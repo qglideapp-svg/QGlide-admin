@@ -1,0 +1,349 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './DriverManagementView.css';
+import { logoutUser } from '../services/authService';
+import logo from '../assets/images/logo.webp';
+import settingsIcon from '../assets/icons/settings.png';
+import notificationsIcon from '../assets/icons/notifications.png';
+
+const NavItem = ({ icon, label, active, onClick }) => (
+  <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
+    <span className="material-symbols-outlined">{icon}</span>
+    <span className="txt">{label}</span>
+  </button>
+);
+
+const StatusBadge = ({ status }) => {
+  const getStatusClass = (status) => {
+    if (!status) return 'driver-status-offline';
+    switch (status.toLowerCase()) {
+      case 'active': return 'driver-status-active';
+      case 'offline': return 'driver-status-offline';
+      case 'suspended': return 'driver-status-suspended';
+      default: return 'driver-status-offline';
+    }
+  };
+
+  return <span className={`driver-status-badge ${getStatusClass(status)}`}>{status}</span>;
+};
+
+export default function DriverManagementView() {
+  const navigate = useNavigate();
+  
+  const [drivers, setDrivers] = useState([
+    {
+      id: 'DRV_001',
+      name: 'Yusuf Al-Sayed',
+      phone: '+974 5512 3456',
+      avatar: 'https://i.pravatar.cc/40?img=1',
+      vehicle: {
+        model: 'Toyota Camry',
+        year: 2022
+      },
+      status: 'Active',
+      rating: 4.9,
+      totalRides: 1204,
+      earnings: 15820.50
+    },
+    {
+      id: 'DRV_002',
+      name: 'Ahmed Khan',
+      phone: '+974 6698 7654',
+      avatar: 'https://i.pravatar.cc/40?img=7',
+      vehicle: {
+        model: 'Lexus ES 350',
+        year: 2021
+      },
+      status: 'Offline',
+      rating: 4.8,
+      totalRides: 982,
+      earnings: 12340.00
+    },
+    {
+      id: 'DRV_003',
+      name: 'Mohammed Al-Mansoori',
+      phone: '+974 3345 6789',
+      avatar: 'https://i.pravatar.cc/40?img=8',
+      vehicle: {
+        model: 'Hyundai Sonata',
+        year: 2023
+      },
+      status: 'Suspended',
+      rating: 4.2,
+      totalRides: 451,
+      earnings: 5600.75
+    },
+    {
+      id: 'DRV_004',
+      name: 'Ali Hassan',
+      phone: '+974 5543 2109',
+      avatar: 'https://i.pravatar.cc/40?img=12',
+      vehicle: {
+        model: 'Honda Accord',
+        year: 2022
+      },
+      status: 'Active',
+      rating: 4.7,
+      totalRides: 876,
+      earnings: 11250.25
+    },
+    {
+      id: 'DRV_005',
+      name: 'Khalid Al-Thani',
+      phone: '+974 5512 8888',
+      avatar: 'https://i.pravatar.cc/40?img=13',
+      vehicle: {
+        model: 'Nissan Altima',
+        year: 2021
+      },
+      status: 'Active',
+      rating: 4.6,
+      totalRides: 654,
+      earnings: 8900.00
+    }
+  ]);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Statuses');
+  const [ratingFilter, setRatingFilter] = useState('Any Rating');
+  const [selectedDrivers, setSelectedDrivers] = useState([]);
+
+  const handleNavClick = (navItem) => {
+    if (navItem === 'dashboard') {
+      navigate('/dashboard');
+    } else if (navItem === 'ride-management') {
+      navigate('/ride-management');
+    } else if (navItem === 'user-management') {
+      navigate('/user-management');
+    }
+  };
+
+  const handleLogout = async () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      try {
+        await logoutUser();
+        navigate('/login');
+      } catch (error) {
+        console.error('Logout error:', error);
+        navigate('/login');
+      }
+    }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedDrivers(filteredDrivers.map(driver => driver.id));
+    } else {
+      setSelectedDrivers([]);
+    }
+  };
+
+  const handleSelectDriver = (driverId) => {
+    setSelectedDrivers(prev => {
+      if (prev.includes(driverId)) {
+        return prev.filter(id => id !== driverId);
+      } else {
+        return [...prev, driverId];
+      }
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All Statuses');
+    setRatingFilter('Any Rating');
+  };
+
+  const handleDriverClick = (driverId) => {
+    navigate(`/driver-profile/${driverId}`);
+  };
+
+  // Filter drivers based on search and filters
+  const filteredDrivers = drivers.filter(driver => {
+    const matchesSearch = driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         driver.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         driver.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All Statuses' || driver.status === statusFilter;
+    const matchesRating = ratingFilter === 'Any Rating' || 
+                         (ratingFilter === '4.5+' && driver.rating >= 4.5) ||
+                         (ratingFilter === '4.0+' && driver.rating >= 4.0) ||
+                         (ratingFilter === '3.5+' && driver.rating >= 3.5);
+    
+    return matchesSearch && matchesStatus && matchesRating;
+  });
+
+  return (
+    <div className="driver-management grid-root">
+      <aside className="side">
+        <div className="sbrand">
+          <img src={logo} alt="QGlide" className="slogo" />
+        </div>
+        <nav className="slist">
+          <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
+          <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="directions_car" label="Driver Management" active={true} />
+          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="account_balance_wallet" label="Financial" />
+          <NavItem icon="support_agent" label="Support" />
+          <NavItem icon="insights" label="Analytics" />
+        </nav>
+
+        <div className="sfoot">
+          <button className="settings" type="button">
+            <img src={settingsIcon} alt="settings" className="kimg" />
+            <span>Settings</span>
+          </button>
+          <div className="urow">
+            <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
+            <div className="meta">
+              <div className="name">Amina Al-Thani</div>
+              <div className="role">Super Admin</div>
+            </div>
+            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+              <span className="material-symbols-outlined">logout</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="top">
+          <div className="titles">
+            <h1>Driver Management</h1>
+            <p className="sub">Search, filter, and manage all drivers on the platform.</p>
+          </div>
+          <div className="acts">
+            <div className="search">
+              <span className="material-symbols-outlined">search</span>
+              <input 
+                placeholder="Search drivers..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <button className="chip on">EN</button>
+            <button className="chip">AR</button>
+            <button className="ibtn" aria-label="dark mode">
+              <span className="material-symbols-outlined">dark_mode</span>
+            </button>
+            <button className="ibtn" aria-label="notifications">
+              <img src={notificationsIcon} alt="notifications" className="kimg" />
+              <i className="dot" />
+            </button>
+            <div className="user-info">
+              <span className="user-name">Amina Al-Thani</span>
+              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+                <span className="material-symbols-outlined">logout</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="container">
+          <div className="driver-management-card">
+            <div className="card-header">
+              <div className="header-left">
+                <div className="filters-row">
+                  <select 
+                    className="filter-select"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="All Statuses">All Statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Offline">Offline</option>
+                    <option value="Suspended">Suspended</option>
+                  </select>
+                  <select 
+                    className="filter-select"
+                    value={ratingFilter}
+                    onChange={(e) => setRatingFilter(e.target.value)}
+                  >
+                    <option value="Any Rating">Any Rating</option>
+                    <option value="4.5+">4.5+</option>
+                    <option value="4.0+">4.0+</option>
+                    <option value="3.5+">3.5+</option>
+                  </select>
+                  <button className="clear-filters" onClick={handleClearFilters}>
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+              <div className="header-actions">
+                <button className="btn-export">
+                  <span className="material-symbols-outlined">download</span>
+                  Export CSV
+                </button>
+                <button className="btn-add-driver">
+                  <span className="material-symbols-outlined">add</span>
+                  Add Driver
+                </button>
+              </div>
+            </div>
+
+            <div className="table-container">
+              <table className="drivers-table">
+                <thead>
+                  <tr>
+                    <th className="checkbox-col">
+                      <input 
+                        type="checkbox" 
+                        onChange={handleSelectAll}
+                        checked={selectedDrivers.length === filteredDrivers.length && filteredDrivers.length > 0}
+                      />
+                    </th>
+                    <th>DRIVER NAME</th>
+                    <th>VEHICLE</th>
+                    <th>STATUS</th>
+                    <th>RATING</th>
+                    <th>TOTAL RIDES</th>
+                    <th>EARNINGS (QAR)</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDrivers.map((driver) => (
+                    <tr key={driver.id} className="driver-row" onClick={() => handleDriverClick(driver.id)} style={{ cursor: 'pointer' }}>
+                      <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox"
+                          checked={selectedDrivers.includes(driver.id)}
+                          onChange={() => handleSelectDriver(driver.id)}
+                        />
+                      </td>
+                      <td className="driver-cell">
+                        <div className="driver-info-cell">
+                          <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
+                          <div>
+                            <div className="driver-name-text">{driver.name}</div>
+                            <div className="driver-phone">{driver.phone}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="vehicle-cell">
+                        <div className="vehicle-model">{driver.vehicle.model}</div>
+                        <div className="vehicle-year">{driver.vehicle.year}</div>
+                      </td>
+                      <td><StatusBadge status={driver.status} /></td>
+                      <td className="rating-cell">
+                        <span className="star-icon">★</span> {driver.rating.toFixed(1)}
+                      </td>
+                      <td className="rides-cell">{driver.totalRides.toLocaleString()}</td>
+                      <td className="earnings-cell">{driver.earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
+                        <button className="action-menu-btn" aria-label="Actions">
+                          <span className="material-symbols-outlined">more_vert</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+

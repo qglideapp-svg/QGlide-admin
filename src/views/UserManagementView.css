@@ -1,0 +1,358 @@
+/* Import Poppins font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* User Management Layout */
+.user-management {
+  font-family: 'Poppins', sans-serif;
+}
+
+.user-management .container {
+  padding: 24px;
+}
+
+.user-management-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.header-left h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.user-count {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0;
+  font-weight: 400;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-export:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.btn-export .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.btn-add-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #FDE68A;
+  border: 1px solid #FCD34D;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400E;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-user:hover {
+  background: #FCD34D;
+}
+
+.btn-add-user .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Filters Row */
+.filters-row {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #E5E7EB;
+  align-items: center;
+}
+
+.search-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  flex: 1;
+  max-width: 320px;
+}
+
+.search-filter .material-symbols-outlined {
+  font-size: 20px;
+  color: #9CA3AF;
+}
+
+.search-filter input {
+  border: none;
+  outline: none;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #111827;
+  flex: 1;
+  background: transparent;
+}
+
+.search-filter input::placeholder {
+  color: #9CA3AF;
+}
+
+.filter-select {
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.filter-select:hover {
+  border-color: #9CA3AF;
+}
+
+.filter-select:focus {
+  border-color: #FCD34D;
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.1);
+}
+
+.clear-filters {
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #D97706;
+  cursor: pointer;
+  margin-left: auto;
+  transition: color 0.2s;
+}
+
+.clear-filters:hover {
+  color: #B45309;
+}
+
+/* Table Container */
+.table-container {
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Poppins', sans-serif;
+}
+
+.users-table thead {
+  background: #F9FAFB;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.users-table th {
+  padding: 12px 24px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.users-table th.checkbox-col {
+  width: 48px;
+  padding-left: 24px;
+}
+
+.users-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 14px;
+  color: #111827;
+}
+
+.users-table tbody tr:hover {
+  background: #F9FAFB;
+}
+
+.checkbox-col input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #FCD34D;
+}
+
+/* User Cell */
+.user-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.user-joined {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: 400;
+}
+
+/* Contact Cell */
+.contact-cell {
+  color: #374151;
+  font-weight: 400;
+}
+
+/* Rides Cell */
+.rides-cell {
+  color: #111827;
+  font-weight: 500;
+}
+
+/* Date Cell */
+.date-cell {
+  color: #374151;
+  font-weight: 400;
+}
+
+/* Rating Cell */
+.rating-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.star-icon {
+  color: #F59E0B;
+  font-size: 16px;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.status-active {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.status-badge.status-inactive {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.status-badge.status-suspended {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+/* Actions Cell */
+.actions-cell {
+  text-align: center;
+}
+
+.action-menu-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6B7280;
+  transition: color 0.2s;
+}
+
+.action-menu-btn:hover {
+  color: #111827;
+}
+
+.action-menu-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .filters-row {
+    flex-wrap: wrap;
+  }
+  
+  .search-filter {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-actions {
+    width: 100%;
+  }
+  
+  .btn-export,
+  .btn-add-user {
+    flex: 1;
+  }
+}
+

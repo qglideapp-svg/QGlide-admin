@@ -1,0 +1,449 @@
+/* Import Poppins font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* User Profile Layout */
+.user-profile {
+  font-family: 'Poppins', sans-serif;
+}
+
+.user-profile .container {
+  padding: 24px;
+  background: #F9FAFB;
+  min-height: calc(100vh - 80px);
+}
+
+/* Breadcrumbs */
+.breadcrumbs {
+  font-size: 14px;
+  color: #6B7280;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-link {
+  color: #6B7280;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.breadcrumb-link:hover {
+  color: #D97706;
+}
+
+.breadcrumb-separator {
+  margin: 0 8px;
+  color: #9CA3AF;
+}
+
+.breadcrumb-current {
+  color: #111827;
+  font-weight: 500;
+}
+
+/* Content Grid */
+.user-profile-content {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+}
+
+/* Left Column - User Information */
+.user-info-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+}
+
+/* Profile Header */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #E5E7EB;
+  margin-bottom: 24px;
+}
+
+.avatar-wrapper {
+  margin-bottom: 16px;
+}
+
+.user-avatar-large {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #FCD34D;
+}
+
+.user-name-large {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.user-id {
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 12px;
+}
+
+.user-profile-status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.user-profile-status-badge.user-profile-status-active {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.user-profile-status-badge.user-profile-status-inactive {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+/* Info Section */
+.info-section {
+  padding-bottom: 24px;
+  border-bottom: 1px solid #E5E7EB;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-icon {
+  font-size: 20px;
+  color: #6B7280;
+}
+
+.info-text {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+}
+
+/* Actions Section */
+.actions-section {
+  margin-bottom: 0;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-reset-password {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #FDE68A;
+  border: 1px solid #FCD34D;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400E;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-reset-password:hover {
+  background: #FCD34D;
+}
+
+.btn-reset-password .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.btn-deactivate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #FEE2E2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #DC2626;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-deactivate:hover {
+  background: #FECACA;
+}
+
+.btn-deactivate .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Right Column - Details */
+.details-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Wallet Card */
+.wallet-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.wallet-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 12px 0;
+}
+
+.wallet-balance {
+  font-size: 40px;
+  font-weight: 700;
+  color: #D97706;
+  margin-bottom: 8px;
+}
+
+.wallet-subtitle {
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.wallet-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-view-history {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view-history:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.btn-add-funds {
+  padding: 10px 20px;
+  background: #1E40AF;
+  border: 1px solid #1E40AF;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-funds:hover {
+  background: #1E3A8A;
+  border-color: #1E3A8A;
+}
+
+/* Ride History Card */
+.ride-history-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+}
+
+.ride-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.ride-history-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.total-rides {
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+/* Ride History Table */
+.ride-history-table-container {
+  overflow-x: auto;
+}
+
+.ride-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Poppins', sans-serif;
+}
+
+.ride-history-table thead {
+  background: #F9FAFB;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.ride-history-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ride-history-table td {
+  padding: 16px;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 14px;
+  color: #111827;
+}
+
+.ride-history-table tbody tr:hover {
+  background: #F9FAFB;
+}
+
+.ride-id {
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.ride-date {
+  color: #111827;
+  font-weight: 400;
+}
+
+.ride-route {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.route-arrow {
+  font-size: 16px;
+  color: #9CA3AF;
+}
+
+.ride-driver {
+  color: #111827;
+  font-weight: 500;
+}
+
+.ride-fare {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Ride Status Badges */
+.ride-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.ride-status-badge.ride-status-completed {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.ride-status-badge.ride-status-canceled {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+  .user-profile-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .wallet-header {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .wallet-actions {
+    width: 100%;
+  }
+  
+  .btn-view-history,
+  .btn-add-funds {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .wallet-actions {
+    flex-direction: column;
+  }
+  
+  .btn-view-history,
+  .btn-add-funds {
+    width: 100%;
+  }
+}
+
