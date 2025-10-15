@@ -100,6 +100,12 @@ export default function UserManagementView() {
       navigate('/ride-management');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
+    } else if (navItem === 'financial') {
+      navigate('/dashboard?section=financial');
+    } else if (navItem === 'support') {
+      navigate('/dashboard?section=support');
+    } else if (navItem === 'analytics') {
+      navigate('/dashboard?section=analytics');
     }
   };
 
@@ -186,9 +192,9 @@ export default function UserManagementView() {
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" active={true} />
-          <NavItem icon="account_balance_wallet" label="Financial" />
-          <NavItem icon="support_agent" label="Support" />
-          <NavItem icon="insights" label="Analytics" />
+          <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
+          <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
         </nav>
 
         <div className="sfoot">

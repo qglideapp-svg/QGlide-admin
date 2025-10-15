@@ -2,8 +2,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* User Management Layout */
-.user-management {
-  font-family: 'Poppins', sans-serif;
+.user-management { 
+  display: flex; 
+  font-family: 'Poppins', sans-serif; 
+}
+
+.side { 
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 240px;
+  overflow-y: auto;
+  background: #fff; 
+  border-right: 1px solid #e5e7eb; 
+  padding: 14px 10px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
+}
+
+.main { 
+  display: block; 
+  flex: 1; 
+  margin-left: 240px; 
 }
 
 .user-management .container {

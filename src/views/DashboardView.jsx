@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import './DashboardView.css';
 import logo from '../assets/images/logo.webp';
 import routeIcon from '../assets/icons/route.png';
@@ -23,8 +23,9 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 export default function DashboardView() {
-  // v2.0 - Fix section rendering issue
+  // v2.1 - Fix menu responsiveness after navigation
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('overview');
   const [dashboardData, setDashboardData] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -33,7 +34,7 @@ export default function DashboardView() {
   const [error, setError] = useState(null);
   const [showToast, setShowToast] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('month');
-  
+
   // Financial Management states
   const [financialOverview, setFinancialOverview] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -58,10 +59,23 @@ export default function DashboardView() {
   const [isAnalyticsDataLoading, setIsAnalyticsDataLoading] = useState(false);
   const [dateRange, setDateRange] = useState('Oct 1, 2025 - Oct 7, 2025');
 
+  // Reset all loading states when component mounts to ensure clean state
   useEffect(() => {
+    setIsFinancialLoading(false);
+    setIsSupportLoading(false);
+    setIsAnalyticsDataLoading(false);
+    
+    // Check for section parameter in URL
+    const section = searchParams.get('section');
+    if (section && ['financial', 'support', 'analytics'].includes(section)) {
+      setActiveSection(section);
+    } else {
+      setActiveSection('overview');
+    }
+    
     loadDashboardData();
     loadAnalyticsData();
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -75,13 +89,7 @@ export default function DashboardView() {
     } else if (activeSection === 'analytics') {
       loadAnalyticsReportData();
     }
-  }, [activeSection]);
-  
-  useEffect(() => {
-    if (activeSection === 'support') {
-      loadSupportData();
-    }
-  }, [ticketFilter]);
+  }, [activeSection, ticketFilter]);
 
   const loadAnalyticsData = async () => {
     setIsAnalyticsLoading(true);
@@ -126,8 +134,9 @@ export default function DashboardView() {
       setIsLoading(false);
     }
   };
-  
+
   const loadFinancialData = async () => {
+    if (isFinancialLoading) return; // Prevent multiple simultaneous calls
     setIsFinancialLoading(true);
     
     try {
@@ -156,6 +165,7 @@ export default function DashboardView() {
   };
   
   const loadSupportData = async () => {
+    if (isSupportLoading) return; // Prevent multiple simultaneous calls
     setIsSupportLoading(true);
     
     try {
@@ -175,6 +185,7 @@ export default function DashboardView() {
   };
   
   const loadAnalyticsReportData = async () => {
+    if (isAnalyticsDataLoading) return; // Prevent multiple simultaneous calls
     setIsAnalyticsDataLoading(true);
     
     try {
@@ -217,7 +228,12 @@ export default function DashboardView() {
     }
   };
 
-  const handleNavClick = (navItem) => {
+  const handleNavClick = useCallback((navItem) => {
+    // Reset any loading states before navigation
+    setIsFinancialLoading(false);
+    setIsSupportLoading(false);
+    setIsAnalyticsDataLoading(false);
+    
     if (navItem === 'financial') {
       setActiveSection('financial');
     } else if (navItem === 'support') {
@@ -234,7 +250,7 @@ export default function DashboardView() {
       navigate('/driver-management');
     }
     // Add other navigation handlers as needed
-  };
+  }, [navigate]);
   
   const handleExportCSV = () => {
     exportTransactionsCSV(transactions);
@@ -377,30 +393,30 @@ export default function DashboardView() {
       <main className="main">
         {activeSection === 'overview' ? (
           <>
-            <header className="top">
-              <div className="titles">
-                <h1>Dashboard Overview</h1>
-                <p className="sub">Welcome back, Amina. Here's what's happening today.</p>
-              </div>
-              <div className="acts">
-                <div className="search">
-                  <span className="material-symbols-outlined">search</span>
-                  <input placeholder="Search..." />
-                </div>
-                <button className="chip on">EN</button>
-                <button className="chip">AR</button>
-                <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
-                <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
-                <div className="user-info">
-                  <span className="user-name">Amina Al-Thani</span>
-                  <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
-                    <span className="material-symbols-outlined">logout</span>
-                  </button>
-                </div>
-              </div>
-            </header>
+        <header className="top">
+          <div className="titles">
+            <h1>Dashboard Overview</h1>
+            <p className="sub">Welcome back, Amina. Here's what's happening today.</p>
+          </div>
+          <div className="acts">
+            <div className="search">
+              <span className="material-symbols-outlined">search</span>
+              <input placeholder="Search..." />
+            </div>
+            <button className="chip on">EN</button>
+            <button className="chip">AR</button>
+            <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
+            <div className="user-info">
+              <span className="user-name">Amina Al-Thani</span>
+              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+                <span className="material-symbols-outlined">logout</span>
+              </button>
+            </div>
+          </div>
+        </header>
 
-            <div className="container">
+        <div className="container">
           {isLoading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
