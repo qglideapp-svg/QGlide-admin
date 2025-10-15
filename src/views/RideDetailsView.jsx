@@ -22,6 +22,73 @@ export default function RideDetailsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showToast, setShowToast] = useState(false);
+
+  // Transform API response to match expected data structure
+  const transformRideData = (apiData) => {
+    if (!apiData) return null;
+
+    return {
+      id: apiData.id,
+      status: apiData.status,
+      // Handle route data
+      pickupLocation: apiData.route?.pickup_address || apiData.pickupLocation || 'Not specified',
+      dropoffLocation: apiData.route?.dropoff_address || apiData.dropoffLocation || 'Not specified',
+      pickup_location: apiData.route?.pickup_location || apiData.pickup_location,
+      dropoff_location: apiData.route?.dropoff_location || apiData.dropoff_location,
+      
+      // Handle rider data
+      rider: {
+        name: apiData.rider?.name || 'Unknown Rider',
+        phone: apiData.rider?.phone || 'N/A',
+        avatar: apiData.rider?.avatar_url || apiData.rider?.avatar || 'https://i.pravatar.cc/40?img=1',
+        rating: apiData.rider?.rating || 0,
+        totalRides: apiData.rider?.total_rides || 0
+      },
+      
+      // Handle driver data
+      driver: {
+        name: apiData.driver?.name || 'Unknown Driver',
+        rating: apiData.driver?.rating || 0,
+        totalRides: apiData.driver?.total_rides || 0,
+        avatar: apiData.driver?.avatar_url || apiData.driver?.avatar || 'https://i.pravatar.cc/40?img=2',
+        vehicle: apiData.driver?.vehicle || 'N/A',
+        licensePlate: apiData.driver?.license_plate || 'N/A'
+      },
+      
+      // Handle fare details
+      fare: {
+        base: apiData.fare_details?.base_fare || 0,
+        distance: apiData.fare_details?.distance_fare || 0,
+        distanceKm: apiData.fare_details?.distance_km || 0,
+        time: apiData.fare_details?.time_fare || 0,
+        timeMinutes: apiData.fare_details?.time_minutes || 0,
+        airportSurcharge: apiData.fare_details?.airport_surcharge || 0,
+        promoCode: apiData.fare_details?.promo_code ? {
+          code: apiData.fare_details.promo_code,
+          discount: apiData.fare_details.promo_discount || 0
+        } : null,
+        total: apiData.fare_details?.total_fare || 0
+      },
+      
+      // Handle payment data
+      payment: {
+        amount: apiData.payment?.amount || 0,
+        currency: apiData.payment?.currency || 'USD',
+        status: apiData.payment?.status || 'pending',
+        method: apiData.payment?.payment_method || 'credit_card',
+        transactionId: apiData.payment?.transaction_id || 'N/A',
+        processedAt: apiData.payment?.processed_at || null
+      },
+      
+      // Handle timeline data
+      timeline: {
+        requestedAt: apiData.timeline?.requested_at || null,
+        acceptedAt: apiData.timeline?.accepted_at || null,
+        startedAt: apiData.timeline?.started_at || null,
+        completedAt: apiData.timeline?.completed_at || null
+      }
+    };
+  };
   
   useEffect(() => {
     if (rideId) {
@@ -60,7 +127,11 @@ export default function RideDetailsView() {
         
         console.log('🎯 Final processed ride details:', rideDetailsData);
         console.log('🔍 Ride details keys:', Object.keys(rideDetailsData || {}));
-        setRideData(rideDetailsData);
+        
+        // Transform the API response to match the expected data structure
+        const transformedData = transformRideData(rideDetailsData);
+        console.log('🔄 Transformed ride data:', transformedData);
+        setRideData(transformedData);
       } else {
         console.log('❌ API error:', result.error);
         setError(result.error);
@@ -504,13 +575,51 @@ export default function RideDetailsView() {
               <div className="section">
                 <h3>Ride Timeline</h3>
                 <div className="timeline">
-                  <div className="timeline-item completed">
-                    <div className="timeline-icon">🏁</div>
-                    <div className="timeline-content">
-                      <div className="timeline-title">Ride Completed</div>
-                      <div className="timeline-time">{formatDateTime(currentRideData.timeline?.completed || currentRideData.created_at || new Date().toISOString())}</div>
+                  {currentRideData.timeline?.requestedAt && (
+                    <div className="timeline-item completed">
+                      <div className="timeline-icon">📱</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">Ride Requested</div>
+                        <div className="timeline-time">{formatDateTime(currentRideData.timeline.requestedAt)}</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  {currentRideData.timeline?.acceptedAt && (
+                    <div className="timeline-item completed">
+                      <div className="timeline-icon">✅</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">Ride Accepted</div>
+                        <div className="timeline-time">{formatDateTime(currentRideData.timeline.acceptedAt)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {currentRideData.timeline?.startedAt && (
+                    <div className="timeline-item completed">
+                      <div className="timeline-icon">🚗</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">Ride Started</div>
+                        <div className="timeline-time">{formatDateTime(currentRideData.timeline.startedAt)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {currentRideData.timeline?.completedAt && (
+                    <div className="timeline-item completed">
+                      <div className="timeline-icon">🏁</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">Ride Completed</div>
+                        <div className="timeline-time">{formatDateTime(currentRideData.timeline.completedAt)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {!currentRideData.timeline?.requestedAt && !currentRideData.timeline?.completedAt && (
+                    <div className="timeline-item completed">
+                      <div className="timeline-icon">🏁</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">Ride Completed</div>
+                        <div className="timeline-time">{formatDateTime(currentRideData.timeline?.completed || currentRideData.created_at || new Date().toISOString())}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
