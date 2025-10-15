@@ -10,6 +10,7 @@ import checkIcon from '../assets/icons/check.png';
 import notificationsIcon from '../assets/icons/notifications.png';
 import { fetchDashboardData, fetchRidesAnalytics } from '../services/dashboardService';
 import { logoutUser } from '../services/authService';
+import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../services/financialService';
 import Toast from '../components/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -21,6 +22,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export default function DashboardView() {
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState('overview');
   const [dashboardData, setDashboardData] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +30,13 @@ export default function DashboardView() {
   const [error, setError] = useState(null);
   const [showToast, setShowToast] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('month');
+  
+  // Financial Management states
+  const [financialOverview, setFinancialOverview] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [payoutRequests, setPayoutRequests] = useState([]);
+  const [isFinancialLoading, setIsFinancialLoading] = useState(false);
+  const [transactionFilter, setTransactionFilter] = useState('All Types');
 
   useEffect(() => {
     loadDashboardData();
@@ -37,6 +46,12 @@ export default function DashboardView() {
   useEffect(() => {
     loadAnalyticsData();
   }, [selectedTimeframe]);
+  
+  useEffect(() => {
+    if (activeSection === 'financial') {
+      loadFinancialData();
+    }
+  }, [activeSection]);
 
   const loadAnalyticsData = async () => {
     setIsAnalyticsLoading(true);
@@ -81,9 +96,41 @@ export default function DashboardView() {
       setIsLoading(false);
     }
   };
+  
+  const loadFinancialData = async () => {
+    setIsFinancialLoading(true);
+    
+    try {
+      const [overviewResult, transactionsResult, payoutsResult] = await Promise.all([
+        fetchFinancialOverview(),
+        fetchTransactions({ type: transactionFilter }),
+        fetchPayoutRequests()
+      ]);
+      
+      if (overviewResult.success) {
+        setFinancialOverview(overviewResult.data);
+      }
+      
+      if (transactionsResult.success) {
+        setTransactions(transactionsResult.data);
+      }
+      
+      if (payoutsResult.success) {
+        setPayoutRequests(payoutsResult.data);
+      }
+    } catch (err) {
+      console.error('Financial data error:', err);
+    } finally {
+      setIsFinancialLoading(false);
+    }
+  };
 
   const handleNavClick = (navItem) => {
-    if (navItem === 'ride-management') {
+    if (navItem === 'financial') {
+      setActiveSection('financial');
+    } else if (navItem === 'overview') {
+      setActiveSection('overview');
+    } else if (navItem === 'ride-management') {
       navigate('/ride-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
@@ -91,6 +138,10 @@ export default function DashboardView() {
       navigate('/driver-management');
     }
     // Add other navigation handlers as needed
+  };
+  
+  const handleExportCSV = () => {
+    exportTransactionsCSV(transactions);
   };
 
   const closeToast = () => {
@@ -142,11 +193,11 @@ export default function DashboardView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" active />
+          <NavItem icon="space_dashboard" label="Dashboard" active={activeSection === 'overview'} onClick={() => handleNavClick('overview')} />
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
-          <NavItem icon="account_balance_wallet" label="Financial" />
+          <NavItem icon="account_balance_wallet" label="Financial" active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
           <NavItem icon="support_agent" label="Support" />
           <NavItem icon="insights" label="Analytics" />
         </nav>
@@ -170,30 +221,32 @@ export default function DashboardView() {
       </aside>
 
       <main className="main">
-        <header className="top">
-          <div className="titles">
-            <h1>Dashboard Overview</h1>
-            <p className="sub">Welcome back, Amina. Here's what's happening today.</p>
-          </div>
-          <div className="acts">
-            <div className="search">
-              <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search..." />
-            </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
-            <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
-            <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
-            <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
-              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
-                <span className="material-symbols-outlined">logout</span>
-              </button>
-            </div>
-          </div>
-        </header>
+        {activeSection === 'overview' ? (
+          <>
+            <header className="top">
+              <div className="titles">
+                <h1>Dashboard Overview</h1>
+                <p className="sub">Welcome back, Amina. Here's what's happening today.</p>
+              </div>
+              <div className="acts">
+                <div className="search">
+                  <span className="material-symbols-outlined">search</span>
+                  <input placeholder="Search..." />
+                </div>
+                <button className="chip on">EN</button>
+                <button className="chip">AR</button>
+                <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
+                <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
+                <div className="user-info">
+                  <span className="user-name">Amina Al-Thani</span>
+                  <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+                    <span className="material-symbols-outlined">logout</span>
+                  </button>
+                </div>
+              </div>
+            </header>
 
-        <div className="container">
+            <div className="container">
           {isLoading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
@@ -303,6 +356,174 @@ export default function DashboardView() {
             </div>
           </section>
         </div>
+          </>
+        ) : (
+          <>
+            <header className="top financial-header">
+              <div className="titles">
+                <h1>Financial Management</h1>
+                <p className="sub">Monitor transactions, manage payouts, and set commissions.</p>
+              </div>
+              <div className="acts">
+                <div className="search">
+                  <span className="material-symbols-outlined">search</span>
+                  <input placeholder="Search transactions..." />
+                </div>
+                <button className="chip on">EN</button>
+                <button className="chip">AR</button>
+                <button className="ibtn" aria-label="dark-mode">
+                  <span className="material-symbols-outlined">dark_mode</span>
+                </button>
+                <button className="ibtn" aria-label="notifications">
+                  <img src={notificationsIcon} alt="notifications" className="kimg" />
+                  <i className="dot" />
+                </button>
+              </div>
+            </header>
+
+            <div className="container financial-section">
+              {isFinancialLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading financial data...</p>
+                </div>
+              ) : (
+                <>
+                  <section className="metric-cards">
+                    <div className="metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">System Wallet Balance</span>
+                          <span className="metric-description">Total across all user wallets</span>
+                        </div>
+                        <div className="metric-icon blue">
+                          <span className="material-symbols-outlined">account_balance</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        {financialOverview ? formatCurrency(financialOverview.systemWalletBalance) : 'QAR 0'}
+                      </div>
+                    </div>
+
+                    <div className="metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">Commissions (MTD)</span>
+                          <span className="metric-trend positive">
+                            {financialOverview?.commissions?.trend ? `+${financialOverview.commissions.trend}% vs last month` : ''}
+                          </span>
+                        </div>
+                        <div className="metric-icon green">
+                          <span className="material-symbols-outlined">percent</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        {financialOverview?.commissions?.amount ? formatCurrency(financialOverview.commissions.amount) : 'QAR 0'}
+                      </div>
+                    </div>
+
+                    <div className="metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">Pending Payouts</span>
+                          <span className="metric-description">Awaiting approval</span>
+                        </div>
+                        <div className="metric-icon orange">
+                          <span className="material-symbols-outlined">hourglass_empty</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        {financialOverview?.pendingPayouts?.amount ? formatCurrency(financialOverview.pendingPayouts.amount) : 'QAR 0'}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="financial-grid">
+                    <div className="transactions-panel">
+                      <div className="panel-header">
+                        <h3>All Transactions</h3>
+                        <div className="panel-controls">
+                          <div className="date-picker-wrapper">
+                            <input type="text" placeholder="mm/dd/yyyy" className="date-picker" />
+                            <span className="material-symbols-outlined">calendar_today</span>
+                          </div>
+                          <select 
+                            className="type-filter"
+                            value={transactionFilter}
+                            onChange={(e) => setTransactionFilter(e.target.value)}
+                          >
+                            <option>All Types</option>
+                            <option>Fare</option>
+                            <option>Top-up</option>
+                            <option>Payout</option>
+                            <option>Refund</option>
+                          </select>
+                          <button className="export-btn" onClick={handleExportCSV}>
+                            Export CSV
+                          </button>
+                        </div>
+                      </div>
+                      <div className="transactions-table-wrapper">
+                        <table className="transactions-table">
+                          <thead>
+                            <tr>
+                              <th>TRANSACTION ID</th>
+                              <th>DATE</th>
+                              <th>USER/DRIVER</th>
+                              <th>TYPE</th>
+                              <th>AMOUNT</th>
+                              <th>STATUS</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {transactions.map((transaction) => (
+                              <tr key={transaction.id}>
+                                <td className="transaction-id">{transaction.id}</td>
+                                <td>{transaction.date}</td>
+                                <td>{transaction.user}</td>
+                                <td>
+                                  <span className={`type-pill ${transaction.type.toLowerCase()}`}>
+                                    {transaction.type}
+                                  </span>
+                                </td>
+                                <td className="amount">{formatCurrency(transaction.amount)}</td>
+                                <td>
+                                  <span className={`status-badge ${transaction.status.toLowerCase()}`}>
+                                    <span className="material-symbols-outlined">
+                                      {transaction.status === 'Completed' ? 'check_circle' : 'schedule'}
+                                    </span>
+                                    {transaction.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="payouts-panel">
+                      <div className="panel-header">
+                        <h3>Payout Requests</h3>
+                      </div>
+                      <div className="payout-list">
+                        {payoutRequests.map((payout) => (
+                          <div key={payout.id} className="payout-item">
+                            <img src={payout.avatar} alt={payout.driverName} className="payout-avatar" />
+                            <div className="payout-info">
+                              <div className="payout-name">{payout.driverName}</div>
+                              <div className="payout-amount">{formatCurrency(payout.amount)}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                </>
+              )}
+            </div>
+          </>
+        )}
       </main>
       
       {showToast && (
