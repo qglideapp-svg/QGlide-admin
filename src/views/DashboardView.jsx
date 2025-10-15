@@ -12,6 +12,7 @@ import { fetchDashboardData, fetchRidesAnalytics } from '../services/dashboardSe
 import { logoutUser } from '../services/authService';
 import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../services/financialService';
 import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved } from '../services/supportService';
+import { fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport } from '../services/analyticsService';
 import Toast from '../components/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -45,6 +46,16 @@ export default function DashboardView() {
   const [ticketFilter, setTicketFilter] = useState('open');
   const [isSupportLoading, setIsSupportLoading] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
+  
+  // Analytics states
+  const [analyticsMetrics, setAnalyticsMetrics] = useState(null);
+  const [ridesByRegion, setRidesByRegion] = useState([]);
+  const [ridesByVehicleType, setRidesByVehicleType] = useState([]);
+  const [acceptanceRateByHour, setAcceptanceRateByHour] = useState([]);
+  const [driverLeaderboard, setDriverLeaderboard] = useState([]);
+  const [revenueByPaymentType, setRevenueByPaymentType] = useState([]);
+  const [isAnalyticsDataLoading, setIsAnalyticsDataLoading] = useState(false);
+  const [dateRange, setDateRange] = useState('Oct 1, 2025 - Oct 7, 2025');
 
   useEffect(() => {
     loadDashboardData();
@@ -60,6 +71,8 @@ export default function DashboardView() {
       loadFinancialData();
     } else if (activeSection === 'support') {
       loadSupportData();
+    } else if (activeSection === 'analytics') {
+      loadAnalyticsReportData();
     }
   }, [activeSection]);
   
@@ -159,12 +172,57 @@ export default function DashboardView() {
       setIsSupportLoading(false);
     }
   };
+  
+  const loadAnalyticsReportData = async () => {
+    setIsAnalyticsDataLoading(true);
+    
+    try {
+      const [metricsResult, regionResult, vehicleTypeResult, acceptanceResult, leaderboardResult, revenueResult] = await Promise.all([
+        fetchAnalyticsMetrics(),
+        fetchRidesByRegion(),
+        fetchRidesByVehicleType(),
+        fetchAcceptanceRateByHour(),
+        fetchDriverLeaderboard(),
+        fetchRevenueByPaymentType()
+      ]);
+      
+      if (metricsResult.success) {
+        setAnalyticsMetrics(metricsResult.data);
+      }
+      
+      if (regionResult.success) {
+        setRidesByRegion(regionResult.data);
+      }
+      
+      if (vehicleTypeResult.success) {
+        setRidesByVehicleType(vehicleTypeResult.data);
+      }
+      
+      if (acceptanceResult.success) {
+        setAcceptanceRateByHour(acceptanceResult.data);
+      }
+      
+      if (leaderboardResult.success) {
+        setDriverLeaderboard(leaderboardResult.data);
+      }
+      
+      if (revenueResult.success) {
+        setRevenueByPaymentType(revenueResult.data);
+      }
+    } catch (err) {
+      console.error('Analytics report data error:', err);
+    } finally {
+      setIsAnalyticsDataLoading(false);
+    }
+  };
 
   const handleNavClick = (navItem) => {
     if (navItem === 'financial') {
       setActiveSection('financial');
     } else if (navItem === 'support') {
       setActiveSection('support');
+    } else if (navItem === 'analytics') {
+      setActiveSection('analytics');
     } else if (navItem === 'overview') {
       setActiveSection('overview');
     } else if (navItem === 'ride-management') {
@@ -276,7 +334,7 @@ export default function DashboardView() {
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
           <NavItem icon="support_agent" label="Support" active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" />
+          <NavItem icon="insights" label="Analytics" active={activeSection === 'analytics'} onClick={() => handleNavClick('analytics')} />
         </nav>
 
         <div className="sfoot">
@@ -767,6 +825,302 @@ export default function DashboardView() {
                     )}
                   </div>
                 </div>
+              )}
+            </div>
+          </>
+        ) : activeSection === 'analytics' ? (
+          <>
+            <header className="top analytics-header">
+              <div className="titles">
+                <h1>Analytics & Reports</h1>
+                <p className="sub">Deep dive into your platform's performance metrics.</p>
+              </div>
+              <div className="acts">
+                <div className="date-range-display">
+                  <span className="material-symbols-outlined">calendar_today</span>
+                  <span>{dateRange}</span>
+                </div>
+                <button className="export-report-btn" onClick={exportAnalyticsReport}>
+                  <span className="material-symbols-outlined">download</span>
+                  Export Report
+                </button>
+                <button className="ibtn" aria-label="settings">
+                  <span className="material-symbols-outlined">settings</span>
+                </button>
+                <button className="ibtn" aria-label="notifications">
+                  <img src={notificationsIcon} alt="notifications" className="kimg" />
+                  <i className="dot" />
+                </button>
+              </div>
+            </header>
+
+            <div className="container analytics-section">
+              {isAnalyticsDataLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading analytics data...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Top 5 Metric Cards */}
+                  <section className="analytics-metrics">
+                    <div className="analytics-metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">Average Fare</span>
+                          <span className="metric-trend positive">
+                            {analyticsMetrics?.averageFare?.trend || ''}
+                          </span>
+                        </div>
+                        <div className="metric-icon green">
+                          <span className="material-symbols-outlined">payments</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        QAR {analyticsMetrics?.averageFare?.value || '0.00'}
+                      </div>
+                    </div>
+
+                    <div className="analytics-metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">Peak Hours</span>
+                          <span className="metric-description">
+                            {analyticsMetrics?.peakHours?.description || ''}
+                          </span>
+                        </div>
+                        <div className="metric-icon purple">
+                          <span className="material-symbols-outlined">schedule</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        {analyticsMetrics?.peakHours?.value || ''}
+                      </div>
+                    </div>
+
+                    <div className="analytics-metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">Avg. Driver Rating</span>
+                          <span className="metric-trend positive">
+                            {analyticsMetrics?.avgDriverRating?.trend || ''}
+                          </span>
+                        </div>
+                        <div className="metric-icon yellow">
+                          <span className="material-symbols-outlined">star</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        {analyticsMetrics?.avgDriverRating?.value || '0.00'}
+                      </div>
+                    </div>
+
+                    <div className="analytics-metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">Total Distance</span>
+                          <span className="metric-description">
+                            {analyticsMetrics?.totalDistance?.description || ''}
+                          </span>
+                        </div>
+                        <div className="metric-icon blue">
+                          <span className="material-symbols-outlined">route</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        {analyticsMetrics?.totalDistance?.value ? formatNumber(analyticsMetrics.totalDistance.value) : '0'} km
+                      </div>
+                    </div>
+
+                    <div className="analytics-metric-card">
+                      <div className="metric-header">
+                        <div className="metric-info">
+                          <span className="metric-label">Driver Acceptance Rate</span>
+                          <span className="metric-trend positive">
+                            {analyticsMetrics?.driverAcceptanceRate?.trend || ''}
+                          </span>
+                        </div>
+                        <div className="metric-icon red">
+                          <span className="material-symbols-outlined">thumb_up</span>
+                        </div>
+                      </div>
+                      <div className="metric-value">
+                        {analyticsMetrics?.driverAcceptanceRate?.value || '0'}%
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Three Chart Panels */}
+                  <section className="analytics-charts-row">
+                    {/* Rides by Region - Bar Chart */}
+                    <div className="analytics-chart-panel">
+                      <div className="chart-panel-header">
+                        <h3>Rides by Region</h3>
+                      </div>
+                      <div className="chart-content">
+                        <div className="bar-chart">
+                          {ridesByRegion.map((region, index) => (
+                            <div key={index} className="bar-chart-item">
+                              <div className="bar-label">{region.region}</div>
+                              <div className="bar-container">
+                                <div 
+                                  className="bar-fill" 
+                                  style={{ 
+                                    width: `${(region.rides / Math.max(...ridesByRegion.map(r => r.rides))) * 100}%`,
+                                    backgroundColor: region.color
+                                  }}
+                                >
+                                  <span className="bar-value">{formatNumber(region.rides)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rides by Vehicle Type - Pie Chart */}
+                    <div className="analytics-chart-panel">
+                      <div className="chart-panel-header">
+                        <h3>Rides by Vehicle Type</h3>
+                      </div>
+                      <div className="chart-content">
+                        <div className="pie-chart-container">
+                          <div className="pie-chart">
+                            {ridesByVehicleType.map((vehicle, index) => {
+                              const prevPercentages = ridesByVehicleType.slice(0, index).reduce((sum, v) => sum + v.percentage, 0);
+                              return (
+                                <div 
+                                  key={index}
+                                  className="pie-slice"
+                                  style={{
+                                    '--start': `${prevPercentages}%`,
+                                    '--value': `${vehicle.percentage}%`,
+                                    '--color': vehicle.color
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                          <div className="pie-legend">
+                            {ridesByVehicleType.map((vehicle, index) => (
+                              <div key={index} className="legend-item">
+                                <span className="legend-color" style={{ backgroundColor: vehicle.color }}></span>
+                                <span className="legend-label">{vehicle.type}</span>
+                                <span className="legend-value">{vehicle.percentage}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Driver Acceptance Rate - Bar Chart */}
+                    <div className="analytics-chart-panel">
+                      <div className="chart-panel-header">
+                        <h3>Driver Acceptance Rate</h3>
+                      </div>
+                      <div className="chart-content">
+                        <div className="bar-chart">
+                          {acceptanceRateByHour.map((hour, index) => (
+                            <div key={index} className="bar-chart-item">
+                              <div className="bar-label">{hour.hour}</div>
+                              <div className="bar-container">
+                                <div 
+                                  className="bar-fill" 
+                                  style={{ 
+                                    width: `${hour.rate}%`,
+                                    backgroundColor: hour.color
+                                  }}
+                                >
+                                  <span className="bar-value">{hour.rate}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Bottom Two Panels */}
+                  <section className="analytics-bottom-row">
+                    {/* Driver Performance Leaderboard */}
+                    <div className="analytics-chart-panel leaderboard-panel">
+                      <div className="chart-panel-header">
+                        <h3>Driver Performance Leaderboard</h3>
+                      </div>
+                      <div className="chart-content">
+                        <table className="leaderboard-table">
+                          <thead>
+                            <tr>
+                              <th>DRIVER</th>
+                              <th>RIDES</th>
+                              <th>RATING</th>
+                              <th>ACCEPT %</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {driverLeaderboard.map((driver) => (
+                              <tr key={driver.id}>
+                                <td>
+                                  <div className="driver-cell">
+                                    <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
+                                    <span className="driver-name">{driver.name}</span>
+                                  </div>
+                                </td>
+                                <td className="rides-cell">{driver.rides}</td>
+                                <td>
+                                  <div className="rating-cell">
+                                    <span className="material-symbols-outlined star-icon">star</span>
+                                    <span>{driver.rating}</span>
+                                  </div>
+                                </td>
+                                <td className="accept-cell">{driver.acceptanceRate}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Revenue by Payment Type - Pie Chart */}
+                    <div className="analytics-chart-panel">
+                      <div className="chart-panel-header">
+                        <h3>Revenue by Payment Type</h3>
+                      </div>
+                      <div className="chart-content">
+                        <div className="pie-chart-container">
+                          <div className="pie-chart">
+                            {revenueByPaymentType.map((payment, index) => {
+                              const prevPercentages = revenueByPaymentType.slice(0, index).reduce((sum, p) => sum + p.percentage, 0);
+                              return (
+                                <div 
+                                  key={index}
+                                  className="pie-slice"
+                                  style={{
+                                    '--start': `${prevPercentages}%`,
+                                    '--value': `${payment.percentage}%`,
+                                    '--color': payment.color
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                          <div className="pie-legend">
+                            {revenueByPaymentType.map((payment, index) => (
+                              <div key={index} className="legend-item">
+                                <span className="legend-color" style={{ backgroundColor: payment.color }}></span>
+                                <span className="legend-label">{payment.type}</span>
+                                <span className="legend-value">{payment.percentage}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </>
               )}
             </div>
           </>
