@@ -4,10 +4,11 @@ const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
 export const fetchDriversList = async (params = {}) => {
   try {
+    // Use saved token from login
     const token = getAuthToken();
     
     if (!token) {
-      throw new Error('No authentication token found');
+      throw new Error('No authentication token found. Please login first.');
     }
 
     // Build query parameters
