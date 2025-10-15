@@ -100,6 +100,8 @@ const MapRoute = ({
 
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 50; // Maximum 5 seconds (50 * 100ms)
     
     const initializeGoogleMap = () => {
       try {
@@ -113,10 +115,19 @@ const MapRoute = ({
         
         // Check if mapRef.current exists
         if (!mapRef.current) {
-          console.log('❌ Map ref not ready, retrying in 100ms...');
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            console.log('❌ Map ref not ready after maximum retries, using fallback');
+            setMapError('Map container not available');
+            setIsLoading(false);
+            return;
+          }
+          console.log(`❌ Map ref not ready, retrying in 100ms... (attempt ${retryCount}/${maxRetries})`);
           setTimeout(initializeGoogleMap, 100);
           return;
         }
+        
+        console.log('✅ Map ref is ready, initializing Google Maps...');
 
         console.log('🔍 Parsing coordinates:', { pickupCoordinates, dropoffCoordinates });
         
@@ -360,7 +371,12 @@ const MapRoute = ({
       };
       document.head.appendChild(script);
     } else {
-      initializeGoogleMap();
+      // Add a small delay to ensure component is fully mounted
+      setTimeout(() => {
+        if (isMounted) {
+          initializeGoogleMap();
+        }
+      }, 200);
     }
     
     // Cleanup function
@@ -368,6 +384,22 @@ const MapRoute = ({
       isMounted = false;
     };
   }, [pickupCoordinates, dropoffCoordinates, pickupLocation, dropoffLocation]);
+
+  // Additional useEffect to ensure DOM element is ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (mapRef.current && isLoading) {
+        console.log('🔄 DOM element ready, re-triggering map initialization...');
+        // Re-trigger the map initialization if still loading
+        if (window.google && window.google.maps) {
+          const event = new Event('googleMapsReady');
+          window.dispatchEvent(event);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // If there's a map error, show fallback
   if (mapError) {
