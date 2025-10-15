@@ -110,6 +110,13 @@ const MapRoute = ({
           setIsLoading(false);
           return;
         }
+        
+        // Check if mapRef.current exists
+        if (!mapRef.current) {
+          console.log('❌ Map ref not ready, retrying in 100ms...');
+          setTimeout(initializeGoogleMap, 100);
+          return;
+        }
 
         console.log('🔍 Parsing coordinates:', { pickupCoordinates, dropoffCoordinates });
         
@@ -130,6 +137,12 @@ const MapRoute = ({
           console.log('🔄 Using fallback coordinates:', { fallbackPickup, fallbackDropoff });
           
           // Initialize map with fallback coordinates
+          if (!mapRef.current) {
+            console.log('❌ Map ref not ready for fallback, retrying...');
+            setTimeout(() => initializeGoogleMap(), 100);
+            return;
+          }
+          
           const map = new window.google.maps.Map(mapRef.current, {
             center: { lat: centerLat, lng: centerLng },
             zoom: 12,
@@ -186,6 +199,12 @@ const MapRoute = ({
         }
 
         // Initialize map
+        if (!mapRef.current) {
+          console.log('❌ Map ref not ready for main map, retrying...');
+          setTimeout(() => initializeGoogleMap(), 100);
+          return;
+        }
+        
         const map = new window.google.maps.Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },
           zoom: zoom,
