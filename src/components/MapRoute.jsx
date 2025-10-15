@@ -164,54 +164,6 @@ const MapRoute = ({
     );
   }
 
-  const pickupCoords = parseCoordinates(pickupCoordinates);
-  const dropoffCoords = parseCoordinates(dropoffCoordinates);
-
-  // If there's a map error, show fallback
-  if (mapError) {
-    return (
-      <div className={`map-route-container ${className}`}>
-        <div className="map-fallback">
-          <div className="fallback-content">
-            <h4>🗺️ Route Map</h4>
-            <div className="route-visualization">
-              <div className="route-line-visual">
-                <div className="direction-arrow-visual">➤</div>
-              </div>
-              <div className="pin pickup-pin-visual">📍</div>
-              <div className="pin dropoff-pin-visual">🎯</div>
-            </div>
-            <div className="fallback-info">
-              <p><strong>Pickup:</strong> {pickupLocation || 'Not specified'}</p>
-              <p><strong>Dropoff:</strong> {dropoffLocation || 'Not specified'}</p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Route Summary */}
-        <div className="route-summary">
-          <div className="route-item">
-            <span className="route-icon pickup">📍</span>
-            <div>
-              <div className="route-label">Pickup</div>
-              <div className="route-address">{pickupLocation || 'Pickup location'}</div>
-            </div>
-          </div>
-          <div className="route-line">
-            <div className="route-distance">Route</div>
-          </div>
-          <div className="route-item">
-            <span className="route-icon dropoff">🎯</span>
-            <div>
-              <div className="route-label">Dropoff</div>
-              <div className="route-address">{dropoffLocation || 'Dropoff location'}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   try {
     return (
       <div className={`map-route-container ${className}`}>
