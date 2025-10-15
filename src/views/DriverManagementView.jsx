@@ -77,19 +77,23 @@ export default function DriverManagementView() {
         limit: limit
       });
 
-      if (result.success) {
+      if (result.success && result.data) {
+        // Ensure drivers is an array before mapping
+        const driversArray = Array.isArray(result.data.drivers) ? result.data.drivers : [];
+        
         // Transform API data to UI format
-        const transformedDrivers = result.data.drivers.map(transformDriverData);
+        const transformedDrivers = driversArray.map(transformDriverData);
         
         setDrivers(transformedDrivers);
-        setTotalPages(result.data.totalPages);
-        setTotalCount(result.data.totalCount);
+        setTotalPages(result.data.totalPages || 1);
+        setTotalCount(result.data.totalCount || 0);
         
         console.log('✅ Drivers loaded successfully:', {
           count: transformedDrivers.length,
           totalCount: result.data.totalCount,
           currentPage: result.data.currentPage,
-          totalPages: result.data.totalPages
+          totalPages: result.data.totalPages,
+          rawDrivers: driversArray
         });
       } else {
         setError(result.error || 'Failed to load drivers');
@@ -116,6 +120,18 @@ export default function DriverManagementView() {
   useEffect(() => {
     loadDrivers();
   }, [statusFilter, currentPage]);
+
+  // Fallback: Initialize with empty array if no drivers loaded after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (drivers.length === 0 && !isLoading && !error) {
+        console.log('⚠️ No drivers loaded, initializing with empty array');
+        setDrivers([]);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [drivers.length, isLoading, error]);
 
   // Load drivers with debounce when search term changes
   useEffect(() => {

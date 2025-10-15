@@ -46,15 +46,31 @@ export const fetchDriversList = async (params = {}) => {
 
     const data = await response.json();
     
+    // Ensure drivers is always an array
+    let driversArray = [];
+    if (Array.isArray(data.drivers)) {
+      driversArray = data.drivers;
+    } else if (Array.isArray(data.data)) {
+      driversArray = data.data;
+    } else if (Array.isArray(data)) {
+      driversArray = data;
+    }
+    
     // Transform API response to match UI expectations
     const transformedData = {
-      drivers: data.drivers || data.data || [],
-      totalCount: data.totalCount || data.total || 0,
-      totalPages: data.totalPages || Math.ceil((data.totalCount || data.total || 0) / (params.limit || 20)),
+      drivers: driversArray,
+      totalCount: data.totalCount || data.total || data.count || driversArray.length,
+      totalPages: data.totalPages || Math.ceil((data.totalCount || data.total || data.count || driversArray.length) / (params.limit || 20)),
       currentPage: params.page || 1,
       hasNextPage: data.hasNextPage || false,
       hasPrevPage: data.hasPrevPage || false
     };
+
+    console.log('🔍 API Response Debug:', {
+      originalData: data,
+      driversArray: driversArray,
+      transformedData: transformedData
+    });
 
     return { success: true, data: transformedData };
   } catch (error) {
