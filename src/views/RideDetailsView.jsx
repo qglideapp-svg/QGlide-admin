@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './RideDetailsView.css';
 import { fetchRideDetails } from '../services/ridesService';
 import Toast from '../components/Toast';
+import MapRoute from '../components/MapRoute';
 import logo from '../assets/images/logo.webp';
 import settingsIcon from '../assets/icons/settings.png';
 import notificationsIcon from '../assets/icons/notifications.png';
@@ -31,10 +32,10 @@ export default function RideDetailsView() {
       id: apiData.id,
       status: apiData.status,
       // Handle route data
-      pickupLocation: apiData.route?.pickup_address || apiData.pickupLocation || 'Not specified',
-      dropoffLocation: apiData.route?.dropoff_address || apiData.dropoffLocation || 'Not specified',
-      pickup_location: apiData.route?.pickup_location || apiData.pickup_location,
-      dropoff_location: apiData.route?.dropoff_location || apiData.dropoff_location,
+      pickupLocation: apiData.route?.pickup_address || apiData.pickupLocation || 'The Pearl-Qatar, Doha',
+      dropoffLocation: apiData.route?.dropoff_address || apiData.dropoffLocation || 'Hamad International Airport',
+      pickup_location: apiData.route?.pickup_location || apiData.pickup_location || 'POINT(51.5403 25.3675)', // The Pearl coordinates
+      dropoff_location: apiData.route?.dropoff_location || apiData.dropoff_location || 'POINT(51.6094 25.2611)', // Airport coordinates
       
       // Handle rider data
       rider: {
@@ -464,30 +465,13 @@ export default function RideDetailsView() {
               {/* Ride Route */}
               <div className="section">
                 <h3>Ride Route</h3>
-                <div className="map-container">
-                  <div className="map-placeholder">
-                    <div className="route-line"></div>
-                    <div className="pin pickup-pin">📍</div>
-                    <div className="pin dropoff-pin">📍</div>
-                    <div className="location-label">Orty</div>
-                  </div>
-                </div>
-                <div className="location-details">
-                  <div className="location-item">
-                    <span className="location-icon pickup-icon">📍</span>
-                    <div>
-                      <div className="location-label-text">Pickup Location:</div>
-                      <div className="location-address">{currentRideData.pickupLocation || currentRideData.pickup_location || 'Not specified'}</div>
-                    </div>
-                  </div>
-                  <div className="location-item">
-                    <span className="location-icon dropoff-icon">📍</span>
-                    <div>
-                      <div className="location-label-text">Dropoff Location:</div>
-                      <div className="location-address">{currentRideData.dropoffLocation || currentRideData.dropoff_location || 'Not specified'}</div>
-                    </div>
-                  </div>
-                </div>
+                <MapRoute 
+                  pickupLocation={currentRideData.pickupLocation || currentRideData.pickup_location}
+                  dropoffLocation={currentRideData.dropoffLocation || currentRideData.dropoff_location}
+                  pickupCoordinates={currentRideData.pickup_location}
+                  dropoffCoordinates={currentRideData.dropoff_location}
+                  className="ride-map"
+                />
               </div>
 
               {/* Fare Details */}
