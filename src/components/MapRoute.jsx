@@ -37,8 +37,10 @@ const MapRoute = ({
   const [center, setCenter] = useState([25.2769, 51.5007]); // Default to Doha
   const [zoom, setZoom] = useState(12);
   const [routeLine, setRouteLine] = useState([]);
+  const [mapError, setMapError] = useState(null);
 
   useEffect(() => {
+    try {
     if (pickupCoordinates && dropoffCoordinates) {
       // Parse coordinates from POINT format or array
       const parseCoordinates = (coords) => {
@@ -93,6 +95,10 @@ const MapRoute = ({
         setZoom(13);
       }
     }
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      setMapError(error.message);
+    }
   }, [pickupCoordinates, dropoffCoordinates]);
 
   // Function to calculate distance between two points
@@ -132,57 +138,101 @@ const MapRoute = ({
   const pickupCoords = parseCoordinates(pickupCoordinates);
   const dropoffCoords = parseCoordinates(dropoffCoordinates);
 
-  return (
-    <div className={`map-route-container ${className}`}>
-      <MapContainer
-        center={center}
-        zoom={zoom}
-        style={{ height: '300px', width: '100%' }}
-        scrollWheelZoom={true}
-        zoomControl={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+  // If there's a map error, show fallback
+  if (mapError) {
+    return (
+      <div className={`map-route-container ${className}`}>
+        <div className="map-fallback">
+          <div className="fallback-content">
+            <h4>🗺️ Route Map</h4>
+            <div className="route-visualization">
+              <div className="route-line-visual"></div>
+              <div className="pin pickup-pin-visual">📍</div>
+              <div className="pin dropoff-pin-visual">🎯</div>
+            </div>
+            <div className="fallback-info">
+              <p><strong>Pickup:</strong> {pickupLocation || 'Not specified'}</p>
+              <p><strong>Dropoff:</strong> {dropoffLocation || 'Not specified'}</p>
+            </div>
+          </div>
+        </div>
         
-        {/* Pickup Marker */}
-        {pickupCoords && (
-          <Marker position={pickupCoords} icon={pickupIcon}>
-            <Popup>
-              <div className="marker-popup">
-                <h4>📍 Pickup Location</h4>
-                <p>{pickupLocation || 'Pickup point'}</p>
-                <small>Coordinates: {pickupCoords[0].toFixed(6)}, {pickupCoords[1].toFixed(6)}</small>
-              </div>
-            </Popup>
-          </Marker>
-        )}
-        
-        {/* Dropoff Marker */}
-        {dropoffCoords && (
-          <Marker position={dropoffCoords} icon={dropoffIcon}>
-            <Popup>
-              <div className="marker-popup">
-                <h4>🎯 Dropoff Location</h4>
-                <p>{dropoffLocation || 'Dropoff point'}</p>
-                <small>Coordinates: {dropoffCoords[0].toFixed(6)}, {dropoffCoords[1].toFixed(6)}</small>
-              </div>
-            </Popup>
-          </Marker>
-        )}
-        
-        {/* Route Line */}
-        {routeLine.length === 2 && (
-          <Polyline
-            positions={routeLine}
-            color="#22bc44"
-            weight={4}
-            opacity={0.8}
-            dashArray="10, 10"
+        {/* Route Summary */}
+        <div className="route-summary">
+          <div className="route-item">
+            <span className="route-icon pickup">📍</span>
+            <div>
+              <div className="route-label">Pickup</div>
+              <div className="route-address">{pickupLocation || 'Pickup location'}</div>
+            </div>
+          </div>
+          <div className="route-line">
+            <div className="route-distance">Route</div>
+          </div>
+          <div className="route-item">
+            <span className="route-icon dropoff">🎯</span>
+            <div>
+              <div className="route-label">Dropoff</div>
+              <div className="route-address">{dropoffLocation || 'Dropoff location'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  try {
+    return (
+      <div className={`map-route-container ${className}`}>
+        <MapContainer
+          center={center}
+          zoom={zoom}
+          style={{ height: '300px', width: '100%' }}
+          scrollWheelZoom={true}
+          zoomControl={true}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-        )}
-      </MapContainer>
+          
+          {/* Pickup Marker */}
+          {pickupCoords && (
+            <Marker position={pickupCoords} icon={pickupIcon}>
+              <Popup>
+                <div className="marker-popup">
+                  <h4>📍 Pickup Location</h4>
+                  <p>{pickupLocation || 'Pickup point'}</p>
+                  <small>Coordinates: {pickupCoords[0].toFixed(6)}, {pickupCoords[1].toFixed(6)}</small>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+          
+          {/* Dropoff Marker */}
+          {dropoffCoords && (
+            <Marker position={dropoffCoords} icon={dropoffIcon}>
+              <Popup>
+                <div className="marker-popup">
+                  <h4>🎯 Dropoff Location</h4>
+                  <p>{dropoffLocation || 'Dropoff point'}</p>
+                  <small>Coordinates: {dropoffCoords[0].toFixed(6)}, {dropoffCoords[1].toFixed(6)}</small>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+          
+          {/* Route Line */}
+          {routeLine.length === 2 && (
+            <Polyline
+              positions={routeLine}
+              color="#22bc44"
+              weight={4}
+              opacity={0.8}
+              dashArray="10, 10"
+            />
+          )}
+        </MapContainer>
       
       {/* Route Summary */}
       {pickupCoords && dropoffCoords && (
@@ -210,6 +260,50 @@ const MapRoute = ({
       )}
     </div>
   );
+  } catch (error) {
+    console.error('Map rendering error:', error);
+    setMapError(error.message);
+    // Return the fallback UI
+    return (
+      <div className={`map-route-container ${className}`}>
+        <div className="map-fallback">
+          <div className="fallback-content">
+            <h4>🗺️ Route Map</h4>
+            <div className="route-visualization">
+              <div className="route-line-visual"></div>
+              <div className="pin pickup-pin-visual">📍</div>
+              <div className="pin dropoff-pin-visual">🎯</div>
+            </div>
+            <div className="fallback-info">
+              <p><strong>Pickup:</strong> {pickupLocation || 'Not specified'}</p>
+              <p><strong>Dropoff:</strong> {dropoffLocation || 'Not specified'}</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Route Summary */}
+        <div className="route-summary">
+          <div className="route-item">
+            <span className="route-icon pickup">📍</span>
+            <div>
+              <div className="route-label">Pickup</div>
+              <div className="route-address">{pickupLocation || 'Pickup location'}</div>
+            </div>
+          </div>
+          <div className="route-line">
+            <div className="route-distance">Route</div>
+          </div>
+          <div className="route-item">
+            <span className="route-icon dropoff">🎯</span>
+            <div>
+              <div className="route-label">Dropoff</div>
+              <div className="route-address">{dropoffLocation || 'Dropoff location'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default MapRoute;

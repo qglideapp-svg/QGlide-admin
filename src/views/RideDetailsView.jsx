@@ -465,13 +465,31 @@ export default function RideDetailsView() {
               {/* Ride Route */}
               <div className="section">
                 <h3>Ride Route</h3>
-                <MapRoute 
-                  pickupLocation={currentRideData.pickupLocation || currentRideData.pickup_location}
-                  dropoffLocation={currentRideData.dropoffLocation || currentRideData.dropoff_location}
-                  pickupCoordinates={currentRideData.pickup_location}
-                  dropoffCoordinates={currentRideData.dropoff_location}
-                  className="ride-map"
-                />
+                <div className="map-container">
+                  <MapRoute 
+                    pickupLocation={currentRideData.pickupLocation || currentRideData.pickup_location}
+                    dropoffLocation={currentRideData.dropoffLocation || currentRideData.dropoff_location}
+                    pickupCoordinates={currentRideData.pickup_location}
+                    dropoffCoordinates={currentRideData.dropoff_location}
+                    className="ride-map"
+                  />
+                </div>
+                <div className="location-details">
+                  <div className="location-item">
+                    <span className="location-icon pickup-icon">📍</span>
+                    <div>
+                      <div className="location-label-text">Pickup Location:</div>
+                      <div className="location-address">{currentRideData.pickupLocation || currentRideData.pickup_location || 'Not specified'}</div>
+                    </div>
+                  </div>
+                  <div className="location-item">
+                    <span className="location-icon dropoff-icon">🎯</span>
+                    <div>
+                      <div className="location-label-text">Dropoff Location:</div>
+                      <div className="location-address">{currentRideData.dropoffLocation || currentRideData.dropoff_location || 'Not specified'}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Fare Details */}
