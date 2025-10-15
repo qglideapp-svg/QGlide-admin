@@ -205,17 +205,18 @@ const MapRoute = ({
   try {
     return (
       <div className={`map-route-container ${className}`}>
-        <MapContainer
-          center={center}
-          zoom={zoom}
-          style={{ height: '300px', width: '100%' }}
-          scrollWheelZoom={true}
-          zoomControl={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        style={{ height: '300px', width: '100%' }}
+        scrollWheelZoom={true}
+        zoomControl={true}
+        preferCanvas={false}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png"
+        />
           
           {/* Pickup Marker */}
           {pickupCoords && Array.isArray(pickupCoords) && !isNaN(pickupCoords[0]) && !isNaN(pickupCoords[1]) && (
