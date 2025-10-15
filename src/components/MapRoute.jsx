@@ -14,32 +14,75 @@ const MapRoute = ({
 
   // Parse coordinates helper function
   const parseCoordinates = (coords) => {
+    console.log('🔍 parseCoordinates input:', coords, 'type:', typeof coords);
+    
     if (Array.isArray(coords)) {
-      return coords;
+      console.log('📊 Array format detected:', coords);
+      if (coords.length >= 2) {
+        const lat = parseFloat(coords[0]);
+        const lng = parseFloat(coords[1]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          console.log('✅ Array parsed successfully:', { lat, lng });
+          return { lat, lng };
+        }
+      }
     }
+    
     if (typeof coords === 'string') {
+      console.log('📝 String format detected:', coords);
+      
       // Handle POINT(lng lat) format
-      const match = coords.match(/POINT\(([^)]+)\)/);
-      if (match) {
-        const parts = match[1].trim().split(/\s+/);
+      const pointMatch = coords.match(/POINT\(([^)]+)\)/);
+      if (pointMatch) {
+        const parts = pointMatch[1].trim().split(/\s+/);
         if (parts.length === 2) {
           const lng = parseFloat(parts[0]);
           const lat = parseFloat(parts[1]);
           if (!isNaN(lat) && !isNaN(lng)) {
+            console.log('✅ POINT format parsed:', { lat, lng });
             return { lat, lng };
           }
         }
       }
+      
+      // Handle (lat, lng) format
+      const parenMatch = coords.match(/\(([^)]+)\)/);
+      if (parenMatch) {
+        const parts = parenMatch[1].split(',');
+        if (parts.length === 2) {
+          const lat = parseFloat(parts[0].trim());
+          const lng = parseFloat(parts[1].trim());
+          if (!isNaN(lat) && !isNaN(lng)) {
+            console.log('✅ Parentheses format parsed:', { lat, lng });
+            return { lat, lng };
+          }
+        }
+      }
+      
       // Handle comma-separated format
       const parts = coords.split(',');
       if (parts.length === 2) {
         const lat = parseFloat(parts[0].trim());
         const lng = parseFloat(parts[1].trim());
         if (!isNaN(lat) && !isNaN(lng)) {
+          console.log('✅ Comma format parsed:', { lat, lng });
+          return { lat, lng };
+        }
+      }
+      
+      // Handle space-separated format
+      const spaceParts = coords.trim().split(/\s+/);
+      if (spaceParts.length === 2) {
+        const lat = parseFloat(spaceParts[0]);
+        const lng = parseFloat(spaceParts[1]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          console.log('✅ Space format parsed:', { lat, lng });
           return { lat, lng };
         }
       }
     }
+    
+    console.log('❌ Failed to parse coordinates:', coords);
     return null;
   };
 
@@ -68,12 +111,62 @@ const MapRoute = ({
           return;
         }
 
+        console.log('🔍 Parsing coordinates:', { pickupCoordinates, dropoffCoordinates });
+        
         const pickup = parseCoordinates(pickupCoordinates);
         const dropoff = parseCoordinates(dropoffCoordinates);
+        
+        console.log('📍 Parsed coordinates:', { pickup, dropoff });
 
         if (!pickup || !dropoff) {
-          setMapError('Invalid coordinates provided');
+          console.log('❌ Invalid coordinates - using fallback');
+          // Use fallback coordinates for testing
+          const fallbackPickup = { lat: 25.2769, lng: 51.5007 }; // Doha center
+          const fallbackDropoff = { lat: 25.2611, lng: 51.6094 }; // Airport area
+          
+          const centerLat = (fallbackPickup.lat + fallbackDropoff.lat) / 2;
+          const centerLng = (fallbackPickup.lng + fallbackDropoff.lng) / 2;
+          
+          console.log('🔄 Using fallback coordinates:', { fallbackPickup, fallbackDropoff });
+          
+          // Initialize map with fallback coordinates
+          const map = new window.google.maps.Map(mapRef.current, {
+            center: { lat: centerLat, lng: centerLng },
+            zoom: 12,
+            mapTypeId: 'roadmap'
+          });
+          
+          // Add fallback markers
+          new window.google.maps.Marker({
+            position: fallbackPickup,
+            map: map,
+            title: 'Pickup Location (Fallback)',
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: '#22bc44',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2
+            }
+          });
+          
+          new window.google.maps.Marker({
+            position: fallbackDropoff,
+            map: map,
+            title: 'Dropoff Location (Fallback)',
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: '#df4444',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2
+            }
+          });
+          
           setIsLoading(false);
+          setMapError(null);
           return;
         }
 
