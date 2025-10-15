@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../services/authService';
+import { fetchDriversList, transformDriverData } from '../services/driverService';
 import logo from '../assets/images/logo.webp';
 import settingsIcon from '../assets/icons/settings.png';
 import notificationsIcon from '../assets/icons/notifications.png';
@@ -31,79 +32,16 @@ export default function DriverManagementView() {
   const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
-  const [drivers, setDrivers] = useState([
-    {
-      id: 'DRV_001',
-      name: 'Yusuf Al-Sayed',
-      phone: '+974 5512 3456',
-      avatar: 'https://i.pravatar.cc/40?img=1',
-      vehicle: {
-        model: 'Toyota Camry',
-        year: 2022
-      },
-      status: 'Active',
-      rating: 4.9,
-      totalRides: 1204,
-      earnings: 15820.50
-    },
-    {
-      id: 'DRV_002',
-      name: 'Ahmed Khan',
-      phone: '+974 6698 7654',
-      avatar: 'https://i.pravatar.cc/40?img=7',
-      vehicle: {
-        model: 'Lexus ES 350',
-        year: 2021
-      },
-      status: 'Offline',
-      rating: 4.8,
-      totalRides: 982,
-      earnings: 12340.00
-    },
-    {
-      id: 'DRV_003',
-      name: 'Mohammed Al-Mansoori',
-      phone: '+974 3345 6789',
-      avatar: 'https://i.pravatar.cc/40?img=8',
-      vehicle: {
-        model: 'Hyundai Sonata',
-        year: 2023
-      },
-      status: 'Suspended',
-      rating: 4.2,
-      totalRides: 451,
-      earnings: 5600.75
-    },
-    {
-      id: 'DRV_004',
-      name: 'Ali Hassan',
-      phone: '+974 5543 2109',
-      avatar: 'https://i.pravatar.cc/40?img=12',
-      vehicle: {
-        model: 'Honda Accord',
-        year: 2022
-      },
-      status: 'Active',
-      rating: 4.7,
-      totalRides: 876,
-      earnings: 11250.25
-    },
-    {
-      id: 'DRV_005',
-      name: 'Khalid Al-Thani',
-      phone: '+974 5512 8888',
-      avatar: 'https://i.pravatar.cc/40?img=13',
-      vehicle: {
-        model: 'Nissan Altima',
-        year: 2021
-      },
-      status: 'Active',
-      rating: 4.6,
-      totalRides: 654,
-      earnings: 8900.00
-    }
-  ]);
+  // API-related state
+  const [drivers, setDrivers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [limit] = useState(20);
 
+  // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
   const [ratingFilter, setRatingFilter] = useState('Any Rating');
@@ -112,6 +50,79 @@ export default function DriverManagementView() {
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
+
+  // Debounced search function
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  // Fetch drivers from API
+  const loadDrivers = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await fetchDriversList({
+        search: searchTerm || undefined,
+        status: statusFilter,
+        page: currentPage,
+        limit: limit
+      });
+
+      if (result.success) {
+        // Transform API data to UI format
+        const transformedDrivers = result.data.drivers.map(transformDriverData);
+        
+        setDrivers(transformedDrivers);
+        setTotalPages(result.data.totalPages);
+        setTotalCount(result.data.totalCount);
+        
+        console.log('✅ Drivers loaded successfully:', {
+          count: transformedDrivers.length,
+          totalCount: result.data.totalCount,
+          currentPage: result.data.currentPage,
+          totalPages: result.data.totalPages
+        });
+      } else {
+        setError(result.error || 'Failed to load drivers');
+        console.error('❌ Failed to load drivers:', result.error);
+      }
+    } catch (error) {
+      setError(error.message || 'An unexpected error occurred');
+      console.error('❌ Load drivers error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchTerm, statusFilter, currentPage, limit]);
+
+  // Debounced version of loadDrivers for search
+  const debouncedLoadDrivers = useCallback(
+    debounce(() => {
+      setCurrentPage(1); // Reset to first page on search
+      loadDrivers();
+    }, 300),
+    [loadDrivers]
+  );
+
+  // Load drivers on mount and when filters change
+  useEffect(() => {
+    loadDrivers();
+  }, [statusFilter, currentPage]);
+
+  // Load drivers with debounce when search term changes
+  useEffect(() => {
+    if (searchTerm !== undefined) {
+      debouncedLoadDrivers();
+    }
+  }, [searchTerm, debouncedLoadDrivers]);
 
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
@@ -165,24 +176,40 @@ export default function DriverManagementView() {
     setSearchTerm('');
     setStatusFilter('All Statuses');
     setRatingFilter('Any Rating');
+    setCurrentPage(1);
+  };
+
+  // Pagination handlers
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
   };
 
   const handleDriverClick = (driverId) => {
     navigate(`/driver-profile/${driverId}`);
   };
 
-  // Filter drivers based on search and filters
+  // Apply client-side rating filter (since API doesn't support rating filtering)
   const filteredDrivers = drivers.filter(driver => {
-    const matchesSearch = driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         driver.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         driver.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All Statuses' || driver.status === statusFilter;
     const matchesRating = ratingFilter === 'Any Rating' || 
                          (ratingFilter === '4.5+' && driver.rating >= 4.5) ||
                          (ratingFilter === '4.0+' && driver.rating >= 4.0) ||
                          (ratingFilter === '3.5+' && driver.rating >= 3.5);
     
-    return matchesSearch && matchesStatus && matchesRating;
+    return matchesRating;
   });
 
   return (
@@ -321,44 +348,183 @@ export default function DriverManagementView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDrivers.map((driver) => (
-                    <tr key={driver.id} className="driver-row" onClick={() => handleDriverClick(driver.id)} style={{ cursor: 'pointer' }}>
-                      <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
-                        <input 
-                          type="checkbox"
-                          checked={selectedDrivers.includes(driver.id)}
-                          onChange={() => handleSelectDriver(driver.id)}
-                        />
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                          <div className="loading-spinner" style={{ 
+                            width: '24px', 
+                            height: '24px', 
+                            border: '2px solid #e5e7eb', 
+                            borderTop: '2px solid #3b82f6', 
+                            borderRadius: '50%', 
+                            animation: 'spin 1s linear infinite' 
+                          }}></div>
+                          <span style={{ color: '#6b7280' }}>Loading drivers...</span>
+                        </div>
                       </td>
-                      <td className="driver-cell">
-                        <div className="driver-info-cell">
-                          <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
-                          <div>
-                            <div className="driver-name-text">{driver.name}</div>
-                            <div className="driver-phone">{driver.phone}</div>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ef4444' }}>error</span>
+                          <div style={{ color: '#ef4444', fontWeight: '500' }}>Error loading drivers</div>
+                          <div style={{ color: '#6b7280', fontSize: '14px' }}>{error}</div>
+                          <button 
+                            onClick={loadDrivers}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '14px'
+                            }}
+                          >
+                            Try Again
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredDrivers.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
+                          <div style={{ color: '#374151', fontWeight: '500' }}>No drivers found</div>
+                          <div style={{ color: '#6b7280', fontSize: '14px' }}>
+                            {searchTerm || statusFilter !== 'All Statuses' 
+                              ? 'Try adjusting your search or filter criteria' 
+                              : 'No drivers are currently registered on the platform'
+                            }
                           </div>
                         </div>
                       </td>
-                      <td className="vehicle-cell">
-                        <div className="vehicle-model">{driver.vehicle.model}</div>
-                        <div className="vehicle-year">{driver.vehicle.year}</div>
-                      </td>
-                      <td><StatusBadge status={driver.status} /></td>
-                      <td className="rating-cell">
-                        <span className="star-icon">★</span> {driver.rating.toFixed(1)}
-                      </td>
-                      <td className="rides-cell">{driver.totalRides.toLocaleString()}</td>
-                      <td className="earnings-cell">{driver.earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                        <button className="action-menu-btn" aria-label="Actions">
-                          <span className="material-symbols-outlined">more_vert</span>
-                        </button>
-                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredDrivers.map((driver) => (
+                      <tr key={driver.id} className="driver-row" onClick={() => handleDriverClick(driver.id)} style={{ cursor: 'pointer' }}>
+                        <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox"
+                            checked={selectedDrivers.includes(driver.id)}
+                            onChange={() => handleSelectDriver(driver.id)}
+                          />
+                        </td>
+                        <td className="driver-cell">
+                          <div className="driver-info-cell">
+                            <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
+                            <div>
+                              <div className="driver-name-text">{driver.name}</div>
+                              <div className="driver-phone">{driver.phone}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="vehicle-cell">
+                          <div className="vehicle-model">{driver.vehicle.model}</div>
+                          <div className="vehicle-year">{driver.vehicle.year}</div>
+                        </td>
+                        <td><StatusBadge status={driver.status} /></td>
+                        <td className="rating-cell">
+                          <span className="star-icon">★</span> {driver.rating.toFixed(1)}
+                        </td>
+                        <td className="rides-cell">{driver.totalRides.toLocaleString()}</td>
+                        <td className="earnings-cell">{driver.earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
+                          <button className="action-menu-btn" aria-label="Actions">
+                            <span className="material-symbols-outlined">more_vert</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && !isLoading && !error && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                padding: '16px 24px',
+                borderTop: '1px solid #e5e7eb',
+                backgroundColor: '#f9fafb'
+              }}>
+                <div style={{ color: '#6b7280', fontSize: '14px' }}>
+                  Showing {filteredDrivers.length} of {totalCount} drivers
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #d1d5db',
+                      backgroundColor: currentPage === 1 ? '#f9fafb' : 'white',
+                      color: currentPage === 1 ? '#9ca3af' : '#374151',
+                      borderRadius: '6px',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Previous
+                  </button>
+                  
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          style={{
+                            padding: '6px 12px',
+                            border: '1px solid #d1d5db',
+                            backgroundColor: currentPage === pageNum ? '#3b82f6' : 'white',
+                            color: currentPage === pageNum ? 'white' : '#374151',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                          }}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #d1d5db',
+                      backgroundColor: currentPage === totalPages ? '#f9fafb' : 'white',
+                      color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                      borderRadius: '6px',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

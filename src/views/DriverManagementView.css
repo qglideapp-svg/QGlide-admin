@@ -2,6 +2,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 @import '../components/CollapsibleSidebar.css';
 
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
 /* Driver Management Layout */
 .driver-management {
   font-family: 'Poppins', sans-serif;
