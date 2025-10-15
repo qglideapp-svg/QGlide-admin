@@ -167,7 +167,9 @@ const MapRoute = ({
           <div className="fallback-content">
             <h4>🗺️ Route Map</h4>
             <div className="route-visualization">
-              <div className="route-line-visual"></div>
+              <div className="route-line-visual">
+                <div className="direction-arrow-visual">➤</div>
+              </div>
               <div className="pin pickup-pin-visual">📍</div>
               <div className="pin dropoff-pin-visual">🎯</div>
             </div>
@@ -246,13 +248,43 @@ const MapRoute = ({
           
           {/* Route Line */}
           {routeLine.length === 2 && (
-            <Polyline
-              positions={routeLine}
-              color="#22bc44"
-              weight={4}
-              opacity={0.8}
-              dashArray="10, 10"
-            />
+            <>
+              <Polyline
+                positions={routeLine}
+                color="#22bc44"
+                weight={4}
+                opacity={0.8}
+                dashArray="10, 10"
+              />
+              {/* Directional Arrow */}
+              {(() => {
+                const [lat1, lng1] = routeLine[0];
+                const [lat2, lng2] = routeLine[1];
+                const midLat = (lat1 + lat2) / 2;
+                const midLng = (lng1 + lng2) / 2;
+                
+                // Calculate bearing for arrow direction
+                const toRadians = (deg) => deg * (Math.PI / 180);
+                const toDegrees = (rad) => rad * (180 / Math.PI);
+                const bearing = Math.atan2(
+                  Math.sin(toRadians(lng2 - lng1)) * Math.cos(toRadians(lat2)),
+                  Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) - 
+                  Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(toRadians(lng2 - lng1))
+                );
+                
+                return (
+                  <Marker 
+                    position={[midLat, midLng]} 
+                    icon={new L.DivIcon({
+                      className: 'direction-arrow',
+                      html: `<div style="transform: rotate(${toDegrees(bearing)}deg); color: #22bc44; font-size: 20px; text-align: center;">➤</div>`,
+                      iconSize: [20, 20],
+                      iconAnchor: [10, 10]
+                    })}
+                  />
+                );
+              })()}
+            </>
           )}
         </MapContainer>
       
@@ -292,7 +324,9 @@ const MapRoute = ({
           <div className="fallback-content">
             <h4>🗺️ Route Map</h4>
             <div className="route-visualization">
-              <div className="route-line-visual"></div>
+              <div className="route-line-visual">
+                <div className="direction-arrow-visual">➤</div>
+              </div>
               <div className="pin pickup-pin-visual">📍</div>
               <div className="pin dropoff-pin-visual">🎯</div>
             </div>
