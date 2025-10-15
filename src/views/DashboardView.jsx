@@ -23,6 +23,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 export default function DashboardView() {
+  // v2.0 - Fix section rendering issue
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('overview');
   const [dashboardData, setDashboardData] = useState(null);
