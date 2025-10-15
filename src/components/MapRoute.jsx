@@ -44,37 +44,6 @@ const MapRoute = ({
   useEffect(() => {
     try {
       if (pickupCoordinates && dropoffCoordinates) {
-        // Parse coordinates from POINT format or array
-        const parseCoordinates = (coords) => {
-          if (Array.isArray(coords)) {
-            return coords;
-          }
-          if (typeof coords === 'string') {
-            // Handle POINT(lng lat) format
-            const match = coords.match(/POINT\(([^)]+)\)/);
-            if (match) {
-              const parts = match[1].trim().split(/\s+/);
-              if (parts.length === 2) {
-                const lng = parseFloat(parts[0]);
-                const lat = parseFloat(parts[1]);
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  return [lat, lng];  // Leaflet needs [lat, lng]
-                }
-              }
-            }
-            // Handle comma-separated format
-            const parts = coords.split(',');
-            if (parts.length === 2) {
-              const lat = parseFloat(parts[0].trim());
-              const lng = parseFloat(parts[1].trim());
-              if (!isNaN(lat) && !isNaN(lng)) {
-                return [lat, lng];
-              }
-            }
-          }
-          return null;
-        };
-
         const pickup = parseCoordinates(pickupCoordinates);
         const dropoff = parseCoordinates(dropoffCoordinates);
 
@@ -195,7 +164,7 @@ const MapRoute = ({
     );
   }
 
-  // Parse coordinates helper function
+  // Parse coordinates helper function (outside useEffect)
   const parseCoordinates = (coords) => {
     if (Array.isArray(coords)) {
       return coords;
