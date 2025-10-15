@@ -1,4 +1,3 @@
-// DashboardView v1.1 - Financial Management Integration
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DashboardView.css';
@@ -49,9 +48,7 @@ export default function DashboardView() {
   }, [selectedTimeframe]);
   
   useEffect(() => {
-    console.log('Active section changed to:', activeSection);
     if (activeSection === 'financial') {
-      console.log('Loading financial data...');
       loadFinancialData();
     }
   }, [activeSection]);
@@ -129,12 +126,9 @@ export default function DashboardView() {
   };
 
   const handleNavClick = (navItem) => {
-    console.log('DashboardView v1.1 - Navigation clicked:', navItem);
     if (navItem === 'financial') {
-      console.log('Switching to financial section');
       setActiveSection('financial');
     } else if (navItem === 'overview') {
-      console.log('Switching to overview section');
       setActiveSection('overview');
     } else if (navItem === 'ride-management') {
       navigate('/ride-management');
@@ -367,7 +361,7 @@ export default function DashboardView() {
           <>
             <header className="top financial-header">
               <div className="titles">
-                <h1>Financial Management <span style={{fontSize: '12px', color: '#10b981', marginLeft: '8px', fontWeight: 'normal'}}>v1.1</span></h1>
+                <h1>Financial Management</h1>
                 <p className="sub">Monitor transactions, manage payouts, and set commissions.</p>
               </div>
               <div className="acts">
