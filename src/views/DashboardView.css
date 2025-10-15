@@ -1259,37 +1259,19 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
 }
 
 .pie-chart {
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  position: relative;
-  background: conic-gradient(
-    from 0deg,
-    var(--color) 0% calc(var(--start) + var(--value)),
-    transparent calc(var(--start) + var(--value)) 100%
-  );
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
-.pie-slice {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 50% 0%);
+.pie-slice-path {
+  transition: opacity 0.2s, transform 0.2s;
+  transform-origin: center;
+  cursor: pointer;
 }
 
-/* Create actual pie chart using individual slices */
-.pie-chart::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 60px;
-  height: 60px;
-  background: white;
-  border-radius: 50%;
-  z-index: 2;
+.pie-slice-path:hover {
+  opacity: 0.85;
+  filter: brightness(1.1);
 }
 
 .pie-legend {

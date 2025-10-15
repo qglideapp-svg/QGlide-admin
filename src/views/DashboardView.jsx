@@ -321,6 +321,24 @@ export default function DashboardView() {
     return `${value}%`;
   };
 
+  // Helper function to create SVG pie chart path
+  const createPieSlice = (startAngle, endAngle, radius = 80) => {
+    const centerX = 100;
+    const centerY = 100;
+    
+    const startRadians = (startAngle - 90) * (Math.PI / 180);
+    const endRadians = (endAngle - 90) * (Math.PI / 180);
+    
+    const x1 = centerX + radius * Math.cos(startRadians);
+    const y1 = centerY + radius * Math.sin(startRadians);
+    const x2 = centerX + radius * Math.cos(endRadians);
+    const y2 = centerY + radius * Math.sin(endRadians);
+    
+    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+    
+    return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+  };
+
   return (
     <div className="dash grid-root">
       <aside className="side">
@@ -986,22 +1004,24 @@ export default function DashboardView() {
                       </div>
                       <div className="chart-content">
                         <div className="pie-chart-container">
-                          <div className="pie-chart">
+                          <svg className="pie-chart" viewBox="0 0 200 200" width="160" height="160">
                             {ridesByVehicleType.map((vehicle, index) => {
                               const prevPercentages = ridesByVehicleType.slice(0, index).reduce((sum, v) => sum + v.percentage, 0);
+                              const startAngle = (prevPercentages / 100) * 360;
+                              const endAngle = ((prevPercentages + vehicle.percentage) / 100) * 360;
+                              const pathData = createPieSlice(startAngle, endAngle);
+                              
                               return (
-                                <div 
+                                <path
                                   key={index}
-                                  className="pie-slice"
-                                  style={{
-                                    '--start': `${prevPercentages}%`,
-                                    '--value': `${vehicle.percentage}%`,
-                                    '--color': vehicle.color
-                                  }}
+                                  d={pathData}
+                                  fill={vehicle.color}
+                                  className="pie-slice-path"
                                 />
                               );
                             })}
-                          </div>
+                            <circle cx="100" cy="100" r="30" fill="white" />
+                          </svg>
                           <div className="pie-legend">
                             {ridesByVehicleType.map((vehicle, index) => (
                               <div key={index} className="legend-item">
@@ -1091,22 +1111,24 @@ export default function DashboardView() {
                       </div>
                       <div className="chart-content">
                         <div className="pie-chart-container">
-                          <div className="pie-chart">
+                          <svg className="pie-chart" viewBox="0 0 200 200" width="160" height="160">
                             {revenueByPaymentType.map((payment, index) => {
                               const prevPercentages = revenueByPaymentType.slice(0, index).reduce((sum, p) => sum + p.percentage, 0);
+                              const startAngle = (prevPercentages / 100) * 360;
+                              const endAngle = ((prevPercentages + payment.percentage) / 100) * 360;
+                              const pathData = createPieSlice(startAngle, endAngle);
+                              
                               return (
-                                <div 
+                                <path
                                   key={index}
-                                  className="pie-slice"
-                                  style={{
-                                    '--start': `${prevPercentages}%`,
-                                    '--value': `${payment.percentage}%`,
-                                    '--color': payment.color
-                                  }}
+                                  d={pathData}
+                                  fill={payment.color}
+                                  className="pie-slice-path"
                                 />
                               );
                             })}
-                          </div>
+                            <circle cx="100" cy="100" r="30" fill="white" />
+                          </svg>
                           <div className="pie-legend">
                             {revenueByPaymentType.map((payment, index) => (
                               <div key={index} className="legend-item">
