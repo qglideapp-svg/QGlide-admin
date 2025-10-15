@@ -56,8 +56,12 @@ const MapRoute = ({
   };
 
   useEffect(() => {
+    let isMounted = true;
+    
     const initializeGoogleMap = () => {
       try {
+        if (!isMounted) return;
+        
         if (!window.google || !window.google.maps) {
           setMapError('Google Maps API not loaded');
           setIsLoading(false);
@@ -197,10 +201,7 @@ const MapRoute = ({
 
         routePath.setMap(map);
 
-        // Calculate and display distance
-        const distance = calculateDistance(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
-        
-        // Create distance info window
+        // Create distance info window using the already calculated distance
         const distanceInfoWindow = new window.google.maps.InfoWindow({
           content: `
             <div style="padding: 8px; text-align: center;">
@@ -228,8 +229,16 @@ const MapRoute = ({
 
     // Load Google Maps API if not already loaded
     if (!window.google || !window.google.maps) {
+      // Check if script is already being loaded
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+      if (existingScript) {
+        // Script already exists, just wait for it to load
+        existingScript.onload = initializeGoogleMap;
+        return;
+      }
+      
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWWgEHLplDIAE&libraries=geometry`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBrThzOJlW4SbyUHKLoCrv9yK5AAs_esao&libraries=geometry&loading=async`;
       script.async = true;
       script.defer = true;
       script.onload = initializeGoogleMap;
@@ -241,6 +250,11 @@ const MapRoute = ({
     } else {
       initializeGoogleMap();
     }
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [pickupCoordinates, dropoffCoordinates, pickupLocation, dropoffLocation]);
 
   // If there's a map error, show fallback
@@ -260,7 +274,7 @@ const MapRoute = ({
             <div className="fallback-info">
               <p><strong>Pickup:</strong> {pickupLocation || 'Not specified'}</p>
               <p><strong>Dropoff:</strong> {dropoffLocation || 'Not specified'}</p>
-              <p style="color: #df4444; margin-top: 10px;"><strong>Error:</strong> {mapError}</p>
+              <p style={{color: '#df4444', marginTop: '10px'}}><strong>Error:</strong> {mapError}</p>
             </div>
           </div>
         </div>
