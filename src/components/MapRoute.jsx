@@ -272,14 +272,16 @@ const MapRoute = ({
                   Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(toRadians(lng2 - lng1))
                 );
                 
+                console.log('Arrow bearing:', toDegrees(bearing), 'degrees');
+                
                 return (
                   <Marker 
                     position={[midLat, midLng]} 
                     icon={new L.DivIcon({
                       className: 'direction-arrow',
-                      html: `<div style="transform: rotate(${toDegrees(bearing)}deg); color: #22bc44; font-size: 20px; text-align: center;">➤</div>`,
-                      iconSize: [20, 20],
-                      iconAnchor: [10, 10]
+                      html: `<div style="transform: rotate(${toDegrees(bearing)}deg); color: #df4444; font-size: 24px; text-align: center; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">➤</div>`,
+                      iconSize: [30, 30],
+                      iconAnchor: [15, 15]
                     })}
                   />
                 );
