@@ -11,6 +11,7 @@ import notificationsIcon from '../assets/icons/notifications.png';
 import { fetchDashboardData, fetchRidesAnalytics } from '../services/dashboardService';
 import { logoutUser } from '../services/authService';
 import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../services/financialService';
+import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved } from '../services/supportService';
 import Toast from '../components/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -37,6 +38,13 @@ export default function DashboardView() {
   const [payoutRequests, setPayoutRequests] = useState([]);
   const [isFinancialLoading, setIsFinancialLoading] = useState(false);
   const [transactionFilter, setTransactionFilter] = useState('All Types');
+  
+  // Support states
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketFilter, setTicketFilter] = useState('open');
+  const [isSupportLoading, setIsSupportLoading] = useState(false);
+  const [replyMessage, setReplyMessage] = useState('');
 
   useEffect(() => {
     loadDashboardData();
@@ -50,8 +58,16 @@ export default function DashboardView() {
   useEffect(() => {
     if (activeSection === 'financial') {
       loadFinancialData();
+    } else if (activeSection === 'support') {
+      loadSupportData();
     }
   }, [activeSection]);
+  
+  useEffect(() => {
+    if (activeSection === 'support') {
+      loadSupportData();
+    }
+  }, [ticketFilter]);
 
   const loadAnalyticsData = async () => {
     setIsAnalyticsLoading(true);
@@ -124,10 +140,31 @@ export default function DashboardView() {
       setIsFinancialLoading(false);
     }
   };
+  
+  const loadSupportData = async () => {
+    setIsSupportLoading(true);
+    
+    try {
+      const tickets = await fetchSupportTickets(ticketFilter);
+      setSupportTickets(tickets);
+      
+      // If a ticket was already selected, refresh its data
+      if (selectedTicket) {
+        const updatedTicket = await fetchTicketDetails(selectedTicket.id);
+        setSelectedTicket(updatedTicket);
+      }
+    } catch (err) {
+      console.error('Support data error:', err);
+    } finally {
+      setIsSupportLoading(false);
+    }
+  };
 
   const handleNavClick = (navItem) => {
     if (navItem === 'financial') {
       setActiveSection('financial');
+    } else if (navItem === 'support') {
+      setActiveSection('support');
     } else if (navItem === 'overview') {
       setActiveSection('overview');
     } else if (navItem === 'ride-management') {
@@ -142,6 +179,46 @@ export default function DashboardView() {
   
   const handleExportCSV = () => {
     exportTransactionsCSV(transactions);
+  };
+  
+  const handleTicketSelect = async (ticket) => {
+    try {
+      const details = await fetchTicketDetails(ticket.id);
+      setSelectedTicket(details);
+    } catch (err) {
+      console.error('Error fetching ticket details:', err);
+    }
+  };
+  
+  const handleSendMessage = async () => {
+    if (!replyMessage.trim() || !selectedTicket) return;
+    
+    try {
+      await sendMessage(selectedTicket.id, replyMessage);
+      setReplyMessage('');
+      
+      // Refresh the ticket details to show the new message
+      const updatedTicket = await fetchTicketDetails(selectedTicket.id);
+      setSelectedTicket(updatedTicket);
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  };
+  
+  const handleMarkAsResolved = async () => {
+    if (!selectedTicket) return;
+    
+    try {
+      await markAsResolved(selectedTicket.id);
+      
+      // Refresh support data
+      await loadSupportData();
+      
+      // Clear selected ticket if it was resolved
+      setSelectedTicket(null);
+    } catch (err) {
+      console.error('Error marking ticket as resolved:', err);
+    }
   };
 
   const closeToast = () => {
@@ -198,7 +275,7 @@ export default function DashboardView() {
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
-          <NavItem icon="support_agent" label="Support" />
+          <NavItem icon="support_agent" label="Support" active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" />
         </nav>
 
@@ -357,7 +434,7 @@ export default function DashboardView() {
           </section>
         </div>
           </>
-        ) : (
+        ) : activeSection === 'financial' ? (
           <>
             <header className="top financial-header">
               <div className="titles">
@@ -523,7 +600,177 @@ export default function DashboardView() {
               )}
             </div>
           </>
-        )}
+        ) : activeSection === 'support' ? (
+          <>
+            <header className="top support-header">
+              <div className="titles">
+                <h1>Support Ticket Center</h1>
+                <p className="sub">Manage customer inquiries and provide assistance.</p>
+              </div>
+              <div className="acts">
+                <div className="search">
+                  <span className="material-symbols-outlined">search</span>
+                  <input placeholder="Search tickets..." />
+                </div>
+                <button className="chip on">EN</button>
+                <button className="chip">AR</button>
+                <button className="ibtn" aria-label="notifications">
+                  <img src={notificationsIcon} alt="notifications" className="kimg" />
+                  <i className="dot" />
+                </button>
+              </div>
+            </header>
+
+            <div className="container support-section">
+              {isSupportLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading support tickets...</p>
+                </div>
+              ) : (
+                <div className="support-layout">
+                  {/* Left Sidebar - Ticket List */}
+                  <div className="tickets-sidebar">
+                    <div className="ticket-filters">
+                      <button 
+                        className={`filter-tab ${ticketFilter === 'open' ? 'active' : ''}`}
+                        onClick={() => setTicketFilter('open')}
+                      >
+                        Open
+                        <span className="count">{supportTickets.filter(t => t.status === 'open').length}</span>
+                      </button>
+                      <button 
+                        className={`filter-tab ${ticketFilter === 'pending' ? 'active' : ''}`}
+                        onClick={() => setTicketFilter('pending')}
+                      >
+                        Pending
+                        <span className="count">{supportTickets.filter(t => t.status === 'pending').length}</span>
+                      </button>
+                      <button 
+                        className={`filter-tab ${ticketFilter === 'resolved' ? 'active' : ''}`}
+                        onClick={() => setTicketFilter('resolved')}
+                      >
+                        Resolved
+                        <span className="count">{supportTickets.filter(t => t.status === 'resolved').length}</span>
+                      </button>
+                    </div>
+
+                    <div className="tickets-list">
+                      {supportTickets.map((ticket) => (
+                        <div 
+                          key={ticket.id}
+                          className={`ticket-item ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
+                          onClick={() => handleTicketSelect(ticket)}
+                        >
+                          <div className="ticket-header-row">
+                            <span className="ticket-id">{ticket.id}</span>
+                            <span className={`priority-badge ${ticket.priority}`}>{ticket.priority}</span>
+                          </div>
+                          <div className="ticket-title">{ticket.title}</div>
+                          <div className="ticket-meta">
+                            <span className="requester">{ticket.requester}</span>
+                            <span className="date">{ticket.date}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right Panel - Ticket Details & Conversation */}
+                  <div className="ticket-details">
+                    {selectedTicket ? (
+                      <>
+                        <div className="ticket-details-header">
+                          <div className="ticket-title-section">
+                            <h2>{selectedTicket.title}</h2>
+                            <span className={`status-badge ${selectedTicket.status}`}>
+                              {selectedTicket.status}
+                            </span>
+                          </div>
+                          <div className="ticket-actions">
+                            {selectedTicket.status !== 'resolved' && (
+                              <button className="resolve-btn" onClick={handleMarkAsResolved}>
+                                <span className="material-symbols-outlined">check_circle</span>
+                                Mark as Resolved
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="ticket-info-bar">
+                          <div className="info-item">
+                            <span className="label">Ticket ID:</span>
+                            <span className="value">{selectedTicket.id}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Requester:</span>
+                            <span className="value">{selectedTicket.requester}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Priority:</span>
+                            <span className={`priority-badge ${selectedTicket.priority}`}>
+                              {selectedTicket.priority}
+                            </span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Date:</span>
+                            <span className="value">{selectedTicket.date}</span>
+                          </div>
+                        </div>
+
+                        <div className="conversation-area">
+                          <div className="conversation-thread">
+                            {selectedTicket.conversation.map((msg) => (
+                              <div key={msg.id} className={`message-bubble ${msg.sender}`}>
+                                <div className="message-header">
+                                  <span className="sender-name">{msg.senderName}</span>
+                                  <span className="message-time">
+                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <div className="message-content">{msg.message}</div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {selectedTicket.status !== 'resolved' && (
+                            <div className="reply-area">
+                              <textarea
+                                className="reply-input"
+                                placeholder="Type your reply..."
+                                value={replyMessage}
+                                onChange={(e) => setReplyMessage(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage();
+                                  }
+                                }}
+                              />
+                              <button 
+                                className="send-btn" 
+                                onClick={handleSendMessage}
+                                disabled={!replyMessage.trim()}
+                              >
+                                <span className="material-symbols-outlined">send</span>
+                                Send
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="no-ticket-selected">
+                        <span className="material-symbols-outlined">support_agent</span>
+                        <p>Select a ticket to view details and conversation</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
       </main>
       
       {showToast && (
