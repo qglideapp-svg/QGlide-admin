@@ -66,6 +66,14 @@ export default function DriverManagementView() {
 
   // Fetch drivers from API
   const loadDrivers = useCallback(async () => {
+    console.log('🔄 LOADING DRIVERS:', {
+      '🔍 Search Term': searchTerm,
+      '📊 Status Filter': statusFilter,
+      '📄 Current Page': currentPage,
+      '📏 Limit': limit,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
     setIsLoading(true);
     setError(null);
 
@@ -75,6 +83,13 @@ export default function DriverManagementView() {
         status: statusFilter,
         page: currentPage,
         limit: limit
+      });
+
+      console.log('📡 API RESULT RECEIVED:', {
+        '✅ Success': result.success,
+        '📊 Has Data': !!result.data,
+        '📝 Error': result.error,
+        '🔍 Full Result': result
       });
 
       if (result.success && result.data) {
@@ -88,12 +103,15 @@ export default function DriverManagementView() {
         setTotalPages(result.data.totalPages || 1);
         setTotalCount(result.data.totalCount || 0);
         
-        console.log('✅ Drivers loaded successfully:', {
-          count: transformedDrivers.length,
-          totalCount: result.data.totalCount,
-          currentPage: result.data.currentPage,
-          totalPages: result.data.totalPages,
-          rawDrivers: driversArray
+        console.log('✅ DRIVERS LOADED SUCCESSFULLY:', {
+          '📊 Transformed Count': transformedDrivers.length,
+          '📝 Total Count': result.data.totalCount,
+          '📄 Current Page': result.data.currentPage,
+          '📋 Total Pages': result.data.totalPages,
+          '🔍 Raw Drivers Array': driversArray,
+          '📋 Full Result Data': result.data,
+          '⚙️ Transformed Drivers': transformedDrivers,
+          '🎯 First Transformed Driver': transformedDrivers[0] || 'No drivers'
         });
       } else {
         setError(result.error || 'Failed to load drivers');
@@ -270,8 +288,8 @@ export default function DriverManagementView() {
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div>
-              <h1>Driver Management</h1>
-              <p className="sub">Search, filter, and manage all drivers on the platform.</p>
+            <h1>Driver Management</h1>
+            <p className="sub">Search, filter, and manage all drivers on the platform.</p>
             </div>
           </div>
           <div className="acts">
@@ -421,39 +439,39 @@ export default function DriverManagementView() {
                     </tr>
                   ) : (
                     filteredDrivers.map((driver) => (
-                      <tr key={driver.id} className="driver-row" onClick={() => handleDriverClick(driver.id)} style={{ cursor: 'pointer' }}>
-                        <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
-                          <input 
-                            type="checkbox"
-                            checked={selectedDrivers.includes(driver.id)}
-                            onChange={() => handleSelectDriver(driver.id)}
-                          />
-                        </td>
-                        <td className="driver-cell">
-                          <div className="driver-info-cell">
-                            <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
-                            <div>
-                              <div className="driver-name-text">{driver.name}</div>
-                              <div className="driver-phone">{driver.phone}</div>
-                            </div>
+                    <tr key={driver.id} className="driver-row" onClick={() => handleDriverClick(driver.id)} style={{ cursor: 'pointer' }}>
+                      <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox"
+                          checked={selectedDrivers.includes(driver.id)}
+                          onChange={() => handleSelectDriver(driver.id)}
+                        />
+                      </td>
+                      <td className="driver-cell">
+                        <div className="driver-info-cell">
+                          <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
+                          <div>
+                            <div className="driver-name-text">{driver.name}</div>
+                            <div className="driver-phone">{driver.phone}</div>
                           </div>
-                        </td>
-                        <td className="vehicle-cell">
-                          <div className="vehicle-model">{driver.vehicle.model}</div>
-                          <div className="vehicle-year">{driver.vehicle.year}</div>
-                        </td>
-                        <td><StatusBadge status={driver.status} /></td>
-                        <td className="rating-cell">
-                          <span className="star-icon">★</span> {driver.rating.toFixed(1)}
-                        </td>
-                        <td className="rides-cell">{driver.totalRides.toLocaleString()}</td>
-                        <td className="earnings-cell">{driver.earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                          <button className="action-menu-btn" aria-label="Actions">
-                            <span className="material-symbols-outlined">more_vert</span>
-                          </button>
-                        </td>
-                      </tr>
+                        </div>
+                      </td>
+                      <td className="vehicle-cell">
+                        <div className="vehicle-model">{driver.vehicle.model}</div>
+                        <div className="vehicle-year">{driver.vehicle.year}</div>
+                      </td>
+                      <td><StatusBadge status={driver.status} /></td>
+                      <td className="rating-cell">
+                        <span className="star-icon">★</span> {driver.rating.toFixed(1)}
+                      </td>
+                      <td className="rides-cell">{driver.totalRides.toLocaleString()}</td>
+                      <td className="earnings-cell">{driver.earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
+                        <button className="action-menu-btn" aria-label="Actions">
+                          <span className="material-symbols-outlined">more_vert</span>
+                        </button>
+                      </td>
+                    </tr>
                     ))
                   )}
                 </tbody>

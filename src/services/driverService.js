@@ -31,12 +31,28 @@ export const fetchDriversList = async (params = {}) => {
 
     const url = `${API_BASE_URL}/admin-drivers-list?${queryParams.toString()}`;
 
+    console.log('🚀 API REQUEST DETAILS:', {
+      '🔗 URL': url,
+      '📝 Params': params,
+      '🔑 Has Token': !!token,
+      '📋 Query String': queryParams.toString(),
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+    });
+
+    console.log('📡 HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '📋 Headers': Object.fromEntries(response.headers.entries()),
+      '✅ OK': response.ok
     });
 
     if (!response.ok) {
@@ -66,15 +82,30 @@ export const fetchDriversList = async (params = {}) => {
       hasPrevPage: data.hasPrevPage || false
     };
 
-    console.log('🔍 API Response Debug:', {
-      originalData: data,
-      driversArray: driversArray,
-      transformedData: transformedData
+    console.log('🔍 FULL API RESPONSE DEBUG:', {
+      '📡 Raw Response': data,
+      '🔍 Response Type': typeof data,
+      '📊 Is Object': typeof data === 'object',
+      '🔢 Response Keys': Object.keys(data || {}),
+      '📝 Drivers Array': driversArray,
+      '📏 Drivers Length': driversArray.length,
+      '🔍 First Driver': driversArray[0] || 'No drivers',
+      '📋 All Drivers': driversArray,
+      '⚙️ Transformed Data': transformedData,
+      '🔗 Request URL': url,
+      '📝 Request Params': params
     });
 
     return { success: true, data: transformedData };
   } catch (error) {
-    console.error('Fetch drivers list error:', error);
+    console.error('❌ FETCH DRIVERS LIST ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '🔗 Request URL': url || 'Unknown',
+      '📝 Request Params': params,
+      '⏰ Timestamp': new Date().toISOString()
+    });
     return { 
       success: false, 
       error: error.message || 'Failed to fetch drivers list' 
