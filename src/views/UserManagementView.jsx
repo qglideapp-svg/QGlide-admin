@@ -106,6 +106,8 @@ export default function UserManagementView() {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
       navigate('/dashboard?section=analytics');
+    } else if (navItem === 'reports') {
+      navigate('/reports');
     }
   };
 
@@ -195,6 +197,7 @@ export default function UserManagementView() {
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">

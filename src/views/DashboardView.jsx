@@ -248,6 +248,8 @@ export default function DashboardView() {
       navigate('/user-management');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
+    } else if (navItem === 'reports') {
+      navigate('/reports');
     }
     // Add other navigation handlers as needed
   }, [navigate]);
@@ -370,6 +372,7 @@ export default function DashboardView() {
           <NavItem icon="account_balance_wallet" label="Financial" active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
           <NavItem icon="support_agent" label="Support" active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" active={activeSection === 'analytics'} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">

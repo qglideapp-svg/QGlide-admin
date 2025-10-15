@@ -273,6 +273,7 @@ export default function RideManagementView() {
           <NavItem icon="account_balance_wallet" label="Financial" />
           <NavItem icon="support_agent" label="Support" />
           <NavItem icon="insights" label="Analytics" />
+          <NavItem icon="assessment" label="Reports" />
         </nav>
 
         <div className="sfoot">
