@@ -1,33 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useState, useRef } from 'react';
 import './MapRoute.css';
-
-// Fix for default markers in react-leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Custom icons
-const pickupIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCAyNSA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIuNSIgY3k9IjEyLjUiIHI9IjEwIiBmaWxsPSIjMjJiYzQ0IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz4KPHBhdGggZD0iTTEyLjUgMjIuNUwxMi41IDQwIiBzdHJva2U9IiMyMmJjNDQiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSIxMi41IiB5PSIxMCIgZmlsbD0id2hpdGUiIGZvbnQtc2l6ZT0iOCIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5QPC90ZXh0Pgo8L3N2Zz4K',
-  iconSize: [25, 40],
-  iconAnchor: [12, 40],
-  popupAnchor: [0, -40],
-});
-
-const dropoffIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCAyNSA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIuNSIgY3k9IjEyLjUiIHI9IjEwIiBmaWxsPSIjZGY0NDQ0IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz4KPHBhdGggZD0iTTEyLjUgMjIuNUwxMi41IDQwIiBzdHJva2U9IiNkZjQ0NDQiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSIxMi41IiB5PSIxMCIgZmlsbD0id2hpdGUiIGZvbnQtc2l6ZT0iOCIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5EPC90ZXh0Pgo8L3N2Zz4K',
-  iconSize: [25, 40],
-  iconAnchor: [12, 40],
-  popupAnchor: [0, -40],
-});
-
-// Google Maps Route Component
 
 const MapRoute = ({ 
   pickupLocation, 
@@ -36,54 +8,9 @@ const MapRoute = ({
   dropoffCoordinates,
   className = ""
 }) => {
-  const [center, setCenter] = useState([25.2769, 51.5007]); // Default to Doha
-  const [zoom, setZoom] = useState(12);
-  const [routeLine, setRouteLine] = useState([]);
+  const mapRef = useRef(null);
   const [mapError, setMapError] = useState(null);
-
-  useEffect(() => {
-    try {
-      if (pickupCoordinates && dropoffCoordinates) {
-        const pickup = parseCoordinates(pickupCoordinates);
-        const dropoff = parseCoordinates(dropoffCoordinates);
-
-        if (pickup && dropoff) {
-          // Calculate center point
-          const centerLat = (pickup[0] + dropoff[0]) / 2;
-          const centerLng = (pickup[1] + dropoff[1]) / 2;
-          setCenter([centerLat, centerLng]);
-
-          // Set route line
-          setRouteLine([pickup, dropoff]);
-
-          // Calculate appropriate zoom level based on distance
-          const distance = calculateDistance(pickup[0], pickup[1], dropoff[0], dropoff[1]);
-          if (distance > 50) {
-            setZoom(10);
-          } else if (distance > 20) {
-            setZoom(11);
-          } else {
-            setZoom(13);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Map initialization error:', error);
-      setMapError(error.message);
-    }
-  }, [pickupCoordinates, dropoffCoordinates]);
-
-  // Function to calculate distance between two points
-  const calculateDistance = (lat1, lng1, lat2, lng2) => {
-    const R = 6371; // Radius of the Earth in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  };
+  const [isLoading, setIsLoading] = useState(true);
 
   // Parse coordinates helper function
   const parseCoordinates = (coords) => {
@@ -99,7 +26,7 @@ const MapRoute = ({
           const lng = parseFloat(parts[0]);
           const lat = parseFloat(parts[1]);
           if (!isNaN(lat) && !isNaN(lng)) {
-            return [lat, lng];  // Leaflet needs [lat, lng]
+            return { lat, lng };
           }
         }
       }
@@ -109,15 +36,212 @@ const MapRoute = ({
         const lat = parseFloat(parts[0].trim());
         const lng = parseFloat(parts[1].trim());
         if (!isNaN(lat) && !isNaN(lng)) {
-          return [lat, lng];
+          return { lat, lng };
         }
       }
     }
     return null;
   };
 
-  const pickupCoords = parseCoordinates(pickupCoordinates);
-  const dropoffCoords = parseCoordinates(dropoffCoordinates);
+  // Function to calculate distance between two points
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  useEffect(() => {
+    const initializeGoogleMap = () => {
+      try {
+        if (!window.google || !window.google.maps) {
+          setMapError('Google Maps API not loaded');
+          setIsLoading(false);
+          return;
+        }
+
+        const pickup = parseCoordinates(pickupCoordinates);
+        const dropoff = parseCoordinates(dropoffCoordinates);
+
+        if (!pickup || !dropoff) {
+          setMapError('Invalid coordinates provided');
+          setIsLoading(false);
+          return;
+        }
+
+        // Calculate center point
+        const centerLat = (pickup.lat + dropoff.lat) / 2;
+        const centerLng = (pickup.lng + dropoff.lng) / 2;
+
+        // Calculate appropriate zoom level based on distance
+        const distance = calculateDistance(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
+        let zoom = 12;
+        if (distance > 50) {
+          zoom = 10;
+        } else if (distance > 20) {
+          zoom = 11;
+        } else {
+          zoom = 13;
+        }
+
+        // Initialize map
+        const map = new window.google.maps.Map(mapRef.current, {
+          center: { lat: centerLat, lng: centerLng },
+          zoom: zoom,
+          mapTypeId: 'roadmap',
+          styles: [
+            {
+              featureType: 'poi',
+              elementType: 'labels',
+              stylers: [{ visibility: 'off' }]
+            }
+          ]
+        });
+
+        // Create pickup marker
+        const pickupMarker = new window.google.maps.Marker({
+          position: pickup,
+          map: map,
+          title: 'Pickup Location',
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#22bc44',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          },
+          label: {
+            text: 'P',
+            color: '#ffffff',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }
+        });
+
+        // Create dropoff marker
+        const dropoffMarker = new window.google.maps.Marker({
+          position: dropoff,
+          map: map,
+          title: 'Dropoff Location',
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#df4444',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          },
+          label: {
+            text: 'D',
+            color: '#ffffff',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }
+        });
+
+        // Create info windows
+        const pickupInfoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px;">
+              <h4 style="margin: 0 0 4px 0; color: #22bc44;">📍 Pickup Location</h4>
+              <p style="margin: 0; font-size: 14px;">${pickupLocation || 'Pickup location'}</p>
+            </div>
+          `
+        });
+
+        const dropoffInfoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px;">
+              <h4 style="margin: 0 0 4px 0; color: #df4444;">🎯 Dropoff Location</h4>
+              <p style="margin: 0; font-size: 14px;">${dropoffLocation || 'Dropoff location'}</p>
+            </div>
+          `
+        });
+
+        // Add click listeners to markers
+        pickupMarker.addListener('click', () => {
+          pickupInfoWindow.open(map, pickupMarker);
+        });
+
+        dropoffMarker.addListener('click', () => {
+          dropoffInfoWindow.open(map, dropoffMarker);
+        });
+
+        // Draw route line with directional arrow
+        const routePath = new window.google.maps.Polyline({
+          path: [pickup, dropoff],
+          geodesic: true,
+          strokeColor: '#22bc44',
+          strokeOpacity: 0.8,
+          strokeWeight: 4,
+          icons: [
+            {
+              icon: {
+                path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                scale: 3,
+                fillColor: '#df4444',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 1
+              },
+              offset: '50%',
+              repeat: '0px'
+            }
+          ]
+        });
+
+        routePath.setMap(map);
+
+        // Calculate and display distance
+        const distance = calculateDistance(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
+        
+        // Create distance info window
+        const distanceInfoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px; text-align: center;">
+              <h4 style="margin: 0 0 4px 0; color: #333;">📏 Route Distance</h4>
+              <p style="margin: 0; font-size: 16px; font-weight: bold; color: #22bc44;">${distance.toFixed(2)} km</p>
+            </div>
+          `,
+          position: { lat: centerLat, lng: centerLng }
+        });
+
+        // Show distance info after a short delay
+        setTimeout(() => {
+          distanceInfoWindow.open(map);
+        }, 1000);
+
+        setIsLoading(false);
+        setMapError(null);
+
+      } catch (error) {
+        console.error('Google Maps initialization error:', error);
+        setMapError(error.message);
+        setIsLoading(false);
+      }
+    };
+
+    // Load Google Maps API if not already loaded
+    if (!window.google || !window.google.maps) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWWgEHLplDIAE&libraries=geometry`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGoogleMap;
+      script.onerror = () => {
+        setMapError('Failed to load Google Maps API');
+        setIsLoading(false);
+      };
+      document.head.appendChild(script);
+    } else {
+      initializeGoogleMap();
+    }
+  }, [pickupCoordinates, dropoffCoordinates, pickupLocation, dropoffLocation]);
 
   // If there's a map error, show fallback
   if (mapError) {
@@ -136,6 +260,7 @@ const MapRoute = ({
             <div className="fallback-info">
               <p><strong>Pickup:</strong> {pickupLocation || 'Not specified'}</p>
               <p><strong>Dropoff:</strong> {dropoffLocation || 'Not specified'}</p>
+              <p style="color: #df4444; margin-top: 10px;"><strong>Error:</strong> {mapError}</p>
             </div>
           </div>
         </div>
@@ -164,159 +289,49 @@ const MapRoute = ({
     );
   }
 
-  try {
+  // Show loading state
+  if (isLoading) {
     return (
       <div className={`map-route-container ${className}`}>
-        <MapContainer
-          center={center}
-          zoom={zoom}
-          style={{ height: '300px', width: '100%' }}
-          scrollWheelZoom={true}
-          zoomControl={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
-          {/* Pickup Marker */}
-          {pickupCoords && Array.isArray(pickupCoords) && !isNaN(pickupCoords[0]) && !isNaN(pickupCoords[1]) && (
-            <Marker position={pickupCoords} icon={pickupIcon}>
-              <Popup>
-                <div className="marker-popup">
-                  <h4>📍 Pickup Location</h4>
-                  <p>{pickupLocation || 'Pickup point'}</p>
-                  <small>Coordinates: {pickupCoords[0].toFixed(6)}, {pickupCoords[1].toFixed(6)}</small>
-                </div>
-              </Popup>
-            </Marker>
-          )}
-          
-          {/* Dropoff Marker */}
-          {dropoffCoords && Array.isArray(dropoffCoords) && !isNaN(dropoffCoords[0]) && !isNaN(dropoffCoords[1]) && (
-            <Marker position={dropoffCoords} icon={dropoffIcon}>
-              <Popup>
-                <div className="marker-popup">
-                  <h4>🎯 Dropoff Location</h4>
-                  <p>{dropoffLocation || 'Dropoff point'}</p>
-                  <small>Coordinates: {dropoffCoords[0].toFixed(6)}, {dropoffCoords[1].toFixed(6)}</small>
-                </div>
-              </Popup>
-            </Marker>
-          )}
-          
-          {/* Route Line */}
-          {routeLine.length === 2 && (
-            <>
-              <Polyline
-                positions={routeLine}
-                color="#22bc44"
-                weight={4}
-                opacity={0.8}
-                dashArray="10, 10"
-              />
-              {/* Directional Arrow */}
-              {(() => {
-                const [lat1, lng1] = routeLine[0];
-                const [lat2, lng2] = routeLine[1];
-                const midLat = (lat1 + lat2) / 2;
-                const midLng = (lng1 + lng2) / 2;
-                
-                // Calculate bearing for arrow direction
-                const toRadians = (deg) => deg * (Math.PI / 180);
-                const toDegrees = (rad) => rad * (180 / Math.PI);
-                const bearing = Math.atan2(
-                  Math.sin(toRadians(lng2 - lng1)) * Math.cos(toRadians(lat2)),
-                  Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) - 
-                  Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(toRadians(lng2 - lng1))
-                );
-                
-                console.log('Arrow bearing:', toDegrees(bearing), 'degrees');
-                
-                return (
-                  <Marker 
-                    position={[midLat, midLng]} 
-                    icon={new L.DivIcon({
-                      className: 'direction-arrow',
-                      html: `<div style="transform: rotate(${toDegrees(bearing)}deg); color: #df4444; font-size: 24px; text-align: center; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">➤</div>`,
-                      iconSize: [30, 30],
-                      iconAnchor: [15, 15]
-                    })}
-                  />
-                );
-              })()}
-            </>
-          )}
-        </MapContainer>
-      
-        {/* Route Summary */}
-        <div className="route-summary">
-          <div className="route-item">
-            <span className="route-icon pickup">📍</span>
-            <div>
-              <div className="route-label">Pickup</div>
-              <div className="route-address">{pickupLocation || 'Pickup location'}</div>
-            </div>
-          </div>
-          <div className="route-line">
-            <div className="route-distance">Route</div>
-          </div>
-          <div className="route-item">
-            <span className="route-icon dropoff">🎯</span>
-            <div>
-              <div className="route-label">Dropoff</div>
-              <div className="route-address">{dropoffLocation || 'Dropoff location'}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  } catch (error) {
-    console.error('Google Maps rendering error:', error);
-    setMapError(error.message);
-    // Return the fallback UI
-    return (
-      <div className={`map-route-container ${className}`}>
-        <div className="map-fallback">
-          <div className="fallback-content">
-            <h4>🗺️ Route Map</h4>
-            <div className="route-visualization">
-              <div className="route-line-visual">
-                <div className="direction-arrow-visual">➤</div>
-              </div>
-              <div className="pin pickup-pin-visual">📍</div>
-              <div className="pin dropoff-pin-visual">🎯</div>
-            </div>
-            <div className="fallback-info">
-              <p><strong>Pickup:</strong> {pickupLocation || 'Not specified'}</p>
-              <p><strong>Dropoff:</strong> {dropoffLocation || 'Not specified'}</p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Route Summary */}
-        <div className="route-summary">
-          <div className="route-item">
-            <span className="route-icon pickup">📍</span>
-            <div>
-              <div className="route-label">Pickup</div>
-              <div className="route-address">{pickupLocation || 'Pickup location'}</div>
-            </div>
-          </div>
-          <div className="route-line">
-            <div className="route-distance">Route</div>
-          </div>
-          <div className="route-item">
-            <span className="route-icon dropoff">🎯</span>
-            <div>
-              <div className="route-label">Dropoff</div>
-              <div className="route-address">{dropoffLocation || 'Dropoff location'}</div>
-            </div>
-          </div>
+        <div className="map-loading">
+          <div className="loading-spinner"></div>
+          <p>Loading Google Maps...</p>
         </div>
       </div>
     );
   }
+
+  // Main Google Maps render
+  return (
+    <div className={`map-route-container ${className}`}>
+      <div 
+        ref={mapRef} 
+        className="google-map-container"
+        style={{ width: '100%', height: '400px' }}
+      />
+      
+      {/* Route Summary */}
+      <div className="route-summary">
+        <div className="route-item">
+          <span className="route-icon pickup">📍</span>
+          <div>
+            <div className="route-label">Pickup</div>
+            <div className="route-address">{pickupLocation || 'Pickup location'}</div>
+          </div>
+        </div>
+        <div className="route-line">
+          <div className="route-distance">Route</div>
+        </div>
+        <div className="route-item">
+          <span className="route-icon dropoff">🎯</span>
+          <div>
+            <div className="route-label">Dropoff</div>
+            <div className="route-address">{dropoffLocation || 'Dropoff location'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default MapRoute;
