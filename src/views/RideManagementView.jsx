@@ -174,6 +174,10 @@ export default function RideManagementView() {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
       navigate('/dashboard');
@@ -268,9 +272,9 @@ export default function RideManagementView() {
 
   // Wrap entire render in try-catch for error handling
   try {
-    return (
-      <div className="ride-management grid-root">
-      <aside className="side">
+  return (
+    <div className={`ride-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <aside className={`side ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sbrand">
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
@@ -303,11 +307,16 @@ export default function RideManagementView() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className={`main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <header className="top">
           <div className="titles">
-            <h1>Ride Management</h1>
-            <p className="sub">Search, filter, and manage all platform rides.</p>
+            <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+            <div>
+              <h1>Ride Management</h1>
+              <p className="sub">Search, filter, and manage all platform rides.</p>
+            </div>
           </div>
           <div className="acts">
             <button className="chip on">EN</button>

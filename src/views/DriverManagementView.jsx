@@ -29,6 +29,7 @@ const StatusBadge = ({ status }) => {
 
 export default function DriverManagementView() {
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [drivers, setDrivers] = useState([
     {
@@ -108,6 +109,10 @@ export default function DriverManagementView() {
   const [ratingFilter, setRatingFilter] = useState('Any Rating');
   const [selectedDrivers, setSelectedDrivers] = useState([]);
 
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
       navigate('/dashboard');
@@ -181,8 +186,8 @@ export default function DriverManagementView() {
   });
 
   return (
-    <div className="driver-management grid-root">
-      <aside className="side">
+    <div className={`driver-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <aside className={`side ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sbrand">
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
@@ -215,11 +220,16 @@ export default function DriverManagementView() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className={`main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <header className="top">
           <div className="titles">
-            <h1>Driver Management</h1>
-            <p className="sub">Search, filter, and manage all drivers on the platform.</p>
+            <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+            <div>
+              <h1>Driver Management</h1>
+              <p className="sub">Search, filter, and manage all drivers on the platform.</p>
+            </div>
           </div>
           <div className="acts">
             <div className="search">
