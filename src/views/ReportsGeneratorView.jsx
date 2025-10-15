@@ -39,6 +39,7 @@ export default function ReportsGeneratorView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   // State for report configuration
   const [reportConfig, setReportConfig] = useState({
@@ -58,6 +59,10 @@ export default function ReportsGeneratorView() {
   useEffect(() => {
     loadReports();
     loadReportOptions();
+    
+    // Load dark mode preference from localStorage
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setIsDarkMode(savedDarkMode);
   }, []);
 
   const loadReports = async () => {
@@ -204,6 +209,12 @@ export default function ReportsGeneratorView() {
     }
   };
 
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
+  };
+
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
       try {
@@ -217,7 +228,7 @@ export default function ReportsGeneratorView() {
   };
 
   return (
-    <div className="reports-generator grid-root">
+    <div className={`reports-generator grid-root ${isDarkMode ? 'dark-mode' : ''}`}>
       <aside className="side">
         <div className="sbrand">
           <img src={logo} alt="QGlide" className="slogo" />
@@ -234,7 +245,7 @@ export default function ReportsGeneratorView() {
         </nav>
 
         <div className="sfoot">
-          <button className="settings" type="button">
+          <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
             <span>Settings</span>
           </button>
@@ -271,8 +282,8 @@ export default function ReportsGeneratorView() {
                 <span className="material-symbols-outlined">search</span>
               </button>
             </div>
-            <button className="theme-toggle" aria-label="dark mode">
-              <span className="material-symbols-outlined">dark_mode</span>
+            <button className="theme-toggle" aria-label="dark mode" onClick={toggleDarkMode}>
+              <span className="material-symbols-outlined">{isDarkMode ? 'light_mode' : 'dark_mode'}</span>
             </button>
             <button className="notifications-btn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />

@@ -376,7 +376,7 @@ export default function DashboardView() {
         </nav>
 
         <div className="sfoot">
-          <button className="settings" type="button">
+          <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
             <span>Settings</span>
           </button>

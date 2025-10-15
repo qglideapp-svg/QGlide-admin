@@ -13,6 +13,7 @@ import DriverManagementView from './views/DriverManagementView.jsx';
 import DriverProfileView from './views/DriverProfileView.jsx';
 import UserProfileView from './views/UserProfileView.jsx';
 import ReportsGeneratorView from './views/ReportsGeneratorView.jsx';
+import SettingsView from './views/SettingsView.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -59,6 +60,11 @@ createRoot(document.getElementById('root')).render(
         <Route path="/reports" element={
           <AuthGuard>
             <ReportsGeneratorView />
+          </AuthGuard>
+        } />
+        <Route path="/settings" element={
+          <AuthGuard>
+            <SettingsView />
           </AuthGuard>
         } />
       </Routes>
