@@ -51,16 +51,28 @@ const MapRoute = ({
           // Handle POINT(lng lat) format
           const match = coords.match(/POINT\(([^)]+)\)/);
           if (match) {
-            const [lng, lat] = match[1].split(' ').map(Number);
-            return [lat, lng];
+            const parts = match[1].trim().split(/\s+/);
+            if (parts.length === 2) {
+              const lng = parseFloat(parts[0]);
+              const lat = parseFloat(parts[1]);
+              console.log('Parsed POINT coordinates:', { lng, lat, original: coords });
+              if (!isNaN(lat) && !isNaN(lng)) {
+                return [lat, lng];  // Leaflet needs [lat, lng]
+              }
+            }
           }
           // Handle comma-separated format
           const parts = coords.split(',');
           if (parts.length === 2) {
-            const [lat, lng] = parts.map(Number);
-            return [lat, lng];
+            const lat = parseFloat(parts[0].trim());
+            const lng = parseFloat(parts[1].trim());
+            console.log('Parsed comma-separated coordinates:', { lat, lng, original: coords });
+            if (!isNaN(lat) && !isNaN(lng)) {
+              return [lat, lng];
+            }
           }
         }
+        console.warn('Could not parse coordinates:', coords);
         return null;
       };
 
@@ -122,14 +134,23 @@ const MapRoute = ({
       // Handle POINT(lng lat) format
       const match = coords.match(/POINT\(([^)]+)\)/);
       if (match) {
-        const [lng, lat] = match[1].split(' ').map(Number);
-        return [lat, lng];
+        const parts = match[1].trim().split(/\s+/);
+        if (parts.length === 2) {
+          const lng = parseFloat(parts[0]);
+          const lat = parseFloat(parts[1]);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            return [lat, lng];  // Leaflet needs [lat, lng]
+          }
+        }
       }
       // Handle comma-separated format
       const parts = coords.split(',');
       if (parts.length === 2) {
-        const [lat, lng] = parts.map(Number);
-        return [lat, lng];
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return [lat, lng];
+        }
       }
     }
     return null;
@@ -197,7 +218,7 @@ const MapRoute = ({
           />
           
           {/* Pickup Marker */}
-          {pickupCoords && (
+          {pickupCoords && Array.isArray(pickupCoords) && !isNaN(pickupCoords[0]) && !isNaN(pickupCoords[1]) && (
             <Marker position={pickupCoords} icon={pickupIcon}>
               <Popup>
                 <div className="marker-popup">
@@ -210,7 +231,7 @@ const MapRoute = ({
           )}
           
           {/* Dropoff Marker */}
-          {dropoffCoords && (
+          {dropoffCoords && Array.isArray(dropoffCoords) && !isNaN(dropoffCoords[0]) && !isNaN(dropoffCoords[1]) && (
             <Marker position={dropoffCoords} icon={dropoffIcon}>
               <Popup>
                 <div className="marker-popup">
