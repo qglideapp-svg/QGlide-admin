@@ -269,9 +269,6 @@ export default function SettingsView() {
                 <span className="material-symbols-outlined">search</span>
               </button>
             </div>
-            <button className="settings-btn" aria-label="settings">
-              <img src={settingsIcon} alt="settings" className="kimg" />
-            </button>
             <button className="notifications-btn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <span className="notification-dot"></span>

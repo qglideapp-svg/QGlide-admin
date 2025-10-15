@@ -30,6 +30,7 @@ const StatusBadge = ({ status }) => {
 
 export default function ReportsGeneratorView() {
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // State for reports data
   const [reports, setReports] = useState([]);
@@ -191,6 +192,10 @@ export default function ReportsGeneratorView() {
     }
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
       navigate('/dashboard');
@@ -228,8 +233,8 @@ export default function ReportsGeneratorView() {
   };
 
   return (
-    <div className={`reports-generator grid-root ${isDarkMode ? 'dark-mode' : ''}`}>
-      <aside className="side">
+    <div className={`reports-generator grid-root ${isDarkMode ? 'dark-mode' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <aside className={`side ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sbrand">
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
@@ -262,11 +267,16 @@ export default function ReportsGeneratorView() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className={`main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <header className="top">
           <div className="titles">
-            <h1>Reports Generator</h1>
-            <p className="sub">Generate and export custom data reports.</p>
+            <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+            <div>
+              <h1>Reports Generator</h1>
+              <p className="sub">Generate and export custom data reports.</p>
+            </div>
           </div>
           <div className="acts">
             <div className="search-container">

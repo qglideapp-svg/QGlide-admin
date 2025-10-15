@@ -29,6 +29,7 @@ const StatusBadge = ({ status }) => {
 
 export default function UserManagementView() {
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [users, setUsers] = useState([
     {
@@ -92,6 +93,10 @@ export default function UserManagementView() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [ratingFilter, setRatingFilter] = useState('Any');
   const [selectedUsers, setSelectedUsers] = useState([]);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
@@ -184,8 +189,8 @@ export default function UserManagementView() {
   });
 
   return (
-    <div className="user-management grid-root">
-      <aside className="side">
+    <div className={`user-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <aside className={`side ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sbrand">
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
@@ -218,11 +223,16 @@ export default function UserManagementView() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className={`main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <header className="top">
           <div className="titles">
-            <h1>User Management</h1>
-            <p className="sub">View, manage, and interact with all registered users.</p>
+            <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+            <div>
+              <h1>User Management</h1>
+              <p className="sub">View, manage, and interact with all registered users.</p>
+            </div>
           </div>
           <div className="acts">
             <div className="search">
@@ -231,7 +241,7 @@ export default function UserManagementView() {
             </div>
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
-            <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <i className="dot" />

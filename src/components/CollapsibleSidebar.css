@@ -1,0 +1,121 @@
+/* Shared Collapsible Sidebar Styles */
+
+/* Sidebar Base Styles */
+.side { 
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 240px;
+  overflow-y: auto;
+  background: #fff; 
+  border-right: 1px solid var(--border); 
+  padding: 14px 10px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  transition: width 0.3s ease, transform 0.3s ease;
+  z-index: 1000;
+}
+
+/* Collapsed Sidebar Styles */
+.side.collapsed {
+  width: 64px;
+}
+
+.side.collapsed .sbrand .slogo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.side.collapsed .snav .txt {
+  display: none;
+}
+
+.side.collapsed .snav {
+  grid-template-columns: 1fr;
+  justify-content: center;
+}
+
+.side.collapsed .settings span {
+  display: none;
+}
+
+.side.collapsed .urow {
+  grid-template-columns: 1fr;
+  justify-content: center;
+}
+
+.side.collapsed .urow .meta {
+  display: none;
+}
+
+/* Main Content Styles */
+.main { 
+  display: block; 
+  flex: 1; 
+  margin-left: 240px; 
+  transition: margin-left 0.3s ease;
+}
+
+.main.sidebar-collapsed {
+  margin-left: 64px;
+}
+
+/* Toggle Button Styles */
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text);
+}
+
+.sidebar-toggle:hover {
+  border-color: var(--primary-blue);
+  background: #f8fafc;
+  color: var(--primary-blue);
+}
+
+.sidebar-toggle .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* Title Container Styles */
+.titles { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+}
+
+/* Responsive Styles */
+@media (max-width: 640px) {
+  .side { 
+    transform: translateX(-100%); 
+    transition: transform 0.3s ease; 
+  }
+  .side.open { 
+    transform: translateX(0); 
+  }
+  .side.collapsed { 
+    transform: translateX(-100%); 
+  }
+  .side.collapsed.open { 
+    transform: translateX(0); 
+    width: 64px; 
+  }
+  .main { 
+    margin-left: 0; 
+  }
+  .main.sidebar-collapsed { 
+    margin-left: 0; 
+  }
+}

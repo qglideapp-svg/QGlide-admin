@@ -353,7 +353,7 @@ export default function RideDetailsView() {
             </div>
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
-            <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">
               <span className="user-name">Amina Al-Thani</span>

@@ -27,6 +27,7 @@ export default function DashboardView() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('overview');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -228,6 +229,10 @@ export default function DashboardView() {
     }
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   const handleNavClick = useCallback((navItem) => {
     // Reset any loading states before navigation
     setIsFinancialLoading(false);
@@ -359,8 +364,8 @@ export default function DashboardView() {
   };
 
   return (
-    <div className="dash grid-root">
-      <aside className="side">
+    <div className={`dash grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <aside className={`side ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sbrand">
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
@@ -393,13 +398,18 @@ export default function DashboardView() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className={`main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         {activeSection === 'overview' ? (
           <>
         <header className="top">
           <div className="titles">
+            <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+            <div>
             <h1>Dashboard Overview</h1>
             <p className="sub">Welcome back, Amina. Here's what's happening today.</p>
+            </div>
           </div>
           <div className="acts">
             <div className="search">
@@ -408,7 +418,7 @@ export default function DashboardView() {
             </div>
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
-            <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">
               <span className="user-name">Amina Al-Thani</span>
@@ -534,8 +544,13 @@ export default function DashboardView() {
           <>
             <header className="top financial-header">
               <div className="titles">
-                <h1>Financial Management</h1>
-                <p className="sub">Monitor transactions, manage payouts, and set commissions.</p>
+                <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+                  <span className="material-symbols-outlined">menu</span>
+                </button>
+                <div>
+                  <h1>Financial Management</h1>
+                  <p className="sub">Monitor transactions, manage payouts, and set commissions.</p>
+                </div>
               </div>
               <div className="acts">
                 <div className="search">
@@ -700,8 +715,13 @@ export default function DashboardView() {
           <>
             <header className="top support-header">
               <div className="titles">
-                <h1>Support Ticket Center</h1>
-                <p className="sub">Manage customer inquiries and provide assistance.</p>
+                <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+                  <span className="material-symbols-outlined">menu</span>
+                </button>
+                <div>
+                  <h1>Support Ticket Center</h1>
+                  <p className="sub">Manage customer inquiries and provide assistance.</p>
+                </div>
               </div>
               <div className="acts">
                 <div className="search">
@@ -870,8 +890,13 @@ export default function DashboardView() {
           <>
             <header className="top analytics-header">
               <div className="titles">
-                <h1>Analytics & Reports</h1>
-                <p className="sub">Deep dive into your platform's performance metrics.</p>
+                <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+                  <span className="material-symbols-outlined">menu</span>
+                </button>
+                <div>
+                  <h1>Analytics & Reports</h1>
+                  <p className="sub">Deep dive into your platform's performance metrics.</p>
+                </div>
               </div>
               <div className="acts">
                 <div className="date-range-display">
@@ -882,7 +907,7 @@ export default function DashboardView() {
                   <span className="material-symbols-outlined">download</span>
                   Export Report
                 </button>
-                <button className="ibtn" aria-label="settings">
+                <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
                   <span className="material-symbols-outlined">settings</span>
                 </button>
                 <button className="ibtn" aria-label="notifications">

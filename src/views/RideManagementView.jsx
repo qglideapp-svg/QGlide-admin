@@ -39,6 +39,7 @@ export default function RideManagementView() {
   console.log('RideManagementView component rendering...');
   
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [isLoading, setIsLoading] = useState(true);
   const [rides, setRides] = useState([]);
@@ -311,7 +312,7 @@ export default function RideManagementView() {
           <div className="acts">
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
-            <button className="ibtn" aria-label="settings"><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">
               <span className="user-name">Amina Al-Thani</span>
