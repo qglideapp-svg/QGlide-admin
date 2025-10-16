@@ -109,9 +109,17 @@
   transition: all 0.2s;
 }
 
-.btn-export:hover {
+.btn-export:hover:not(:disabled) {
   background: #F9FAFB;
   border-color: #9CA3AF;
+}
+
+.btn-export:disabled {
+  background: #F3F4F6;
+  border-color: #E5E7EB;
+  cursor: not-allowed;
+  opacity: 0.7;
+  color: #9CA3AF;
 }
 
 .btn-export .material-symbols-outlined {

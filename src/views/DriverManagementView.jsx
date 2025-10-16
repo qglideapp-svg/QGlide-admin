@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../services/authService';
-import { fetchDriversList, transformDriverData } from '../services/driverService';
+import { fetchDriversList, transformDriverData, exportDriversToCSV } from '../services/driverService';
 import logo from '../assets/images/logo.webp';
 import settingsIcon from '../assets/icons/settings.png';
 import notificationsIcon from '../assets/icons/notifications.png';
@@ -46,14 +46,19 @@ export default function DriverManagementView() {
   const [statusFilter, setStatusFilter] = useState('All Statuses');
   const [ratingFilter, setRatingFilter] = useState('Any Rating');
   const [selectedDrivers, setSelectedDrivers] = useState([]);
+  
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   // Fetch drivers from API
-  const loadDrivers = useCallback(async () => {
+  const loadDrivers = useCallback(async (search = '', status = '') => {
     console.log('🔄 LOADING DRIVERS:', {
+      '🔍 Search Term': search,
+      '📊 Status Filter': status,
       '⏰ Timestamp': new Date().toISOString()
     });
     
@@ -61,7 +66,7 @@ export default function DriverManagementView() {
     setError(null);
 
     try {
-      const result = await fetchDriversList();
+      const result = await fetchDriversList(search, status);
 
       console.log('📡 API RESULT RECEIVED:', {
         '✅ Success': result.success,
@@ -110,6 +115,20 @@ export default function DriverManagementView() {
   useEffect(() => {
     loadDrivers();
   }, []);
+
+  // Debounced search and filter effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('🔍 SEARCH/FILTER TRIGGERED:', {
+        '📝 Search Term': searchTerm,
+        '📊 Status Filter': statusFilter,
+        '⏰ Timestamp': new Date().toISOString()
+      });
+      loadDrivers(searchTerm, statusFilter);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, loadDrivers]);
 
   // Fallback: Initialize with empty array if no drivers loaded after 5 seconds
   useEffect(() => {
@@ -176,6 +195,45 @@ export default function DriverManagementView() {
     setStatusFilter('All Statuses');
     setRatingFilter('Any Rating');
     setCurrentPage(1);
+  };
+
+  // Handle CSV export
+  const handleExportCSV = async () => {
+    console.log('🔄 EXPORTING DRIVERS TO CSV:', {
+      '📊 Status Filter': statusFilter,
+      '⭐ Rating Filter': ratingFilter,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsExporting(true);
+
+    try {
+      const result = await exportDriversToCSV(statusFilter, ratingFilter);
+
+      console.log('📡 EXPORT RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📄 Filename': result.filename,
+        '📏 Size': result.size
+      });
+
+      if (result.success) {
+        // Show success message (you could add a toast notification here)
+        console.log('✅ CSV export completed successfully!');
+        // Optionally show a toast notification
+        // setToast({ type: 'success', message: `Export completed: ${result.filename}` });
+      } else {
+        console.error('❌ Export failed:', result.error);
+        // Optionally show error toast
+        // setToast({ type: 'error', message: result.error });
+      }
+    } catch (error) {
+      console.error('❌ Export error:', error);
+      // Optionally show error toast
+      // setToast({ type: 'error', message: error.message });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Pagination handlers
@@ -259,11 +317,14 @@ export default function DriverManagementView() {
           </div>
           <div className="acts">
             <div className="search">
-              <span className="material-symbols-outlined">search</span>
+              <span className="material-symbols-outlined">
+                {isLoading ? 'hourglass_empty' : 'search'}
+              </span>
               <input 
                 placeholder="Search drivers..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <button className="chip on">EN</button>
@@ -315,9 +376,15 @@ export default function DriverManagementView() {
                 </div>
               </div>
               <div className="header-actions">
-                <button className="btn-export">
-                  <span className="material-symbols-outlined">download</span>
-                  Export CSV
+                <button 
+                  className="btn-export" 
+                  onClick={handleExportCSV}
+                  disabled={isExporting}
+                >
+                  <span className="material-symbols-outlined">
+                    {isExporting ? 'hourglass_empty' : 'download'}
+                  </span>
+                  {isExporting ? 'Exporting...' : 'Export CSV'}
                 </button>
                 <button className="btn-add-driver">
                   <span className="material-symbols-outlined">add</span>
@@ -394,8 +461,8 @@ export default function DriverManagementView() {
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
                           <div style={{ color: '#374151', fontWeight: '500' }}>No drivers found</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                            {searchTerm || statusFilter !== 'All Statuses' 
-                              ? 'Try adjusting your search or filter criteria' 
+                            {searchTerm || statusFilter !== 'All Statuses' || ratingFilter !== 'Any Rating' 
+                              ? 'Try adjusting your search term or filter criteria' 
                               : 'No drivers are currently registered on the platform'
                             }
                           </div>

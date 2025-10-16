@@ -2,54 +2,65 @@ import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
-export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
+// Fetch users list with filters
+export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingFilter = '', page = 1, limit = 20) => {
   try {
-    // Use saved token from login
     const token = getAuthToken();
     
     if (!token) {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    // Build URL with search and status parameters if provided
-    let url = `${API_BASE_URL}/admin-drivers-list`;
+    // Build URL with query parameters
+    let url = `${API_BASE_URL}/admin-users-list`;
     const params = [];
     
     if (searchTerm && searchTerm.trim()) {
       params.push(`search=${encodeURIComponent(searchTerm.trim())}`);
     }
     
-    if (statusFilter && statusFilter !== 'All Statuses' && statusFilter.toLowerCase() !== 'all') {
+    if (statusFilter && statusFilter !== 'All' && statusFilter.toLowerCase() !== 'all') {
       params.push(`status=${encodeURIComponent(statusFilter.toLowerCase())}`);
     }
+    
+    if (ratingFilter && ratingFilter !== 'Any' && ratingFilter !== 'Any Rating') {
+      // Extract numeric value from rating filter (e.g., "4.5+" -> "4.5")
+      const ratingValue = ratingFilter.replace('+', '');
+      params.push(`min_rating=${encodeURIComponent(ratingValue)}`);
+    }
+    
+    // Add pagination parameters
+    params.push(`page=${page}`);
+    params.push(`limit=${limit}`);
     
     if (params.length > 0) {
       url += `?${params.join('&')}`;
     }
-
-    console.log('🚀 API REQUEST DETAILS:', {
+    
+    console.log('🚀 FETCH USERS LIST REQUEST:', {
       '🔗 URL': url,
       '🔍 Search Term': searchTerm,
       '📊 Status Filter': statusFilter,
+      '⭐ Rating Filter': ratingFilter,
+      '📄 Page': page,
+      '📏 Limit': limit,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
-      '⏰ Timestamp': new Date().toISOString(),
-      '🔍 Making request to admin-drivers-list endpoint': true
+      '⏰ Timestamp': new Date().toISOString()
     });
 
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
 
-    console.log('📡 HTTP RESPONSE:', {
+    console.log('📡 FETCH USERS HTTP RESPONSE:', {
       '✅ Status': response.status,
       '📝 Status Text': response.statusText,
       '🔗 URL': response.url,
-      '📋 Headers': Object.fromEntries(response.headers.entries()),
       '✅ OK': response.ok
     });
 
@@ -60,90 +71,81 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
 
     const data = await response.json();
     
-    // Log the raw response first to see what we're getting
-    console.log('📡 RAW API RESPONSE:', JSON.stringify(data, null, 2));
+    console.log('📡 RAW USERS API RESPONSE:', JSON.stringify(data, null, 2));
     
-    // Try to find drivers in the response - check multiple possible locations
-    let driversArray = [];
+    // Parse API response - check multiple possible structures
+    let usersArray = [];
     
-    // Check if response is directly an array
     if (Array.isArray(data)) {
-      driversArray = data;
-      console.log('✅ Found drivers as direct array');
-    }
-    // Check the actual API response structure: data.data.drivers
-    else if (data.data && data.data.drivers && Array.isArray(data.data.drivers)) {
-      driversArray = data.data.drivers;
-      console.log('✅ Found drivers in data.data.drivers');
-    }
-    // Check other common API response structures
-    else if (data.drivers && Array.isArray(data.drivers)) {
-      driversArray = data.drivers;
-      console.log('✅ Found drivers in data.drivers');
-    }
-    else if (data.data && Array.isArray(data.data)) {
-      driversArray = data.data;
-      console.log('✅ Found drivers in data.data');
-    }
-    else if (data.results && Array.isArray(data.results)) {
-      driversArray = data.results;
-      console.log('✅ Found drivers in data.results');
-    }
-    else if (data.items && Array.isArray(data.items)) {
-      driversArray = data.items;
-      console.log('✅ Found drivers in data.items');
-    }
-    else {
-      console.log('❌ No drivers array found in response');
+      usersArray = data;
+      console.log('✅ Found users as direct array');
+    } else if (data.data && Array.isArray(data.data.users)) {
+      usersArray = data.data.users;
+      console.log('✅ Found users in data.data.users');
+    } else if (data.users && Array.isArray(data.users)) {
+      usersArray = data.users;
+      console.log('✅ Found users in data.users');
+    } else if (data.data && Array.isArray(data.data)) {
+      usersArray = data.data;
+      console.log('✅ Found users in data.data');
+    } else if (data.results && Array.isArray(data.results)) {
+      usersArray = data.results;
+      console.log('✅ Found users in data.results');
+    } else {
+      console.log('❌ No users array found in response');
       console.log('Available keys:', Object.keys(data));
     }
     
-    // Transform API response to match UI expectations
     const transformedData = {
-      drivers: driversArray,
-      totalCount: data.data?.total_count || data.totalCount || data.total || data.count || driversArray.length,
-      totalPages: data.data?.total_pages || data.totalPages || Math.ceil((data.data?.total_count || data.totalCount || data.total || data.count || driversArray.length) / 20),
-      currentPage: data.data?.page || 1,
+      users: usersArray,
+      totalCount: data.data?.total_count || data.totalCount || data.total || data.count || usersArray.length,
+      totalPages: data.data?.total_pages || data.totalPages || Math.ceil((data.data?.total_count || data.totalCount || data.total || data.count || usersArray.length) / limit),
+      currentPage: data.data?.page || data.page || page,
       hasNextPage: data.data?.hasNextPage || data.hasNextPage || false,
       hasPrevPage: data.data?.hasPrevPage || data.hasPrevPage || false
     };
 
-    console.log('🔍 FULL API RESPONSE DEBUG:', {
+    console.log('🔍 FULL USERS API RESPONSE DEBUG:', {
       '📡 Raw Response': data,
       '🔍 Response Type': typeof data,
       '📊 Is Object': typeof data === 'object',
       '🔢 Response Keys': Object.keys(data || {}),
-      '📝 Drivers Array': driversArray,
-      '📏 Drivers Length': driversArray.length,
-      '🔍 First Driver': driversArray[0] || 'No drivers',
-      '📋 All Drivers': driversArray,
+      '📝 Users Array': usersArray,
+      '📏 Users Length': usersArray.length,
+      '🔍 First User': usersArray[0] || 'No users',
+      '📋 All Users': usersArray,
       '⚙️ Transformed Data': transformedData,
       '🔗 Request URL': url,
-      '🔍 Data.drivers check': data.drivers,
-      '🔍 Data.data check': data.data,
-      '🔍 Is data.drivers array?': Array.isArray(data.drivers),
-      '🔍 Is data.data array?': Array.isArray(data.data),
-      '🔍 Is data array?': Array.isArray(data),
-      '🔍 Raw data stringified': JSON.stringify(data, null, 2)
+      '📊 Pagination': {
+        totalCount: transformedData.totalCount,
+        totalPages: transformedData.totalPages,
+        currentPage: transformedData.currentPage,
+        hasNextPage: transformedData.hasNextPage,
+        hasPrevPage: transformedData.hasPrevPage
+      }
     });
-
-    return { success: true, data: transformedData };
+    
+    return { 
+      success: true, 
+      data: transformedData
+    };
   } catch (error) {
-    console.error('❌ FETCH DRIVERS LIST ERROR:', {
+    console.error('❌ FETCH USERS LIST ERROR:', {
       '🚨 Error Message': error.message,
       '🔍 Error Type': error.constructor.name,
       '📝 Error Stack': error.stack,
       '⏰ Timestamp': new Date().toISOString()
     });
+    
     return { 
       success: false, 
-      error: error.message || 'Failed to fetch drivers list' 
+      error: error.message || 'Failed to fetch users list' 
     };
   }
 };
 
-// Fetch driver details by ID
-export const fetchDriverDetails = async (driverId) => {
+// Fetch user details by ID
+export const fetchUserDetails = async (userId) => {
   try {
     const token = getAuthToken();
     
@@ -151,11 +153,11 @@ export const fetchDriverDetails = async (driverId) => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    const url = `${API_BASE_URL}/admin-driver-details?driver_id=${driverId}`;
+    const url = `${API_BASE_URL}/admin-user-details?user_id=${userId}`;
     
-    console.log('🚀 FETCH DRIVER DETAILS REQUEST:', {
+    console.log('🚀 FETCH USER DETAILS REQUEST:', {
       '🔗 URL': url,
-      '🆔 Driver ID': driverId,
+      '🆔 User ID': userId,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
@@ -165,11 +167,11 @@ export const fetchDriverDetails = async (driverId) => {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
 
-    console.log('📡 DRIVER DETAILS HTTP RESPONSE:', {
+    console.log('📡 FETCH USER DETAILS HTTP RESPONSE:', {
       '✅ Status': response.status,
       '📝 Status Text': response.statusText,
       '🔗 URL': response.url,
@@ -183,33 +185,32 @@ export const fetchDriverDetails = async (driverId) => {
 
     const data = await response.json();
     
-    console.log('📡 RAW DRIVER DETAILS RESPONSE:', JSON.stringify(data, null, 2));
+    console.log('📡 RAW USER DETAILS RESPONSE:', JSON.stringify(data, null, 2));
     
-    // Extract driver from data.data.driver
-    if (data.success && data.data && data.data.driver) {
-      console.log('✅ DRIVER DETAILS EXTRACTED SUCCESSFULLY:', {
-        '📊 Driver Data': data.data.driver,
-        '🔍 Driver ID': data.data.driver.id,
-        '👤 Driver Name': data.data.driver.full_name,
-        '📱 Phone': data.data.driver.phone,
-        '🚗 Vehicle Info': data.data.driver.driver_profile,
-        '💰 Earnings': data.data.driver.earnings,
-        '🚕 Recent Rides': data.data.driver.recent_rides
+    // Extract user from response
+    if (data.success && data.data && data.data.user) {
+      console.log('✅ USER DETAILS EXTRACTED SUCCESSFULLY:', {
+        '📊 User Data': data.data.user,
+        '🔍 User ID': data.data.user.id,
+        '👤 User Name': data.data.user.full_name,
+        '📱 Phone': data.data.user.phone,
+        '💰 Earnings': data.data.user.earnings,
+        '🚕 Recent Rides': data.data.user.recent_rides
       });
       
-      return { success: true, data: data.data.driver };
+      return { success: true, data: data.data.user };
     }
     
-    console.log('❌ INVALID DRIVER DETAILS RESPONSE STRUCTURE:', {
+    console.log('❌ INVALID USER DETAILS RESPONSE STRUCTURE:', {
       '📊 Raw Data': data,
       '🔍 Success': data.success,
       '🔍 Has Data': !!data.data,
-      '🔍 Has Driver': !!data.data?.driver
+      '🔍 Has User': !!data.data?.user
     });
     
     return { success: false, error: 'Invalid response structure' };
   } catch (error) {
-    console.error('❌ FETCH DRIVER DETAILS ERROR:', {
+    console.error('❌ FETCH USER DETAILS ERROR:', {
       '🚨 Error Message': error.message,
       '🔍 Error Type': error.constructor.name,
       '📝 Error Stack': error.stack,
@@ -218,13 +219,13 @@ export const fetchDriverDetails = async (driverId) => {
     
     return { 
       success: false, 
-      error: error.message || 'Failed to fetch driver details' 
+      error: error.message || 'Failed to fetch user details' 
     };
   }
 };
 
-// Approve driver by ID
-export const approveDriver = async (driverId) => {
+// Update user profile
+export const updateUser = async (userId, userData) => {
   try {
     const token = getAuthToken();
     
@@ -232,11 +233,12 @@ export const approveDriver = async (driverId) => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    const url = `${API_BASE_URL}/approve-driver`;
+    const url = `${API_BASE_URL}/admin-update-user`;
     
-    console.log('🚀 APPROVE DRIVER REQUEST:', {
+    console.log('🚀 UPDATE USER PROFILE REQUEST:', {
       '🔗 URL': url,
-      '🆔 Driver ID': driverId,
+      '🆔 User ID': userId,
+      '📝 User Data': userData,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
@@ -248,10 +250,15 @@ export const approveDriver = async (driverId) => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ driver_id: driverId })
+      body: JSON.stringify({ 
+        user_id: userId,
+        full_name: userData.full_name,
+        phone: userData.phone,
+        email: userData.email
+      })
     });
 
-    console.log('📡 APPROVE DRIVER HTTP RESPONSE:', {
+    console.log('📡 UPDATE USER PROFILE HTTP RESPONSE:', {
       '✅ Status': response.status,
       '📝 Status Text': response.statusText,
       '🔗 URL': response.url,
@@ -265,11 +272,11 @@ export const approveDriver = async (driverId) => {
 
     const data = await response.json();
     
-    console.log('📡 APPROVE DRIVER RESPONSE:', JSON.stringify(data, null, 2));
+    console.log('📡 UPDATE USER PROFILE RESPONSE:', JSON.stringify(data, null, 2));
     
     return { success: true, data };
   } catch (error) {
-    console.error('❌ APPROVE DRIVER ERROR:', {
+    console.error('❌ UPDATE USER PROFILE ERROR:', {
       '🚨 Error Message': error.message,
       '🔍 Error Type': error.constructor.name,
       '📝 Error Stack': error.stack,
@@ -278,13 +285,13 @@ export const approveDriver = async (driverId) => {
     
     return { 
       success: false, 
-      error: error.message || 'Failed to approve driver' 
+      error: error.message || 'Failed to update user profile' 
     };
   }
 };
 
-// Suspend driver by ID with reason
-export const suspendDriver = async (driverId, reason) => {
+// Delete user account
+export const deleteUser = async (userId, reason) => {
   try {
     const token = getAuthToken();
     
@@ -292,11 +299,11 @@ export const suspendDriver = async (driverId, reason) => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    const url = `${API_BASE_URL}/admin-update-driver-status`;
+    const url = `${API_BASE_URL}/admin-delete-user`;
     
-    console.log('🚀 SUSPEND DRIVER REQUEST:', {
+    console.log('🚀 DELETE USER REQUEST:', {
       '🔗 URL': url,
-      '🆔 Driver ID': driverId,
+      '🆔 User ID': userId,
       '📝 Reason': reason,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
@@ -310,13 +317,12 @@ export const suspendDriver = async (driverId, reason) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
-        driver_id: driverId,
-        status: 'suspended',
+        user_id: userId,
         reason: reason
       })
     });
 
-    console.log('📡 SUSPEND DRIVER HTTP RESPONSE:', {
+    console.log('📡 DELETE USER HTTP RESPONSE:', {
       '✅ Status': response.status,
       '📝 Status Text': response.statusText,
       '🔗 URL': response.url,
@@ -330,11 +336,11 @@ export const suspendDriver = async (driverId, reason) => {
 
     const data = await response.json();
     
-    console.log('📡 SUSPEND DRIVER RESPONSE:', JSON.stringify(data, null, 2));
+    console.log('📡 DELETE USER RESPONSE:', JSON.stringify(data, null, 2));
     
     return { success: true, data };
   } catch (error) {
-    console.error('❌ SUSPEND DRIVER ERROR:', {
+    console.error('❌ DELETE USER ERROR:', {
       '🚨 Error Message': error.message,
       '🔍 Error Type': error.constructor.name,
       '📝 Error Stack': error.stack,
@@ -343,13 +349,13 @@ export const suspendDriver = async (driverId, reason) => {
     
     return { 
       success: false, 
-      error: error.message || 'Failed to suspend driver' 
+      error: error.message || 'Failed to delete user account' 
     };
   }
 };
 
-// Update driver details
-export const updateDriver = async (driverId, updateData) => {
+// Update user status (deactivate/activate)
+export const updateUserStatus = async (userId, status, reason) => {
   try {
     const token = getAuthToken();
     
@@ -357,75 +363,12 @@ export const updateDriver = async (driverId, updateData) => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    const url = `${API_BASE_URL}/admin-update-driver`;
+    const url = `${API_BASE_URL}/admin-update-user-status`;
     
-    console.log('🚀 UPDATE DRIVER REQUEST:', {
+    console.log('🚀 UPDATE USER STATUS REQUEST:', {
       '🔗 URL': url,
-      '🆔 Driver ID': driverId,
-      '📝 Update Data': updateData,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
-      '⏰ Timestamp': new Date().toISOString()
-    });
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        driver_id: driverId,
-        ...updateData
-      })
-    });
-
-    console.log('📡 UPDATE DRIVER HTTP RESPONSE:', {
-      '✅ Status': response.status,
-      '📝 Status Text': response.statusText,
-      '🔗 URL': response.url,
-      '✅ OK': response.ok
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    console.log('📡 UPDATE DRIVER RESPONSE:', JSON.stringify(data, null, 2));
-    
-    return { success: true, data };
-  } catch (error) {
-    console.error('❌ UPDATE DRIVER ERROR:', {
-      '🚨 Error Message': error.message,
-      '🔍 Error Type': error.constructor.name,
-      '📝 Error Stack': error.stack,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-    
-    return { 
-      success: false, 
-      error: error.message || 'Failed to update driver' 
-    };
-  }
-};
-
-// Delete driver by ID with reason
-export const deleteDriver = async (driverId, reason) => {
-  try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
-    const url = `${API_BASE_URL}/admin-delete-driver`;
-    
-    console.log('🚀 DELETE DRIVER REQUEST:', {
-      '🔗 URL': url,
-      '🆔 Driver ID': driverId,
+      '🆔 User ID': userId,
+      '📊 Status': status,
       '📝 Reason': reason,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
@@ -439,12 +382,13 @@ export const deleteDriver = async (driverId, reason) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
-        driver_id: driverId,
+        user_id: userId,
+        status: status,
         reason: reason
       })
     });
 
-    console.log('📡 DELETE DRIVER HTTP RESPONSE:', {
+    console.log('📡 UPDATE USER STATUS HTTP RESPONSE:', {
       '✅ Status': response.status,
       '📝 Status Text': response.statusText,
       '🔗 URL': response.url,
@@ -458,11 +402,11 @@ export const deleteDriver = async (driverId, reason) => {
 
     const data = await response.json();
     
-    console.log('📡 DELETE DRIVER RESPONSE:', JSON.stringify(data, null, 2));
+    console.log('📡 UPDATE USER STATUS RESPONSE:', JSON.stringify(data, null, 2));
     
     return { success: true, data };
   } catch (error) {
-    console.error('❌ DELETE DRIVER ERROR:', {
+    console.error('❌ UPDATE USER STATUS ERROR:', {
       '🚨 Error Message': error.message,
       '🔍 Error Type': error.constructor.name,
       '📝 Error Stack': error.stack,
@@ -471,13 +415,13 @@ export const deleteDriver = async (driverId, reason) => {
     
     return { 
       success: false, 
-      error: error.message || 'Failed to delete driver' 
+      error: error.message || 'Failed to update user status' 
     };
   }
 };
 
-// Export drivers to CSV
-export const exportDriversToCSV = async (status = '', minRating = '') => {
+// Create new user
+export const createUser = async (userData) => {
   try {
     const token = getAuthToken();
     
@@ -485,27 +429,79 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    let url = `${API_BASE_URL}/admin-drivers-export-csv`;
-    const params = [];
+    const url = `${API_BASE_URL}/admin-create-user`;
     
-    if (status && status !== 'All Statuses' && status.toLowerCase() !== 'all') {
-      params.push(`status=${encodeURIComponent(status.toLowerCase())}`);
-    }
-    
-    if (minRating && minRating !== 'Any Rating') {
-      // Extract numeric value from rating filter (e.g., "4.5+" -> "4.5")
-      const ratingValue = minRating.replace('+', '');
-      params.push(`min_rating=${encodeURIComponent(ratingValue)}`);
-    }
-    
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
+    console.log('🚀 CREATE USER REQUEST:', {
+      '🔗 URL': url,
+      '📝 User Data': userData,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        full_name: userData.full_name,
+        email: userData.email,
+        phone: userData.phone,
+        password: userData.password
+      })
+    });
+
+    console.log('📡 CREATE USER HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    console.log('🚀 EXPORT DRIVERS CSV REQUEST:', {
+    const data = await response.json();
+    
+    console.log('📡 CREATE USER RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ CREATE USER ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to create user' 
+    };
+  }
+};
+
+// Export users to CSV
+export const exportUsersToCSV = async (status = '') => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    let url = `${API_BASE_URL}/admin-users-export-csv`;
+    if (status && status !== 'All' && status.toLowerCase() !== 'all') {
+      url += `?status=${encodeURIComponent(status.toLowerCase())}`;
+    }
+
+    console.log('🚀 EXPORT USERS CSV REQUEST:', {
       '🔗 URL': url,
       '📊 Status Filter': status,
-      '⭐ Min Rating': minRating,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
@@ -515,7 +511,7 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
 
@@ -540,7 +536,7 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
       
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const filename = `drivers_export_${timestamp}.csv`;
+      const filename = `users_export_${timestamp}.csv`;
       
       // Create and trigger download
       const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -556,7 +552,7 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
       console.log('✅ CSV EXPORT SUCCESSFUL:', {
         '📄 Filename': filename,
         '📏 Content Length': csvContent.length,
-        '📊 Export Filters': { status, minRating }
+        '📊 Export Filter': { status }
       });
       
       return { success: true, filename, size: csvContent.length };
@@ -577,25 +573,22 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
     
     return { 
       success: false, 
-      error: error.message || 'Failed to export drivers to CSV' 
+      error: error.message || 'Failed to export users to CSV' 
     };
   }
 };
 
-// Helper function to transform driver data from API to UI format
-export const transformDriverData = (apiDriver) => {
+// Transform user data from API format to UI format
+export const transformUserData = (apiUser) => {
   return {
-    id: apiDriver.id || apiDriver.driver_id || '',
-    name: apiDriver.full_name || apiDriver.name || apiDriver.driver_name || 'Unknown Driver',
-    phone: apiDriver.phone_number || apiDriver.phone || apiDriver.contact_number || '',
-    avatar: apiDriver.profile_picture || apiDriver.avatar || apiDriver.profile_image || 'https://i.pravatar.cc/40',
-    vehicle: {
-      model: apiDriver.vehicle_model || apiDriver.vehicle?.model || apiDriver.car_model || 'Unknown Vehicle',
-      year: apiDriver.vehicle_year || apiDriver.vehicle?.year || apiDriver.car_year || new Date().getFullYear()
-    },
-    status: apiDriver.status || apiDriver.driver_status || 'Unknown',
-    rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
-    totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0),
-    earnings: parseFloat(apiDriver.total_earnings || apiDriver.earnings || 0)
+    id: apiUser.id || apiUser.user_id || '',
+    name: apiUser.full_name || apiUser.name || 'Unknown User',
+    avatar: apiUser.avatar_url || apiUser.profile_picture || 'https://i.pravatar.cc/40',
+    joinedDate: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split('T')[0] : 'N/A',
+    contact: apiUser.email || apiUser.phone || apiUser.phone_number || 'N/A',
+    totalRides: parseInt(apiUser.total_rides || apiUser.rides_count || 0),
+    lastRide: apiUser.last_ride_date || 'N/A',
+    rating: parseFloat(apiUser.rating || apiUser.average_rating || 0),
+    status: apiUser.status || 'Active'
   };
 };

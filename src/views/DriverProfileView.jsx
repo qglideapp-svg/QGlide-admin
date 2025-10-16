@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
 import { logoutUser } from '../services/authService';
-import { fetchDriverDetails, approveDriver, suspendDriver, updateDriver } from '../services/driverService';
+import { fetchDriverDetails, approveDriver, suspendDriver, updateDriver, deleteDriver } from '../services/driverService';
 import Toast from '../components/Toast';
 import SuspendDriverModal from '../components/SuspendDriverModal';
 import EditDriverModal from '../components/EditDriverModal';
+import DeleteDriverModal from '../components/DeleteDriverModal';
 import logo from '../assets/images/logo.webp';
 import settingsIcon from '../assets/icons/settings.png';
 import notificationsIcon from '../assets/icons/notifications.png';
@@ -54,6 +55,10 @@ export default function DriverProfileView() {
   // Edit modal and loading states
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Delete modal and loading states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load driver data from API
   useEffect(() => {
@@ -344,6 +349,66 @@ export default function DriverProfileView() {
     }
   };
 
+  // Handle delete driver click - opens modal
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  // Handle delete driver confirmation - calls API
+  const handleDeleteConfirm = async (reason) => {
+    if (!driverId) {
+      setToast({
+        type: 'error',
+        message: 'No driver ID available'
+      });
+      return;
+    }
+
+    console.log('🔄 DELETING DRIVER:', {
+      '🆔 Driver ID': driverId,
+      '📝 Reason': reason,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsDeleting(true);
+
+    try {
+      const result = await deleteDriver(driverId, reason);
+
+      console.log('📡 DELETE RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📊 Data': result.data
+      });
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: 'Driver deleted successfully!'
+        });
+        
+        // Close modal and navigate back to driver management
+        setShowDeleteModal(false);
+        setTimeout(() => {
+          navigate('/driver-management');
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to delete driver'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Delete driver error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
       navigate('/dashboard');
@@ -509,6 +574,10 @@ export default function DriverProfileView() {
                 <span className="material-symbols-outlined">block</span>
                 Suspend
               </button>
+              <button className="btn-delete" onClick={handleDeleteClick}>
+                <span className="material-symbols-outlined">delete</span>
+                Delete
+              </button>
             </div>
           </div>
 
@@ -665,23 +734,32 @@ export default function DriverProfileView() {
         </div>
       </main>
       
-      {/* Edit Driver Modal */}
-      <EditDriverModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onConfirm={handleEditConfirm}
-        driverData={driverData}
-        isLoading={isUpdating}
-      />
-      
-      {/* Suspend Driver Modal */}
-      <SuspendDriverModal
-        isOpen={showSuspendModal}
-        onClose={() => setShowSuspendModal(false)}
-        onConfirm={handleSuspendConfirm}
-        driverName={driverData?.name || 'Unknown Driver'}
-        isLoading={isSuspending}
-      />
+          {/* Edit Driver Modal */}
+          <EditDriverModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            onConfirm={handleEditConfirm}
+            driverData={driverData}
+            isLoading={isUpdating}
+          />
+          
+          {/* Suspend Driver Modal */}
+          <SuspendDriverModal
+            isOpen={showSuspendModal}
+            onClose={() => setShowSuspendModal(false)}
+            onConfirm={handleSuspendConfirm}
+            driverName={driverData?.name || 'Unknown Driver'}
+            isLoading={isSuspending}
+          />
+          
+          {/* Delete Driver Modal */}
+          <DeleteDriverModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={handleDeleteConfirm}
+            driverName={driverData?.name || 'Unknown Driver'}
+            isLoading={isDeleting}
+          />
       
       {/* Toast Notification */}
       {toast && (

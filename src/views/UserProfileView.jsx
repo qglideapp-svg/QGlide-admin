@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './UserProfileView.css';
 import { logoutUser } from '../services/authService';
+import { fetchUserDetails, updateUserStatus, updateUser, deleteUser } from '../services/userService';
+import DeactivateUserModal from '../components/DeactivateUserModal';
+import EditUserModal from '../components/EditUserModal';
+import DeleteUserModal from '../components/DeleteUserModal';
+import Toast from '../components/Toast';
 import logo from '../assets/images/logo.webp';
 import settingsIcon from '../assets/icons/settings.png';
 import notificationsIcon from '../assets/icons/notifications.png';
@@ -44,53 +49,298 @@ export default function UserProfileView() {
   const navigate = useNavigate();
   const { userId } = useParams();
 
-  // Mock user data - in production, this would come from an API
-  const [userData] = useState({
-    id: userId || 'QG-84321',
-    name: 'Fahad Al-Marri',
-    avatar: 'https://i.pravatar.cc/120?img=1',
-    status: 'Active',
-    email: 'fahad.almarri@example.com',
-    phone: '+974 5512 3456',
-    joinedDate: '15 Aug, 2024',
-    walletBalance: 258.50,
-    lastTopUp: '01 Oct 2025',
-    totalRides: 124,
-    rideHistory: [
-      {
-        id: 'RD-98754',
-        date: '05 Oct 2025, 10:30 AM',
-        route: { from: 'The Pearl', to: 'Hamad Airport' },
-        driver: 'Yusuf Ahmed',
-        fare: 85.00,
-        status: 'Completed'
-      },
-      {
-        id: 'RD-98712',
-        date: '03 Oct 2025, 08:00 PM',
-        route: { from: 'Villaggio Mall', to: 'West Bay' },
-        driver: 'Ali Khan',
-        fare: 42.50,
-        status: 'Completed'
-      },
-      {
-        id: 'RD-98650',
-        date: '01 Oct 2025, 09:15 AM',
-        route: { from: 'Education City', to: 'Souq Waqif' },
-        driver: 'Mohammed Hassan',
-        fare: 60.00,
-        status: 'Canceled'
-      },
-      {
-        id: 'RD-98599',
-        date: '28 Sep 2025, 06:45 PM',
-        route: { from: 'Lusail Marina', to: 'Katara' },
-        driver: 'Omar Abdullah',
-        fare: 35.00,
-        status: 'Completed'
+  // API-related state
+  const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Deactivate modal state
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Toast state
+  const [toast, setToast] = useState(null);
+
+  // Load user data from API
+  const loadUserData = useCallback(async () => {
+    if (!userId) {
+      setError('No user ID provided');
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('🔄 LOADING USER DETAILS:', {
+      '🆔 User ID': userId,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await fetchUserDetails(userId);
+
+      console.log('📡 USER DETAILS API RESULT:', {
+        '✅ Success': result.success,
+        '📊 Has Data': !!result.data,
+        '📝 Error': result.error,
+        '🔍 Full Result': result
+      });
+
+      if (result.success && result.data) {
+        const apiUser = result.data;
+        
+        // Transform API data to match existing UI structure
+        const transformedData = {
+          id: apiUser.id || userId,
+          name: apiUser.full_name || 'Unknown User',
+          avatar: apiUser.avatar_url || `https://i.pravatar.cc/120?img=${userId}`,
+          status: apiUser.status || 'Active',
+          email: apiUser.email || 'No email provided',
+          phone: apiUser.phone || 'No phone provided',
+          joinedDate: apiUser.created_at ? new Date(apiUser.created_at).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          }) : 'Unknown',
+          walletBalance: parseFloat(apiUser.earnings?.total || 0),
+          lastTopUp: 'N/A', // Not in API response
+          totalRides: parseInt(apiUser.total_rides || 0),
+          rideHistory: (apiUser.recent_rides || []).map((ride, index) => ({
+            id: ride.id || `RD-${index + 1}`,
+            date: ride.created_at ? new Date(ride.created_at).toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }) : 'N/A',
+            route: { 
+              from: 'Pickup Location', // Not in API response
+              to: 'Dropoff Location' // Not in API response
+            },
+            driver: 'Driver Name', // Not in API response
+            fare: parseFloat(ride.fare || ride.actual_fare || 0),
+            status: ride.status === 'completed' ? 'Completed' : 
+                   ride.status === 'cancelled' ? 'Canceled' : 
+                   ride.status === 'in_progress' ? 'In Progress' : 'Pending'
+          }))
+        };
+
+        setUserData(transformedData);
+        
+        console.log('✅ USER DATA TRANSFORMED SUCCESSFULLY:', {
+          '📊 Transformed Data': transformedData,
+          '👤 User Name': transformedData.name,
+          '📱 Phone': transformedData.phone,
+          '💰 Wallet Balance': transformedData.walletBalance,
+          '🚕 Total Rides': transformedData.totalRides
+        });
+      } else {
+        setError(result.error || 'Failed to load user details');
+        console.error('❌ Failed to load user details:', result.error);
       }
-    ]
-  });
+    } catch (error) {
+      setError(error.message || 'An unexpected error occurred');
+      console.error('❌ Load user details error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
+
+  // Load user data on mount
+  useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
+
+  // Handle deactivate user click - opens modal
+  const handleDeactivateClick = () => {
+    setShowDeactivateModal(true);
+  };
+
+  // Handle edit user click - opens modal
+  const handleEditClick = () => {
+    setShowEditModal(true);
+  };
+
+  // Handle delete user click - opens modal
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  // Handle deactivate user confirmation - calls API
+  const handleDeactivateConfirm = async (status, reason) => {
+    if (!userId) {
+      setToast({
+        type: 'error',
+        message: 'No user ID available'
+      });
+      return;
+    }
+
+    console.log('🔄 DEACTIVATING USER:', {
+      '🆔 User ID': userId,
+      '📊 Status': status,
+      '📝 Reason': reason,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsDeactivating(true);
+
+    try {
+      const result = await updateUserStatus(userId, status, reason);
+
+      console.log('📡 DEACTIVATE RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📊 Data': result.data
+      });
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: `User account ${status} successfully!`
+        });
+        
+        // Close modal and reload user data
+        setShowDeactivateModal(false);
+        setTimeout(() => {
+          loadUserData(); // Reload to get updated status
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to deactivate user account'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Deactivate user error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
+  // Handle edit user confirmation - calls API
+  const handleEditConfirm = async (userData) => {
+    if (!userId) {
+      setToast({
+        type: 'error',
+        message: 'No user ID available'
+      });
+      return;
+    }
+
+    console.log('🔄 EDITING USER:', {
+      '🆔 User ID': userId,
+      '📝 User Data': userData,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsUpdating(true);
+
+    try {
+      const result = await updateUser(userId, userData);
+
+      console.log('📡 EDIT USER RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📊 Data': result.data
+      });
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: 'User profile updated successfully!'
+        });
+        
+        // Close modal and reload user data
+        setShowEditModal(false);
+        setTimeout(() => {
+          loadUserData(); // Reload to get updated data
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to update user profile'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Edit user error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle delete user confirmation - calls API
+  const handleDeleteConfirm = async (reason) => {
+    if (!userId) {
+      setToast({
+        type: 'error',
+        message: 'No user ID available'
+      });
+      return;
+    }
+
+    console.log('🔄 DELETING USER:', {
+      '🆔 User ID': userId,
+      '📝 Reason': reason,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsDeleting(true);
+
+    try {
+      const result = await deleteUser(userId, reason);
+
+      console.log('📡 DELETE USER RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📊 Data': result.data
+      });
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: 'User account deleted successfully!'
+        });
+        
+        // Close modal and redirect to user management
+        setShowDeleteModal(false);
+        setTimeout(() => {
+          navigate('/user-management');
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to delete user account'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Delete user error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
@@ -195,6 +445,30 @@ export default function UserProfileView() {
         </header>
 
         <div className="container">
+          {isLoading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <div className="loading-text">Loading user details...</div>
+            </div>
+          ) : error ? (
+            <div className="error-container">
+              <div className="error-icon">⚠️</div>
+              <div className="error-title">Error Loading User</div>
+              <div className="error-message">{error}</div>
+              <button className="retry-btn" onClick={loadUserData}>
+                Try Again
+              </button>
+            </div>
+          ) : !userData ? (
+            <div className="error-container">
+              <div className="error-icon">❌</div>
+              <div className="error-title">User Not Found</div>
+              <div className="error-message">The requested user could not be found.</div>
+              <button className="retry-btn" onClick={() => navigate('/user-management')}>
+                Back to Users
+              </button>
+            </div>
+          ) : (
           <div className="user-profile-content">
             {/* Left Column - User Information */}
             <div className="user-info-column">
@@ -232,13 +506,13 @@ export default function UserProfileView() {
                 <div className="actions-section">
                   <h3 className="section-title">Account Actions</h3>
                   <div className="action-buttons">
-                    <button className="btn-reset-password">
-                      <span className="material-symbols-outlined">key</span>
-                      Reset Password
+                    <button className="btn-edit-profile" onClick={handleEditClick}>
+                      <span className="material-symbols-outlined">edit</span>
+                      Edit Profile
                     </button>
-                    <button className="btn-deactivate">
+                    <button className="btn-deactivate" onClick={handleDeactivateClick}>
                       <span className="material-symbols-outlined">block</span>
-                      Deactivate Account
+                      Change Status
                     </button>
                   </div>
                 </div>
@@ -256,8 +530,8 @@ export default function UserProfileView() {
                     <div className="wallet-subtitle">Last top-up: {userData.lastTopUp}</div>
                   </div>
                   <div className="wallet-actions">
-                    <button className="btn-view-history">View History</button>
-                    <button className="btn-add-funds">Add Funds</button>
+                    <button className="btn-view-history" onClick={handleDeleteClick}>Delete Account</button>
+                    <button className="btn-add-funds">Export to CSV</button>
                   </div>
                 </div>
               </div>
@@ -301,8 +575,46 @@ export default function UserProfileView() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </main>
+      
+      {/* Deactivate User Modal */}
+      <DeactivateUserModal
+        isOpen={showDeactivateModal}
+        onClose={() => setShowDeactivateModal(false)}
+        onConfirm={handleDeactivateConfirm}
+        userName={userData?.name || 'Unknown User'}
+        isLoading={isDeactivating}
+      />
+      
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onConfirm={handleEditConfirm}
+        userData={userData}
+        isLoading={isUpdating}
+      />
+      
+      {/* Delete User Modal */}
+      <DeleteUserModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        userName={userData?.name || 'Unknown User'}
+        isLoading={isDeleting}
+      />
+      
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          duration={5000}
+        />
+      )}
     </div>
   );
 }
