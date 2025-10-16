@@ -89,7 +89,10 @@ export default function DriverManagementView() {
         '✅ Success': result.success,
         '📊 Has Data': !!result.data,
         '📝 Error': result.error,
-        '🔍 Full Result': result
+        '🔍 Full Result': result,
+        '🔍 Result.data.drivers': result.data?.drivers,
+        '🔍 Result.data.drivers length': result.data?.drivers?.length,
+        '🔍 Is result.data.drivers array?': Array.isArray(result.data?.drivers)
       });
 
       if (result.success && result.data) {

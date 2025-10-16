@@ -30,14 +30,17 @@ export const fetchDriversList = async (params = {}) => {
       queryParams.append('limit', params.limit.toString());
     }
 
-    const url = `${API_BASE_URL}/admin-drivers-list?${queryParams.toString()}`;
+    // For debugging, let's try without query parameters first
+    const url = `${API_BASE_URL}/admin-drivers-list${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
 
     console.log('🚀 API REQUEST DETAILS:', {
       '🔗 URL': url,
       '📝 Params': params,
       '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '📋 Query String': queryParams.toString(),
-      '⏰ Timestamp': new Date().toISOString()
+      '⏰ Timestamp': new Date().toISOString(),
+      '🔍 Making request to admin-drivers-list endpoint'
     });
 
     const response = await fetch(url, {
@@ -94,7 +97,13 @@ export const fetchDriversList = async (params = {}) => {
       '📋 All Drivers': driversArray,
       '⚙️ Transformed Data': transformedData,
       '🔗 Request URL': url,
-      '📝 Request Params': params
+      '📝 Request Params': params,
+      '🔍 Data.drivers check': data.drivers,
+      '🔍 Data.data check': data.data,
+      '🔍 Is data.drivers array?': Array.isArray(data.drivers),
+      '🔍 Is data.data array?': Array.isArray(data.data),
+      '🔍 Is data array?': Array.isArray(data),
+      '🔍 Raw data stringified': JSON.stringify(data, null, 2)
     });
 
     return { success: true, data: transformedData };
