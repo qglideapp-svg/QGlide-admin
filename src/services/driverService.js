@@ -112,8 +112,6 @@ export const fetchDriversList = async (params = {}) => {
       '🚨 Error Message': error.message,
       '🔍 Error Type': error.constructor.name,
       '📝 Error Stack': error.stack,
-      '🔗 Request URL': url || 'Unknown',
-      '📝 Request Params': params,
       '⏰ Timestamp': new Date().toISOString()
     });
     return { 
