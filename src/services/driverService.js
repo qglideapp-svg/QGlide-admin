@@ -45,14 +45,37 @@ export const fetchDriversList = async () => {
 
     const data = await response.json();
     
-    // Ensure drivers is always an array
+    // Log the raw response first to see what we're getting
+    console.log('📡 RAW API RESPONSE:', JSON.stringify(data, null, 2));
+    
+    // Try to find drivers in the response - check multiple possible locations
     let driversArray = [];
-    if (Array.isArray(data.drivers)) {
-      driversArray = data.drivers;
-    } else if (Array.isArray(data.data)) {
-      driversArray = data.data;
-    } else if (Array.isArray(data)) {
+    
+    // Check if response is directly an array
+    if (Array.isArray(data)) {
       driversArray = data;
+      console.log('✅ Found drivers as direct array');
+    }
+    // Check common API response structures
+    else if (data.drivers && Array.isArray(data.drivers)) {
+      driversArray = data.drivers;
+      console.log('✅ Found drivers in data.drivers');
+    }
+    else if (data.data && Array.isArray(data.data)) {
+      driversArray = data.data;
+      console.log('✅ Found drivers in data.data');
+    }
+    else if (data.results && Array.isArray(data.results)) {
+      driversArray = data.results;
+      console.log('✅ Found drivers in data.results');
+    }
+    else if (data.items && Array.isArray(data.items)) {
+      driversArray = data.items;
+      console.log('✅ Found drivers in data.items');
+    }
+    else {
+      console.log('❌ No drivers array found in response');
+      console.log('Available keys:', Object.keys(data));
     }
     
     // Transform API response to match UI expectations
