@@ -31,6 +31,15 @@ export default function LoginView() {
       if (result.success) {
         // Store the access token from the response
         if (result.data.access_token) {
+          console.log('🚀 LOGIN SUCCESS - STORING TOKEN:', {
+            '✅ Login Successful': true,
+            '🔑 Access Token': result.data.access_token,
+            '📏 Token Length': result.data.access_token?.length,
+            '🔍 Token Preview': result.data.access_token ? `${result.data.access_token.substring(0, 20)}...${result.data.access_token.substring(result.data.access_token.length - 10)}` : 'No token',
+            '📧 Email': email,
+            '⏰ Login Time': new Date().toISOString()
+          });
+          
           storeAuthToken(result.data.access_token);
         }
         navigate('/dashboard');

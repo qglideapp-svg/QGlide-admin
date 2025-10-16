@@ -29,10 +29,29 @@ export const loginUser = async (email, password) => {
 
 export const storeAuthToken = (token) => {
   localStorage.setItem('authToken', token);
+  
+  // Log the bearer token for debugging
+  console.log('🔑 BEARER TOKEN STORED:', {
+    '🔑 Token': token,
+    '📏 Token Length': token?.length,
+    '🔍 Token Preview': token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : 'No token',
+    '⏰ Timestamp': new Date().toISOString()
+  });
 };
 
 export const getAuthToken = () => {
-  return localStorage.getItem('authToken');
+  const token = localStorage.getItem('authToken');
+  
+  // Log when token is retrieved
+  console.log('🔍 AUTH TOKEN RETRIEVED:', {
+    '🔑 Token': token,
+    '📏 Token Length': token?.length,
+    '🔍 Token Preview': token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : 'No token',
+    '✅ Has Token': !!token,
+    '⏰ Retrieved At': new Date().toISOString()
+  });
+  
+  return token;
 };
 
 export const logoutUser = async () => {
