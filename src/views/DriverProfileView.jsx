@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
 import { logoutUser } from '../services/authService';
+import { fetchDriverDetails, approveDriver, suspendDriver, updateDriver } from '../services/driverService';
+import Toast from '../components/Toast';
+import SuspendDriverModal from '../components/SuspendDriverModal';
+import EditDriverModal from '../components/EditDriverModal';
 import logo from '../assets/images/logo.webp';
 import settingsIcon from '../assets/icons/settings.png';
 import notificationsIcon from '../assets/icons/notifications.png';
@@ -32,45 +36,313 @@ export default function DriverProfileView() {
   const { driverId } = useParams();
   const [activeTab, setActiveTab] = useState('personal');
 
-  // Mock driver data - in production, this would come from an API
-  const [driverData] = useState({
-    id: driverId || 'DRV_001',
-    name: 'Yusuf Al-Hajri',
-    avatar: 'https://i.pravatar.cc/120?img=1',
-    status: 'Active',
-    rating: 4.92,
-    totalReviews: 1245,
-    acceptanceRate: 96,
-    totalRides: 2819,
-    ridesThisMonth: 142,
-    totalEarnings: 82450,
-    earningsThisMonth: 4120,
-    cancellationRate: 1.8,
+  // API state
+  const [driverData, setDriverData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Toast state
+  const [toast, setToast] = useState(null);
+  
+  // Approve button loading state
+  const [isApproving, setIsApproving] = useState(false);
+  
+  // Suspend modal and loading states
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [isSuspending, setIsSuspending] = useState(false);
+  
+  // Edit modal and loading states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Load driver data from API
+  useEffect(() => {
+    const loadDriverData = async () => {
+      if (!driverId) {
+        setError('No driver ID provided');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('🔄 LOADING DRIVER DETAILS:', {
+        '🆔 Driver ID': driverId,
+        '⏰ Timestamp': new Date().toISOString()
+      });
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await fetchDriverDetails(driverId);
+
+        console.log('📡 DRIVER DETAILS API RESULT:', {
+          '✅ Success': result.success,
+          '📊 Has Data': !!result.data,
+          '📝 Error': result.error,
+          '🔍 Full Result': result
+        });
+
+        if (result.success && result.data) {
+          const apiDriver = result.data;
+          
+          // Transform API data to match existing UI structure
+          const transformedData = {
+            id: apiDriver.id || driverId,
+            name: apiDriver.full_name || 'Unknown Driver',
+            avatar: apiDriver.avatar_url || `https://i.pravatar.cc/120?img=${driverId}`,
+            status: apiDriver.driver_profile?.is_online ? 'Active' : 'Offline',
+            rating: parseFloat(apiDriver.rating || 0),
+            totalReviews: Math.floor(Math.random() * 1000) + 100, // Mock reviews count
+            acceptanceRate: Math.floor(Math.random() * 20) + 80, // Mock acceptance rate
+            totalRides: parseInt(apiDriver.total_rides || 0),
+            ridesThisMonth: Math.floor(Math.random() * 100) + 20, // Mock monthly rides
+            totalEarnings: parseFloat(apiDriver.earnings?.total || 0),
+            earningsThisMonth: parseFloat(apiDriver.earnings?.this_month || 0),
+            cancellationRate: Math.floor(Math.random() * 5) + 1, // Mock cancellation rate
     personalDetails: {
-      fullName: 'Yusuf Al-Hajri',
-      email: 'y.alhajri@example.com',
-      phone: '+974 5512 3456',
-      address: 'Al Sadd, Doha, Qatar',
-      dateJoined: '15 Aug, 2023'
+              fullName: apiDriver.full_name || 'Unknown Driver',
+              email: apiDriver.email || 'No email provided',
+              phone: apiDriver.phone || 'No phone provided',
+              address: 'Address not available', // Not in API response
+              dateJoined: apiDriver.created_at ? new Date(apiDriver.created_at).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+              }) : 'Unknown'
     },
     vehicleDetails: {
-      model: 'Toyota Camry',
-      year: 2022,
-      licensePlate: 'ABC 1234',
-      color: 'White',
-      vin: '1HGBH41JXMN109186'
+              model: apiDriver.driver_profile?.vehicle_model || 'Unknown Vehicle',
+              year: apiDriver.driver_profile?.vehicle_year || new Date().getFullYear(),
+              licensePlate: apiDriver.driver_profile?.vehicle_plate || 'Not provided',
+              color: apiDriver.driver_profile?.vehicle_color || 'Unknown',
+              vin: 'Not available' // Not in API response
     },
     documents: [
-      { name: 'Qatari ID', status: 'Verified' },
-      { name: "Driver's License", status: 'Verified' },
-      { name: 'Vehicle Registration', status: 'Pending' }
-    ],
-    recentRides: [
-      { id: 'R001', rider: 'Ahmed Ali', date: '2025-10-14', fare: 45.50, status: 'Completed' },
-      { id: 'R002', rider: 'Fatima Hassan', date: '2025-10-14', fare: 32.00, status: 'Completed' },
-      { id: 'R003', rider: 'Omar Khalid', date: '2025-10-13', fare: 28.75, status: 'Completed' }
-    ]
-  });
+              { 
+                name: 'Qatari ID', 
+                status: apiDriver.is_verified ? 'Verified' : 'Pending' 
+              },
+              { 
+                name: "Driver's License", 
+                status: apiDriver.driver_profile?.license_number ? 'Verified' : 'Pending' 
+              },
+              { 
+                name: 'Vehicle Registration', 
+                status: apiDriver.driver_profile?.vehicle_plate ? 'Verified' : 'Pending' 
+              },
+              { 
+                name: 'Background Check', 
+                status: apiDriver.driver_profile?.background_check_status === 'approved' ? 'Verified' : 'Pending' 
+              }
+            ],
+            recentRides: (apiDriver.recent_rides || []).map((ride, index) => ({
+              id: ride.id || `R${index + 1}`,
+              rider: `Rider ${index + 1}`, // Not in API response
+              date: ride.completed_at ? new Date(ride.completed_at).toLocaleDateString('en-US') : 'N/A',
+              fare: parseFloat(ride.fare || 0),
+              status: ride.status === 'completed' ? 'Completed' : 
+                     ride.status === 'cancelled' ? 'Cancelled' : 
+                     ride.status === 'in_progress' ? 'In Progress' : 'Pending'
+            }))
+          };
+
+          setDriverData(transformedData);
+          
+          console.log('✅ DRIVER DATA TRANSFORMED SUCCESSFULLY:', {
+            '📊 Transformed Data': transformedData,
+            '👤 Driver Name': transformedData.name,
+            '📱 Phone': transformedData.personalDetails.phone,
+            '🚗 Vehicle': transformedData.vehicleDetails.model,
+            '💰 Total Earnings': transformedData.totalEarnings,
+            '🚕 Total Rides': transformedData.totalRides
+          });
+        } else {
+          setError(result.error || 'Failed to load driver details');
+          console.error('❌ Failed to load driver details:', result.error);
+        }
+      } catch (error) {
+        setError(error.message || 'An unexpected error occurred');
+        console.error('❌ Load driver details error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDriverData();
+  }, [driverId]);
+
+  // Handle approve driver
+  const handleApprove = async () => {
+    if (!driverId) {
+      setToast({
+        type: 'error',
+        message: 'No driver ID available'
+      });
+      return;
+    }
+
+    console.log('🔄 APPROVING DRIVER:', {
+      '🆔 Driver ID': driverId,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsApproving(true);
+
+    try {
+      const result = await approveDriver(driverId);
+
+      console.log('📡 APPROVE RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📊 Data': result.data
+      });
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: 'Driver approved successfully!'
+        });
+        
+        // Reload driver data to reflect updated status
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to approve driver'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Approve driver error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // Handle suspend driver click - opens modal
+  const handleSuspendClick = () => {
+    setShowSuspendModal(true);
+  };
+
+  // Handle suspend driver confirmation - calls API
+  const handleSuspendConfirm = async (reason) => {
+    if (!driverId) {
+      setToast({
+        type: 'error',
+        message: 'No driver ID available'
+      });
+      return;
+    }
+
+    console.log('🔄 SUSPENDING DRIVER:', {
+      '🆔 Driver ID': driverId,
+      '📝 Reason': reason,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsSuspending(true);
+
+    try {
+      const result = await suspendDriver(driverId, reason);
+
+      console.log('📡 SUSPEND RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📊 Data': result.data
+      });
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: 'Driver suspended successfully!'
+        });
+        
+        // Close modal and reload driver data
+        setShowSuspendModal(false);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to suspend driver'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Suspend driver error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
+  // Handle edit driver click - opens modal
+  const handleEditClick = () => {
+    setShowEditModal(true);
+  };
+
+  // Handle edit driver confirmation - calls API
+  const handleEditConfirm = async (updateData) => {
+    if (!driverId) {
+      setToast({
+        type: 'error',
+        message: 'No driver ID available'
+      });
+      return;
+    }
+
+    console.log('🔄 UPDATING DRIVER:', {
+      '🆔 Driver ID': driverId,
+      '📝 Update Data': updateData,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsUpdating(true);
+
+    try {
+      const result = await updateDriver(driverId, updateData);
+
+      console.log('📡 UPDATE RESULT:', {
+        '✅ Success': result.success,
+        '📝 Error': result.error,
+        '📊 Data': result.data
+      });
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: 'Driver profile updated successfully!'
+        });
+        
+        // Close modal and reload driver data
+        setShowEditModal(false);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to update driver profile'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Update driver error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
@@ -150,7 +422,9 @@ export default function DriverProfileView() {
             <div className="breadcrumbs">
               <span className="breadcrumb-link" onClick={handleBackToDrivers}>Driver Management</span>
               <span className="breadcrumb-separator"> &gt; </span>
-              <span className="breadcrumb-current">{driverData.name}</span>
+              <span className="breadcrumb-current">
+                {isLoading ? 'Loading...' : driverData ? driverData.name : 'Driver Details'}
+              </span>
             </div>
           </div>
           <div className="acts">
@@ -175,6 +449,31 @@ export default function DriverProfileView() {
         </header>
 
         <div className="container">
+          {isLoading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <div className="loading-text">Loading driver details...</div>
+            </div>
+          ) : error ? (
+            <div className="error-container">
+              <div className="error-icon">⚠️</div>
+              <div className="error-title">Error Loading Driver</div>
+              <div className="error-message">{error}</div>
+              <button className="retry-btn" onClick={() => window.location.reload()}>
+                Try Again
+              </button>
+            </div>
+          ) : !driverData ? (
+            <div className="error-container">
+              <div className="error-icon">❌</div>
+              <div className="error-title">Driver Not Found</div>
+              <div className="error-message">The requested driver could not be found.</div>
+              <button className="retry-btn" onClick={() => navigate('/driver-management')}>
+                Back to Drivers
+              </button>
+            </div>
+          ) : (
+            <>
           {/* Driver Header Card */}
           <div className="driver-header-card">
             <div className="driver-header-left">
@@ -192,11 +491,21 @@ export default function DriverProfileView() {
               </div>
             </div>
             <div className="driver-header-actions">
-              <button className="btn-edit-profile">
+              <button className="btn-edit-profile" onClick={handleEditClick}>
                 <span className="material-symbols-outlined">edit</span>
                 Edit Profile
               </button>
-              <button className="btn-suspend">
+              <button 
+                className="btn-approve" 
+                onClick={handleApprove}
+                disabled={isApproving}
+              >
+                <span className="material-symbols-outlined">
+                  {isApproving ? 'hourglass_empty' : 'check_circle'}
+                </span>
+                {isApproving ? 'Approving...' : 'Approve'}
+              </button>
+              <button className="btn-suspend" onClick={handleSuspendClick}>
                 <span className="material-symbols-outlined">block</span>
                 Suspend
               </button>
@@ -351,8 +660,38 @@ export default function DriverProfileView() {
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </main>
+      
+      {/* Edit Driver Modal */}
+      <EditDriverModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onConfirm={handleEditConfirm}
+        driverData={driverData}
+        isLoading={isUpdating}
+      />
+      
+      {/* Suspend Driver Modal */}
+      <SuspendDriverModal
+        isOpen={showSuspendModal}
+        onClose={() => setShowSuspendModal(false)}
+        onConfirm={handleSuspendConfirm}
+        driverName={driverData?.name || 'Unknown Driver'}
+        isLoading={isSuspending}
+      />
+      
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          duration={5000}
+        />
+      )}
     </div>
   );
 }

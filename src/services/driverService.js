@@ -127,6 +127,276 @@ export const fetchDriversList = async () => {
   }
 };
 
+// Fetch driver details by ID
+export const fetchDriverDetails = async (driverId) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const url = `${API_BASE_URL}/admin-driver-details?driver_id=${driverId}`;
+    
+    console.log('🚀 FETCH DRIVER DETAILS REQUEST:', {
+      '🔗 URL': url,
+      '🆔 Driver ID': driverId,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('📡 DRIVER DETAILS HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 RAW DRIVER DETAILS RESPONSE:', JSON.stringify(data, null, 2));
+    
+    // Extract driver from data.data.driver
+    if (data.success && data.data && data.data.driver) {
+      console.log('✅ DRIVER DETAILS EXTRACTED SUCCESSFULLY:', {
+        '📊 Driver Data': data.data.driver,
+        '🔍 Driver ID': data.data.driver.id,
+        '👤 Driver Name': data.data.driver.full_name,
+        '📱 Phone': data.data.driver.phone,
+        '🚗 Vehicle Info': data.data.driver.driver_profile,
+        '💰 Earnings': data.data.driver.earnings,
+        '🚕 Recent Rides': data.data.driver.recent_rides
+      });
+      
+      return { success: true, data: data.data.driver };
+    }
+    
+    console.log('❌ INVALID DRIVER DETAILS RESPONSE STRUCTURE:', {
+      '📊 Raw Data': data,
+      '🔍 Success': data.success,
+      '🔍 Has Data': !!data.data,
+      '🔍 Has Driver': !!data.data?.driver
+    });
+    
+    return { success: false, error: 'Invalid response structure' };
+  } catch (error) {
+    console.error('❌ FETCH DRIVER DETAILS ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to fetch driver details' 
+    };
+  }
+};
+
+// Approve driver by ID
+export const approveDriver = async (driverId) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const url = `${API_BASE_URL}/approve-driver`;
+    
+    console.log('🚀 APPROVE DRIVER REQUEST:', {
+      '🔗 URL': url,
+      '🆔 Driver ID': driverId,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ driver_id: driverId })
+    });
+
+    console.log('📡 APPROVE DRIVER HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 APPROVE DRIVER RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ APPROVE DRIVER ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to approve driver' 
+    };
+  }
+};
+
+// Suspend driver by ID with reason
+export const suspendDriver = async (driverId, reason) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const url = `${API_BASE_URL}/admin-update-driver-status`;
+    
+    console.log('🚀 SUSPEND DRIVER REQUEST:', {
+      '🔗 URL': url,
+      '🆔 Driver ID': driverId,
+      '📝 Reason': reason,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        driver_id: driverId,
+        status: 'suspended',
+        reason: reason
+      })
+    });
+
+    console.log('📡 SUSPEND DRIVER HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 SUSPEND DRIVER RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ SUSPEND DRIVER ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to suspend driver' 
+    };
+  }
+};
+
+// Update driver details
+export const updateDriver = async (driverId, updateData) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const url = `${API_BASE_URL}/admin-update-driver`;
+    
+    console.log('🚀 UPDATE DRIVER REQUEST:', {
+      '🔗 URL': url,
+      '🆔 Driver ID': driverId,
+      '📝 Update Data': updateData,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        driver_id: driverId,
+        ...updateData
+      })
+    });
+
+    console.log('📡 UPDATE DRIVER HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 UPDATE DRIVER RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ UPDATE DRIVER ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to update driver' 
+    };
+  }
+};
+
 // Helper function to transform driver data from API to UI format
 export const transformDriverData = (apiDriver) => {
   return {
