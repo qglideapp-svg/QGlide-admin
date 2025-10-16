@@ -40,6 +40,14 @@ export default function LoginView() {
             '⏰ Login Time': new Date().toISOString()
           });
           
+          // Terminal logging for debugging
+          console.log('\n' + '='.repeat(80));
+          console.log('🚀 LOGIN SUCCESS - BEARER TOKEN:');
+          console.log('='.repeat(80));
+          console.log('Email:', email);
+          console.log('Token:', result.data.access_token);
+          console.log('='.repeat(80) + '\n');
+          
           storeAuthToken(result.data.access_token);
         }
         navigate('/dashboard');

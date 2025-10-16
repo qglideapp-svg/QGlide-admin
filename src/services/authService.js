@@ -37,6 +37,13 @@ export const storeAuthToken = (token) => {
     '🔍 Token Preview': token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : 'No token',
     '⏰ Timestamp': new Date().toISOString()
   });
+  
+  // Also log to terminal for debugging
+  console.log('\n' + '='.repeat(80));
+  console.log('🔑 BEARER TOKEN (for terminal debugging):');
+  console.log('='.repeat(80));
+  console.log(token);
+  console.log('='.repeat(80) + '\n');
 };
 
 export const getAuthToken = () => {
