@@ -56,7 +56,12 @@ export const fetchDriversList = async () => {
       driversArray = data;
       console.log('✅ Found drivers as direct array');
     }
-    // Check common API response structures
+    // Check the actual API response structure: data.data.drivers
+    else if (data.data && data.data.drivers && Array.isArray(data.data.drivers)) {
+      driversArray = data.data.drivers;
+      console.log('✅ Found drivers in data.data.drivers');
+    }
+    // Check other common API response structures
     else if (data.drivers && Array.isArray(data.drivers)) {
       driversArray = data.drivers;
       console.log('✅ Found drivers in data.drivers');
@@ -81,11 +86,11 @@ export const fetchDriversList = async () => {
     // Transform API response to match UI expectations
     const transformedData = {
       drivers: driversArray,
-      totalCount: data.totalCount || data.total || data.count || driversArray.length,
-      totalPages: data.totalPages || Math.ceil((data.totalCount || data.total || data.count || driversArray.length) / 20),
-      currentPage: 1,
-      hasNextPage: data.hasNextPage || false,
-      hasPrevPage: data.hasPrevPage || false
+      totalCount: data.data?.total_count || data.totalCount || data.total || data.count || driversArray.length,
+      totalPages: data.data?.total_pages || data.totalPages || Math.ceil((data.data?.total_count || data.totalCount || data.total || data.count || driversArray.length) / 20),
+      currentPage: data.data?.page || 1,
+      hasNextPage: data.data?.hasNextPage || data.hasNextPage || false,
+      hasPrevPage: data.data?.hasPrevPage || data.hasPrevPage || false
     };
 
     console.log('🔍 FULL API RESPONSE DEBUG:', {
