@@ -40,7 +40,7 @@ export const fetchDriversList = async (params = {}) => {
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '📋 Query String': queryParams.toString(),
       '⏰ Timestamp': new Date().toISOString(),
-      '🔍 Making request to admin-drivers-list endpoint'
+      '🔍 Making request to admin-drivers-list endpoint': true
     });
 
     const response = await fetch(url, {
