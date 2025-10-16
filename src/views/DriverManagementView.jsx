@@ -51,26 +51,9 @@ export default function DriverManagementView() {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  // Debounced search function
-  const debounce = (func, wait) => {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  };
-
   // Fetch drivers from API
   const loadDrivers = useCallback(async () => {
     console.log('🔄 LOADING DRIVERS:', {
-      '🔍 Search Term': searchTerm,
-      '📊 Status Filter': statusFilter,
-      '📄 Current Page': currentPage,
-      '📏 Limit': limit,
       '⏰ Timestamp': new Date().toISOString()
     });
     
@@ -78,12 +61,7 @@ export default function DriverManagementView() {
     setError(null);
 
     try {
-      const result = await fetchDriversList({
-        search: searchTerm || undefined,
-        status: statusFilter,
-        page: currentPage,
-        limit: limit
-      });
+      const result = await fetchDriversList();
 
       console.log('📡 API RESULT RECEIVED:', {
         '✅ Success': result.success,
@@ -126,21 +104,12 @@ export default function DriverManagementView() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, statusFilter, currentPage, limit]);
+  }, []);
 
-  // Debounced version of loadDrivers for search
-  const debouncedLoadDrivers = useCallback(
-    debounce(() => {
-      setCurrentPage(1); // Reset to first page on search
-      loadDrivers();
-    }, 300),
-    [loadDrivers]
-  );
-
-  // Load drivers on mount and when filters change
+  // Load drivers on mount
   useEffect(() => {
     loadDrivers();
-  }, [statusFilter, currentPage]);
+  }, []);
 
   // Fallback: Initialize with empty array if no drivers loaded after 5 seconds
   useEffect(() => {
@@ -153,13 +122,6 @@ export default function DriverManagementView() {
 
     return () => clearTimeout(timer);
   }, [drivers.length, isLoading, error]);
-
-  // Load drivers with debounce when search term changes
-  useEffect(() => {
-    if (searchTerm !== undefined) {
-      debouncedLoadDrivers();
-    }
-  }, [searchTerm, debouncedLoadDrivers]);
 
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {

@@ -2,7 +2,7 @@ import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
-export const fetchDriversList = async (params = {}) => {
+export const fetchDriversList = async () => {
   try {
     // Use saved token from login
     const token = getAuthToken();
@@ -11,34 +11,13 @@ export const fetchDriversList = async (params = {}) => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    // Build query parameters
-    const queryParams = new URLSearchParams();
-    
-    if (params.search) {
-      queryParams.append('search', params.search);
-    }
-    
-    if (params.status && params.status !== 'All Statuses') {
-      queryParams.append('status', params.status.toLowerCase());
-    }
-    
-    if (params.page) {
-      queryParams.append('page', params.page.toString());
-    }
-    
-    if (params.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-
-    // For debugging, let's try without query parameters first
-    const url = `${API_BASE_URL}/admin-drivers-list${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    // Simple endpoint without any query parameters
+    const url = `${API_BASE_URL}/admin-drivers-list`;
 
     console.log('🚀 API REQUEST DETAILS:', {
       '🔗 URL': url,
-      '📝 Params': params,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
-      '📋 Query String': queryParams.toString(),
       '⏰ Timestamp': new Date().toISOString(),
       '🔍 Making request to admin-drivers-list endpoint': true
     });
@@ -80,8 +59,8 @@ export const fetchDriversList = async (params = {}) => {
     const transformedData = {
       drivers: driversArray,
       totalCount: data.totalCount || data.total || data.count || driversArray.length,
-      totalPages: data.totalPages || Math.ceil((data.totalCount || data.total || data.count || driversArray.length) / (params.limit || 20)),
-      currentPage: params.page || 1,
+      totalPages: data.totalPages || Math.ceil((data.totalCount || data.total || data.count || driversArray.length) / 20),
+      currentPage: 1,
       hasNextPage: data.hasNextPage || false,
       hasPrevPage: data.hasPrevPage || false
     };
@@ -97,7 +76,6 @@ export const fetchDriversList = async (params = {}) => {
       '📋 All Drivers': driversArray,
       '⚙️ Transformed Data': transformedData,
       '🔗 Request URL': url,
-      '📝 Request Params': params,
       '🔍 Data.drivers check': data.drivers,
       '🔍 Data.data check': data.data,
       '🔍 Is data.drivers array?': Array.isArray(data.drivers),
