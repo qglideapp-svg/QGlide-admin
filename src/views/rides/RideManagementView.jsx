@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RideManagementView.css';
-import { logoutUser } from '../services/authService';
-import { fetchRidesList } from '../services/ridesService';
-import Toast from '../components/Toast';
-import logo from '../assets/images/logo.webp';
-import settingsIcon from '../assets/icons/settings.png';
-import notificationsIcon from '../assets/icons/notifications.png';
+import { logoutUser } from '../../services/authService';
+import { fetchRidesList } from '../../services/ridesService';
+import Toast from '../../components/Toast';
+import logo from '../../assets/images/logo.webp';
+import settingsIcon from '../../assets/icons/settings.png';
+import notificationsIcon from '../../assets/icons/notifications.png';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>

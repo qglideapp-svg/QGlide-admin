@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './DashboardView.css';
-import logo from '../assets/images/logo.webp';
-import routeIcon from '../assets/icons/route.png';
-import moneyIcon from '../assets/icons/money.png';
-import activeIcon from '../assets/icons/active.png';
-import settingsIcon from '../assets/icons/settings.png';
-import checkIcon from '../assets/icons/check.png';
-import notificationsIcon from '../assets/icons/notifications.png';
-import { fetchDashboardData, fetchRidesAnalytics } from '../services/dashboardService';
-import { logoutUser } from '../services/authService';
-import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../services/financialService';
-import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved } from '../services/supportService';
-import { fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport } from '../services/analyticsService';
-import Toast from '../components/Toast';
+import logo from '../../assets/images/logo.webp';
+import routeIcon from '../../assets/icons/route.png';
+import moneyIcon from '../../assets/icons/money.png';
+import activeIcon from '../../assets/icons/active.png';
+import settingsIcon from '../../assets/icons/settings.png';
+import checkIcon from '../../assets/icons/check.png';
+import notificationsIcon from '../../assets/icons/notifications.png';
+import { fetchDashboardData, fetchRidesAnalytics } from '../../services/dashboardService';
+import { logoutUser } from '../../services/authService';
+import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../../services/financialService';
+import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved } from '../../services/supportService';
+import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
+import Toast from '../../components/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -59,6 +59,22 @@ export default function DashboardView() {
   const [revenueByPaymentType, setRevenueByPaymentType] = useState([]);
   const [isAnalyticsDataLoading, setIsAnalyticsDataLoading] = useState(false);
   const [dateRange, setDateRange] = useState('Oct 1, 2025 - Oct 7, 2025');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState('2025-10-01');
+  const [tempEndDate, setTempEndDate] = useState('2025-10-07');
+  
+  // Export dropdown states
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showSectionModal, setShowSectionModal] = useState(false);
+  const [selectedSections, setSelectedSections] = useState([
+    'metrics',
+    'ridesByRegion', 
+    'ridesByVehicleType',
+    'acceptanceRateByHour',
+    'driverLeaderboard',
+    'revenueByPaymentType'
+  ]);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Reset all loading states when component mounts to ensure clean state
   useEffect(() => {
@@ -92,6 +108,20 @@ export default function DashboardView() {
     }
   }, [activeSection, ticketFilter]);
 
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showExportDropdown && !event.target.closest('.export-dropdown-container')) {
+        setShowExportDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportDropdown]);
+
   const loadAnalyticsData = async () => {
     setIsAnalyticsLoading(true);
     
@@ -123,7 +153,17 @@ export default function DashboardView() {
       const result = await fetchDashboardData();
       
       if (result.success) {
-        setDashboardData(result.data);
+        const overview = result.data.data.dashboard_overview;
+        const transformedData = {
+          totalRidesToday: overview.total_rides_last_7_days.value,
+          ridesGrowth: overview.total_rides_last_7_days.change_percent,
+          totalRevenue: overview.total_revenue_last_7_days.value,
+          revenueGrowth: overview.total_revenue_last_7_days.change_percent,
+          activeDrivers: overview.active_drivers.value,
+          successRate: overview.ride_success_rate_last_7_days.value,
+          successRateGrowth: overview.ride_success_rate_last_7_days.change_percent
+        };
+        setDashboardData(transformedData);
       } else {
         setError(result.error);
         setShowToast(true);
@@ -185,48 +225,253 @@ export default function DashboardView() {
     }
   };
   
+  // Helper function to convert dateRange string to ISO format
+  const parseDateRange = (dateRangeString) => {
+    try {
+      // Parse format like "Oct 1, 2025 - Oct 7, 2025"
+      const parts = dateRangeString.split(' - ');
+      if (parts.length !== 2) {
+        throw new Error('Invalid date range format');
+      }
+      
+      const startDateStr = parts[0].trim();
+      const endDateStr = parts[1].trim();
+      
+      // Parse dates (assuming format: "Oct 1, 2025")
+      const startDate = new Date(startDateStr);
+      const endDate = new Date(endDateStr);
+      
+      // Set time to start and end of day
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      
+      return {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      };
+    } catch (error) {
+      console.error('Date parsing error:', error);
+      // Fallback to last 7 days
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 7);
+      
+      return {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      };
+    }
+  };
+
   const loadAnalyticsReportData = async () => {
     if (isAnalyticsDataLoading) return; // Prevent multiple simultaneous calls
     setIsAnalyticsDataLoading(true);
     
     try {
-      const [metricsResult, regionResult, vehicleTypeResult, acceptanceResult, leaderboardResult, revenueResult] = await Promise.all([
-        fetchAnalyticsMetrics(),
-        fetchRidesByRegion(),
-        fetchRidesByVehicleType(),
-        fetchAcceptanceRateByHour(),
-        fetchDriverLeaderboard(),
-        fetchRevenueByPaymentType()
-      ]);
+      console.log('🔄 LOADING ANALYTICS REPORT DATA:', {
+        '📅 Date Range': dateRange,
+        '⏰ Timestamp': new Date().toISOString()
+      });
+
+      // Parse dateRange to get start and end dates
+      const { startDate, endDate } = parseDateRange(dateRange);
       
-      if (metricsResult.success) {
-        setAnalyticsMetrics(metricsResult.data);
-      }
+      console.log('📅 PARSED DATES:', {
+        '📅 Start Date': startDate,
+        '📅 End Date': endDate
+      });
+
+      // Call the unified analytics API
+      const result = await fetchAnalyticsReports(startDate, endDate);
       
-      if (regionResult.success) {
-        setRidesByRegion(regionResult.data);
-      }
-      
-      if (vehicleTypeResult.success) {
-        setRidesByVehicleType(vehicleTypeResult.data);
-      }
-      
-      if (acceptanceResult.success) {
-        setAcceptanceRateByHour(acceptanceResult.data);
-      }
-      
-      if (leaderboardResult.success) {
-        setDriverLeaderboard(leaderboardResult.data);
-      }
-      
-      if (revenueResult.success) {
-        setRevenueByPaymentType(revenueResult.data);
+      if (result.success && result.data) {
+        console.log('✅ ANALYTICS DATA LOADED:', {
+          '📊 Has Metrics': !!result.data.metrics,
+          '🗺️ Has Regions': !!result.data.ridesByRegion,
+          '🚗 Has Vehicle Types': !!result.data.ridesByVehicleType,
+          '⏰ Has Time Data': !!result.data.acceptanceRateByHour,
+          '👑 Has Leaderboard': !!result.data.driverLeaderboard,
+          '💰 Has Revenue Data': !!result.data.revenueByPaymentType,
+          '🔍 Full Data': result.data
+        });
+
+        // Update all analytics state variables
+        if (result.data.metrics) {
+          setAnalyticsMetrics(result.data.metrics);
+        }
+        
+        if (result.data.ridesByRegion) {
+          setRidesByRegion(result.data.ridesByRegion);
+        }
+        
+        if (result.data.ridesByVehicleType) {
+          setRidesByVehicleType(result.data.ridesByVehicleType);
+        }
+        
+        if (result.data.acceptanceRateByHour) {
+          setAcceptanceRateByHour(result.data.acceptanceRateByHour);
+        }
+        
+        if (result.data.driverLeaderboard) {
+          setDriverLeaderboard(result.data.driverLeaderboard);
+        }
+        
+        if (result.data.revenueByPaymentType) {
+          setRevenueByPaymentType(result.data.revenueByPaymentType);
+        }
+      } else {
+        console.error('❌ Analytics API failed:', result.error);
+        // Keep existing data if API fails
       }
     } catch (err) {
-      console.error('Analytics report data error:', err);
+      console.error('❌ Analytics report data error:', err);
+      // Keep existing data if there's an error
     } finally {
       setIsAnalyticsDataLoading(false);
     }
+  };
+
+  // Date picker handlers
+  const handleDateRangeClick = () => {
+    setShowDatePicker(!showDatePicker);
+  };
+
+  const handleDateRangeApply = () => {
+    // Convert dates to the expected format
+    const startDate = new Date(tempStartDate);
+    const endDate = new Date(tempEndDate);
+    
+    const formatDate = (date) => {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    };
+    
+    const newDateRange = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    setDateRange(newDateRange);
+    setShowDatePicker(false);
+    
+    // Reload analytics data with new date range
+    loadAnalyticsReportData();
+  };
+
+  const handleDateRangeCancel = () => {
+    setShowDatePicker(false);
+  };
+
+  // Export dropdown handlers
+  const handleExportClick = () => {
+    setShowExportDropdown(!showExportDropdown);
+  };
+
+  const handleExportOption = async (option) => {
+    setShowExportDropdown(false);
+    
+    const { startDate, endDate } = parseDateRange(dateRange);
+    
+    switch (option) {
+      case 'all-csv':
+        await handleExportAllCSV(startDate, endDate);
+        break;
+      case 'specific':
+        setShowSectionModal(true);
+        break;
+      case 'json':
+        await handleExportJSON(startDate, endDate);
+        break;
+      case 'revenue-only':
+        await handleExportRevenueOnly(startDate, endDate);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleExportAllCSV = async (startDate, endDate) => {
+    setIsExporting(true);
+    try {
+      const result = await exportAnalyticsReport(startDate, endDate);
+      if (result.success) {
+        showToastMessage('All data exported as CSV successfully', 'success');
+      } else {
+        showToastMessage(result.error || 'Failed to export data', 'error');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showToastMessage('Failed to export data', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportJSON = async (startDate, endDate) => {
+    setIsExporting(true);
+    try {
+      const result = await exportAnalyticsAsJSON(startDate, endDate);
+      if (result.success) {
+        showToastMessage('Data exported as JSON successfully', 'success');
+      } else {
+        showToastMessage(result.error || 'Failed to export JSON', 'error');
+      }
+    } catch (error) {
+      console.error('JSON export error:', error);
+      showToastMessage('Failed to export JSON', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportRevenueOnly = async (startDate, endDate) => {
+    setIsExporting(true);
+    try {
+      const result = await exportRevenueData(startDate, endDate);
+      if (result.success) {
+        showToastMessage('Revenue data exported successfully', 'success');
+      } else {
+        showToastMessage(result.error || 'Failed to export revenue data', 'error');
+      }
+    } catch (error) {
+      console.error('Revenue export error:', error);
+      showToastMessage('Failed to export revenue data', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportSpecific = () => {
+    setShowExportDropdown(false);
+    setShowSectionModal(true);
+  };
+
+  const handleSectionExport = async () => {
+    setShowSectionModal(false);
+    setIsExporting(true);
+    
+    try {
+      const { startDate, endDate } = parseDateRange(dateRange);
+      const result = await exportSpecificSections(startDate, endDate, selectedSections);
+      
+      if (result.success) {
+        showToastMessage('Selected sections exported successfully', 'success');
+      } else {
+        showToastMessage(result.error || 'Failed to export sections', 'error');
+      }
+    } catch (error) {
+      console.error('Section export error:', error);
+      showToastMessage('Failed to export sections', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleSectionToggle = (section) => {
+    setSelectedSections(prev => 
+      prev.includes(section) 
+        ? prev.filter(s => s !== section)
+        : [...prev, section]
+    );
   };
 
   const toggleSidebar = () => {
@@ -899,14 +1144,98 @@ export default function DashboardView() {
                 </div>
               </div>
               <div className="acts">
-                <div className="date-range-display">
-                  <span className="material-symbols-outlined">calendar_today</span>
-                  <span>{dateRange}</span>
+                <div className="date-range-picker-container">
+                  <div className="date-range-display" onClick={handleDateRangeClick}>
+                    <span className="material-symbols-outlined">calendar_today</span>
+                    <span>{dateRange}</span>
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </div>
+                  
+                  {showDatePicker && (
+                    <div className="date-picker-dropdown">
+                      <div className="date-picker-header">
+                        <h4>Select Date Range</h4>
+                        <button className="close-btn" onClick={handleDateRangeCancel}>
+                          <span className="material-symbols-outlined">close</span>
+                        </button>
+                      </div>
+                      <div className="date-inputs">
+                        <div className="date-input-group">
+                          <label>Start Date</label>
+                          <input
+                            type="date"
+                            value={tempStartDate}
+                            onChange={(e) => setTempStartDate(e.target.value)}
+                            className="date-input"
+                          />
+                        </div>
+                        <div className="date-input-group">
+                          <label>End Date</label>
+                          <input
+                            type="date"
+                            value={tempEndDate}
+                            onChange={(e) => setTempEndDate(e.target.value)}
+                            className="date-input"
+                          />
+                        </div>
+                      </div>
+                      <div className="date-picker-actions">
+                        <button className="cancel-btn" onClick={handleDateRangeCancel}>
+                          Cancel
+                        </button>
+                        <button className="apply-btn" onClick={handleDateRangeApply}>
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button className="export-report-btn" onClick={exportAnalyticsReport}>
-                  <span className="material-symbols-outlined">download</span>
-                  Export Report
-                </button>
+                <div className="export-dropdown-container">
+                  <button 
+                    className="export-report-btn" 
+                    onClick={handleExportClick}
+                    disabled={isExporting}
+                  >
+                    <span className="material-symbols-outlined">
+                      {isExporting ? 'hourglass_empty' : 'download'}
+                    </span>
+                    {isExporting ? 'Exporting...' : 'Export Report'}
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </button>
+                  
+                  {showExportDropdown && (
+                    <div className="export-dropdown-menu">
+                      <div 
+                        className="export-dropdown-item"
+                        onClick={() => handleExportOption('all-csv')}
+                      >
+                        <span className="material-symbols-outlined">table_chart</span>
+                        Export All Data as CSV
+                      </div>
+                      <div 
+                        className="export-dropdown-item"
+                        onClick={() => handleExportOption('specific')}
+                      >
+                        <span className="material-symbols-outlined">checklist</span>
+                        Export Specific Sections
+                      </div>
+                      <div 
+                        className="export-dropdown-item"
+                        onClick={() => handleExportOption('json')}
+                      >
+                        <span className="material-symbols-outlined">code</span>
+                        Export as JSON
+                      </div>
+                      <div 
+                        className="export-dropdown-item"
+                        onClick={() => handleExportOption('revenue-only')}
+                      >
+                        <span className="material-symbols-outlined">payments</span>
+                        Export Only Revenue Data
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
                   <span className="material-symbols-outlined">settings</span>
                 </button>
@@ -1200,6 +1529,54 @@ export default function DashboardView() {
           type="error" 
           onClose={closeToast}
         />
+      )}
+
+      {/* Section Selection Modal */}
+      {showSectionModal && (
+        <div className="export-section-modal-overlay" onClick={() => setShowSectionModal(false)}>
+          <div className="export-section-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Select Sections to Export</h3>
+              <button className="close-btn" onClick={() => setShowSectionModal(false)}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="modal-content">
+              <div className="section-checkbox-group">
+                {[
+                  { key: 'metrics', label: 'Metrics Overview' },
+                  { key: 'ridesByRegion', label: 'Rides by Region' },
+                  { key: 'ridesByVehicleType', label: 'Rides by Vehicle Type' },
+                  { key: 'acceptanceRateByHour', label: 'Driver Acceptance Rate' },
+                  { key: 'driverLeaderboard', label: 'Driver Leaderboard' },
+                  { key: 'revenueByPaymentType', label: 'Revenue by Payment Type' }
+                ].map((section) => (
+                  <label key={section.key} className="section-checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedSections.includes(section.key)}
+                      onChange={() => handleSectionToggle(section.key)}
+                    />
+                    <span className="checkmark"></span>
+                    <span className="section-label">{section.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="cancel-btn" onClick={() => setShowSectionModal(false)}>
+                Cancel
+              </button>
+              <button 
+                className="export-btn" 
+                onClick={handleSectionExport}
+                disabled={selectedSections.length === 0}
+              >
+                Export Selected ({selectedSections.length})
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

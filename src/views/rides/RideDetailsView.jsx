@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './RideDetailsView.css';
-import { fetchRideDetails } from '../services/ridesService';
-import Toast from '../components/Toast';
-import MapRoute from '../components/MapRoute';
-import logo from '../assets/images/logo.webp';
-import settingsIcon from '../assets/icons/settings.png';
-import notificationsIcon from '../assets/icons/notifications.png';
-import { logoutUser } from '../services/authService';
+import { fetchRideDetails } from '../../services/ridesService';
+import Toast from '../../components/Toast';
+import MapRoute from '../../components/MapRoute';
+import logo from '../../assets/images/logo.webp';
+import settingsIcon from '../../assets/icons/settings.png';
+import notificationsIcon from '../../assets/icons/notifications.png';
+import { logoutUser } from '../../services/authService';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>

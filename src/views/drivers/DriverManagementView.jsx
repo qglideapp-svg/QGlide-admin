@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
-import { logoutUser } from '../services/authService';
-import { fetchDriversList, transformDriverData, exportDriversToCSV } from '../services/driverService';
-import logo from '../assets/images/logo.webp';
-import settingsIcon from '../assets/icons/settings.png';
-import notificationsIcon from '../assets/icons/notifications.png';
+import { logoutUser } from '../../services/authService';
+import { fetchDriversList, transformDriverData, exportDriversToCSV } from '../../services/driverService';
+import logo from '../../assets/images/logo.webp';
+import settingsIcon from '../../assets/icons/settings.png';
+import notificationsIcon from '../../assets/icons/notifications.png';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -128,7 +128,7 @@ export default function DriverManagementView() {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter, loadDrivers]);
+  }, [searchTerm, statusFilter]);
 
   // Fallback: Initialize with empty array if no drivers loaded after 5 seconds
   useEffect(() => {

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginView.css';
-import logoSrc from '../assets/images/logo.png';
-import { loginUser, storeAuthToken } from '../services/authService';
-import Toast from '../components/Toast';
+import logoSrc from '../../assets/images/logo.png';
+import { loginUser, storeAuthToken } from '../../services/authService';
+import Toast from '../../components/Toast';
 
 export default function LoginView() {
   const navigate = useNavigate();

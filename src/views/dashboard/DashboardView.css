@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
-@import '../components/CollapsibleSidebar.css';
+@import '../../components/CollapsibleSidebar.css';
 
 :root {
   --bg: #f6f8fb;
@@ -1472,6 +1472,431 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
   }
   .main.sidebar-collapsed { 
     margin-left: 0; 
+  }
+}
+
+/* Date Range Picker Styles */
+.date-range-picker-container {
+  position: relative;
+}
+
+.date-range-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #374151;
+  min-width: 200px;
+}
+
+.date-range-display:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.date-range-display .material-symbols-outlined {
+  font-size: 18px;
+  color: #6b7280;
+}
+
+.date-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 320px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.date-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.date-picker-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.date-inputs {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.date-input-group {
+  display: grid;
+  gap: 6px;
+}
+
+.date-input-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.date-input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #374151;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.date-picker-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #e2e8f0;
+  justify-content: flex-end;
+}
+
+.cancel-btn, .apply-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.cancel-btn {
+  background: #f9fafb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.cancel-btn:hover {
+  background: #f3f4f6;
+}
+
+.apply-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.apply-btn:hover {
+  background: #2563eb;
+}
+
+/* Responsive adjustments for date picker */
+@media (max-width: 768px) {
+  .date-picker-dropdown {
+    right: -50px;
+    min-width: 280px;
+  }
+  
+  .date-range-display {
+    min-width: 160px;
+    padding: 8px 12px;
+  }
+}
+
+/* Export Dropdown Styles */
+.export-dropdown-container {
+  position: relative;
+}
+
+.export-report-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 140px;
+}
+
+.export-report-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.export-report-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.export-report-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.export-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 240px;
+  animation: slideDown 0.2s ease-out;
+}
+
+.export-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.export-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.export-dropdown-item:hover {
+  background: #f8fafc;
+}
+
+.export-dropdown-item .material-symbols-outlined {
+  font-size: 20px;
+  color: #6b7280;
+}
+
+/* Export Section Modal Styles */
+.export-section-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.export-section-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.modal-content {
+  padding: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.section-checkbox-group {
+  display: grid;
+  gap: 16px;
+}
+
+.section-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.section-checkbox-item input[type="checkbox"] {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.section-checkbox-item input[type="checkbox"]:checked + .checkmark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.section-checkbox-item input[type="checkbox"]:checked + .checkmark::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.section-label {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  justify-content: flex-end;
+}
+
+.modal-actions .cancel-btn,
+.modal-actions .export-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.modal-actions .cancel-btn {
+  background: #f9fafb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.modal-actions .cancel-btn:hover {
+  background: #f3f4f6;
+}
+
+.modal-actions .export-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.modal-actions .export-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.modal-actions .export-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for export dropdown */
+@media (max-width: 768px) {
+  .export-dropdown-menu {
+    right: -20px;
+    min-width: 200px;
+  }
+  
+  .export-section-modal {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .modal-content {
+    padding: 20px;
+  }
+  
+  .modal-actions {
+    padding: 16px 20px;
+    flex-direction: column;
+  }
+  
+  .modal-actions .cancel-btn,
+  .modal-actions .export-btn {
+    width: 100%;
   }
 }
 

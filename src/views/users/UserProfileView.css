@@ -517,3 +517,48 @@
   }
 }
 
+/* Loading, error, and empty states for ride history */
+.loading-cell,
+.error-cell,
+.empty-cell {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  border-top-color: var(--primary-color);
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.error-message,
+.empty-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.error-message {
+  color: var(--error-color);
+}
+
+.error-message .material-icons,
+.empty-message .material-icons {
+  font-size: 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

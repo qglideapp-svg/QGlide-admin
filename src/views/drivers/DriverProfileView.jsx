@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
-import { logoutUser } from '../services/authService';
-import { fetchDriverDetails, approveDriver, suspendDriver, updateDriver, deleteDriver } from '../services/driverService';
-import Toast from '../components/Toast';
-import SuspendDriverModal from '../components/SuspendDriverModal';
-import EditDriverModal from '../components/EditDriverModal';
-import DeleteDriverModal from '../components/DeleteDriverModal';
-import logo from '../assets/images/logo.webp';
-import settingsIcon from '../assets/icons/settings.png';
-import notificationsIcon from '../assets/icons/notifications.png';
+import { logoutUser } from '../../services/authService';
+import { fetchDriverDetails, approveDriver, suspendDriver, updateDriver, deleteDriver } from '../../services/driverService';
+import Toast from '../../components/Toast';
+import SuspendDriverModal from '../../components/SuspendDriverModal';
+import EditDriverModal from '../../components/EditDriverModal';
+import DeleteDriverModal from '../../components/DeleteDriverModal';
+import DocumentViewModal from '../../components/DocumentViewModal';
+import logo from '../../assets/images/logo.webp';
+import settingsIcon from '../../assets/icons/settings.png';
+import notificationsIcon from '../../assets/icons/notifications.png';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -59,6 +60,10 @@ export default function DriverProfileView() {
   // Delete modal and loading states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Document viewer modal state
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
 
   // Load driver data from API
   useEffect(() => {
@@ -89,6 +94,15 @@ export default function DriverProfileView() {
 
         if (result.success && result.data) {
           const apiDriver = result.data;
+          
+          // Log document data structure for debugging
+          console.log('📄 DOCUMENTS DATA:', {
+            'Raw Documents': apiDriver.documents,
+            'Driver Profile Documents': apiDriver.driver_profile?.documents,
+            'Uploaded Documents': apiDriver.uploaded_documents,
+            'All API Keys': Object.keys(apiDriver),
+            'Driver Profile Keys': apiDriver.driver_profile ? Object.keys(apiDriver.driver_profile) : 'No driver_profile'
+          });
           
           // Transform API data to match existing UI structure
           const transformedData = {
@@ -122,24 +136,41 @@ export default function DriverProfileView() {
               color: apiDriver.driver_profile?.vehicle_color || 'Unknown',
               vin: 'Not available' // Not in API response
     },
-    documents: [
-              { 
-                name: 'Qatari ID', 
-                status: apiDriver.is_verified ? 'Verified' : 'Pending' 
-              },
-              { 
-                name: "Driver's License", 
-                status: apiDriver.driver_profile?.license_number ? 'Verified' : 'Pending' 
-              },
-              { 
-                name: 'Vehicle Registration', 
-                status: apiDriver.driver_profile?.vehicle_plate ? 'Verified' : 'Pending' 
-              },
-              { 
-                name: 'Background Check', 
-                status: apiDriver.driver_profile?.background_check_status === 'approved' ? 'Verified' : 'Pending' 
+    documents: (() => {
+              // Try to get documents from API first
+              const apiDocuments = apiDriver.documents || apiDriver.driver_profile?.documents || apiDriver.uploaded_documents || [];
+              
+              if (apiDocuments && apiDocuments.length > 0) {
+                // Use actual API document data
+                return apiDocuments.map(doc => ({
+                  name: doc.document_name || doc.name || doc.type || doc.title || 'Unknown Document',
+                  status: doc.status || doc.verification_status || doc.approval_status || 'Pending',
+                  uploadDate: doc.upload_date || doc.uploaded_at || doc.created_at || null,
+                  url: doc.document_url || doc.url || doc.file_url || null
+                }));
+              } else {
+                // Fallback to hardcoded data if API doesn't provide documents
+                console.log('📄 Using fallback document data - API did not provide documents');
+                return [
+                  { 
+                    name: 'Qatari ID', 
+                    status: apiDriver.is_verified ? 'Verified' : 'Pending' 
+                  },
+                  { 
+                    name: "Driver's License", 
+                    status: apiDriver.driver_profile?.license_number ? 'Verified' : 'Pending' 
+                  },
+                  { 
+                    name: 'Vehicle Registration', 
+                    status: apiDriver.driver_profile?.vehicle_plate ? 'Verified' : 'Pending' 
+                  },
+                  { 
+                    name: 'Background Check', 
+                    status: apiDriver.driver_profile?.background_check_status === 'approved' ? 'Verified' : 'Pending' 
+                  }
+                ];
               }
-            ],
+            })(),
             recentRides: (apiDriver.recent_rides || []).map((ride, index) => ({
               id: ride.id || `R${index + 1}`,
               rider: `Rider ${index + 1}`, // Not in API response
@@ -407,6 +438,12 @@ export default function DriverProfileView() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  // Handle document view click - opens modal
+  const handleViewDocument = (document) => {
+    setSelectedDocument(document);
+    setShowDocumentModal(true);
   };
 
   const handleNavClick = (navItem) => {
@@ -721,7 +758,11 @@ export default function DriverProfileView() {
                         {doc.status}
                       </div>
                     </div>
-                    <button className="btn-view-document" aria-label="View document">
+                    <button 
+                      className="btn-view-document" 
+                      aria-label="View document"
+                      onClick={() => handleViewDocument(doc)}
+                    >
                       <span className="material-symbols-outlined">visibility</span>
                     </button>
                   </div>
@@ -759,6 +800,13 @@ export default function DriverProfileView() {
             onConfirm={handleDeleteConfirm}
             driverName={driverData?.name || 'Unknown Driver'}
             isLoading={isDeleting}
+          />
+          
+          {/* Document Viewer Modal */}
+          <DocumentViewModal
+            isOpen={showDocumentModal}
+            onClose={() => setShowDocumentModal(false)}
+            document={selectedDocument}
           />
       
       {/* Toast Notification */}

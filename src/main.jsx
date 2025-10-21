@@ -4,16 +4,16 @@ import '@fontsource/poppins/600.css';
 import '@fontsource/poppins/700.css';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LoginView from './views/LoginView.jsx';
-import DashboardView from './views/DashboardView.jsx';
-import RideManagementView from './views/RideManagementView.jsx';
-import RideDetailsView from './views/RideDetailsView.jsx';
-import UserManagementView from './views/UserManagementView.jsx';
-import DriverManagementView from './views/DriverManagementView.jsx';
-import DriverProfileView from './views/DriverProfileView.jsx';
-import UserProfileView from './views/UserProfileView.jsx';
-import ReportsGeneratorView from './views/ReportsGeneratorView.jsx';
-import SettingsView from './views/SettingsView.jsx';
+import LoginView from './views/auth/LoginView.jsx';
+import DashboardView from './views/dashboard/DashboardView.jsx';
+import RideManagementView from './views/rides/RideManagementView.jsx';
+import RideDetailsView from './views/rides/RideDetailsView.jsx';
+import UserManagementView from './views/users/UserManagementView.jsx';
+import DriverManagementView from './views/drivers/DriverManagementView.jsx';
+import DriverProfileView from './views/drivers/DriverProfileView.jsx';
+import UserProfileView from './views/users/UserProfileView.jsx';
+import ReportsGeneratorView from './views/reports/ReportsGeneratorView.jsx';
+import SettingsView from './views/settings/SettingsView.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
 
 createRoot(document.getElementById('root')).render(

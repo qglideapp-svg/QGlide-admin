@@ -34,7 +34,7 @@ body { margin: 0; font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Ro
   content: '';
   position: absolute;
   inset: 0;
-  background: url('../assets/images/backdrop.jpg') center/cover no-repeat;
+  background: url('../../assets/images/backdrop.jpg') center/cover no-repeat;
   opacity: 0.35; /* reduced opacity */
 }
 

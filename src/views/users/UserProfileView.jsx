@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './UserProfileView.css';
-import { logoutUser } from '../services/authService';
-import { fetchUserDetails, updateUserStatus, updateUser, deleteUser } from '../services/userService';
-import DeactivateUserModal from '../components/DeactivateUserModal';
-import EditUserModal from '../components/EditUserModal';
-import DeleteUserModal from '../components/DeleteUserModal';
-import Toast from '../components/Toast';
-import logo from '../assets/images/logo.webp';
-import settingsIcon from '../assets/icons/settings.png';
-import notificationsIcon from '../assets/icons/notifications.png';
+import { logoutUser } from '../../services/authService';
+import { fetchUserDetails, updateUserStatus, updateUser, deleteUser, fetchUserRideHistory } from '../../services/userService';
+import DeactivateUserModal from '../../components/DeactivateUserModal';
+import EditUserModal from '../../components/EditUserModal';
+import DeleteUserModal from '../../components/DeleteUserModal';
+import Toast from '../../components/Toast';
+import logo from '../../assets/images/logo.webp';
+import settingsIcon from '../../assets/icons/settings.png';
+import notificationsIcon from '../../assets/icons/notifications.png';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -53,6 +53,11 @@ export default function UserProfileView() {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Ride history state
+  const [rideHistory, setRideHistory] = useState([]);
+  const [isLoadingRides, setIsLoadingRides] = useState(false);
+  const [ridesError, setRidesError] = useState(null);
   
   // Deactivate modal state
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -114,25 +119,7 @@ export default function UserProfileView() {
           walletBalance: parseFloat(apiUser.earnings?.total || 0),
           lastTopUp: 'N/A', // Not in API response
           totalRides: parseInt(apiUser.total_rides || 0),
-          rideHistory: (apiUser.recent_rides || []).map((ride, index) => ({
-            id: ride.id || `RD-${index + 1}`,
-            date: ride.created_at ? new Date(ride.created_at).toLocaleString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            }) : 'N/A',
-            route: { 
-              from: 'Pickup Location', // Not in API response
-              to: 'Dropoff Location' // Not in API response
-            },
-            driver: 'Driver Name', // Not in API response
-            fare: parseFloat(ride.fare || ride.actual_fare || 0),
-            status: ride.status === 'completed' ? 'Completed' : 
-                   ride.status === 'cancelled' ? 'Canceled' : 
-                   ride.status === 'in_progress' ? 'In Progress' : 'Pending'
-          }))
+          rideHistory: [] // Will be loaded separately from ride history API
         };
 
         setUserData(transformedData);
@@ -160,6 +147,83 @@ export default function UserProfileView() {
   useEffect(() => {
     loadUserData();
   }, [loadUserData]);
+
+  // Load ride history from API
+  const loadRideHistory = useCallback(async () => {
+    if (!userId) {
+      console.log('No user ID available for ride history');
+      return;
+    }
+
+    console.log('🔄 LOADING RIDE HISTORY:', {
+      '🆔 User ID': userId,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    setIsLoadingRides(true);
+    setRidesError(null);
+
+    try {
+      const result = await fetchUserRideHistory(userId);
+
+      console.log('📡 RIDE HISTORY API RESULT:', {
+        '✅ Success': result.success,
+        '📊 Has Data': !!result.data,
+        '📝 Error': result.error,
+        '🔍 Full Result': result
+      });
+
+      if (result.success && result.data) {
+        const apiRides = result.data.rides || [];
+        
+        // Transform API ride data to match UI structure
+        const transformedRides = apiRides.map((ride, index) => ({
+          id: ride.id || ride.ride_id || `RD-${index + 1}`,
+          date: ride.created_at || ride.ride_date ? new Date(ride.created_at || ride.ride_date).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) : 'N/A',
+          route: {
+            from: ride.pickup_location || ride.from_address || ride.pickup_address || 'Unknown',
+            to: ride.dropoff_location || ride.to_address || ride.dropoff_address || 'Unknown'
+          },
+          driver: ride.driver_name || ride.driver?.full_name || ride.driver?.name || 'Unknown Driver',
+          fare: parseFloat(ride.fare || ride.total_amount || ride.price || 0),
+          status: ride.status === 'completed' ? 'Completed' : 
+                 ride.status === 'cancelled' ? 'Cancelled' : 
+                 ride.status === 'in_progress' ? 'In Progress' :
+                 ride.status || 'Unknown'
+        }));
+        
+        setRideHistory(transformedRides);
+        
+        console.log('✅ RIDE HISTORY LOADED SUCCESSFULLY:', {
+          '📊 Transformed Rides Count': transformedRides.length,
+          '📝 Raw Rides Array': apiRides,
+          '⚙️ Transformed Rides': transformedRides,
+          '🎯 First Transformed Ride': transformedRides[0] || 'No rides'
+        });
+      } else {
+        setRidesError(result.error || 'Failed to load ride history');
+        console.error('❌ Failed to load ride history:', result.error);
+      }
+    } catch (error) {
+      setRidesError(error.message || 'An unexpected error occurred');
+      console.error('❌ Load ride history error:', error);
+    } finally {
+      setIsLoadingRides(false);
+    }
+  }, [userId]);
+
+  // Load ride history when user ID is available
+  useEffect(() => {
+    if (userId && userData) {
+      loadRideHistory();
+    }
+  }, [userId, userData, loadRideHistory]);
 
   // Handle deactivate user click - opens modal
   const handleDeactivateClick = () => {
@@ -555,7 +619,33 @@ export default function UserProfileView() {
                       </tr>
                     </thead>
                     <tbody>
-                      {userData.rideHistory.map((ride) => (
+                      {isLoadingRides ? (
+                        <tr>
+                          <td colSpan="6" className="loading-cell">
+                            <div className="loading-spinner"></div>
+                            Loading ride history...
+                          </td>
+                        </tr>
+                      ) : ridesError ? (
+                        <tr>
+                          <td colSpan="6" className="error-cell">
+                            <div className="error-message">
+                              <span className="material-icons">error</span>
+                              {ridesError}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : rideHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="empty-cell">
+                            <div className="empty-message">
+                              <span className="material-icons">directions_car</span>
+                              No ride history found
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        rideHistory.map((ride) => (
                         <tr key={ride.id}>
                           <td className="ride-id">#{ride.id}</td>
                           <td className="ride-date">{ride.date}</td>
@@ -568,7 +658,8 @@ export default function UserProfileView() {
                           <td className="ride-fare">QAR {ride.fare.toFixed(2)}</td>
                           <td><RideStatusBadge status={ride.status} /></td>
                         </tr>
-                      ))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

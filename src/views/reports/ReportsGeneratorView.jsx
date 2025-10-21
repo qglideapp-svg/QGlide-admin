@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ReportsGeneratorView.css';
-import { logoutUser } from '../services/authService';
-import { fetchReports, generateReport, deleteReport, retryReport, downloadReport, getReportOptions, searchReports } from '../services/reportsService';
-import logo from '../assets/images/logo.webp';
-import settingsIcon from '../assets/icons/settings.png';
-import notificationsIcon from '../assets/icons/notifications.png';
-import Toast from '../components/Toast';
+import { logoutUser } from '../../services/authService';
+import { fetchReports, generateReport, deleteReport, retryReport, downloadReport, getReportOptions, searchReports } from '../../services/reportsService';
+import logo from '../../assets/images/logo.webp';
+import settingsIcon from '../../assets/icons/settings.png';
+import notificationsIcon from '../../assets/icons/notifications.png';
+import Toast from '../../components/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>

@@ -1,6 +1,6 @@
 /* Import Poppins font */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-@import '../components/CollapsibleSidebar.css';
+@import '../../components/CollapsibleSidebar.css';
 
 /* Loading spinner animation */
 @keyframes spin {
@@ -8,39 +8,20 @@
   100% { transform: rotate(360deg); }
 }
 
-/* User Management Layout */
-.user-management { 
-  display: flex; 
-  font-family: 'Poppins', sans-serif; 
+.loading-spinner {
+  animation: spin 1s linear infinite;
 }
 
-.side { 
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: 240px;
-  overflow-y: auto;
-  background: #fff; 
-  border-right: 1px solid #e5e7eb; 
-  padding: 14px 10px; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 10px; 
-  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
+/* Driver Management Layout */
+.driver-management {
+  font-family: 'Poppins', sans-serif;
 }
 
-.main { 
-  display: block; 
-  flex: 1; 
-  margin-left: 240px; 
-}
-
-.user-management .container {
+.driver-management .container {
   padding: 24px;
 }
 
-.user-management-card {
+.driver-management-card {
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -54,20 +35,57 @@
   align-items: center;
   padding: 24px;
   border-bottom: 1px solid #E5E7EB;
+  gap: 20px;
 }
 
-.header-left h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 4px 0;
+.header-left {
+  flex: 1;
 }
 
-.user-count {
+.filters-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
   font-size: 14px;
-  color: #6B7280;
-  margin: 0;
-  font-weight: 400;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.filter-select:hover {
+  border-color: #9CA3AF;
+}
+
+.filter-select:focus {
+  border-color: #FCD34D;
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.1);
+}
+
+.clear-filters {
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #D97706;
+  cursor: pointer;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.clear-filters:hover {
+  color: #B45309;
 }
 
 .header-actions {
@@ -96,20 +114,19 @@
   border-color: #9CA3AF;
 }
 
-.btn-export.disabled,
 .btn-export:disabled {
   background: #F3F4F6;
-  color: #9CA3AF;
   border-color: #E5E7EB;
   cursor: not-allowed;
   opacity: 0.7;
+  color: #9CA3AF;
 }
 
 .btn-export .material-symbols-outlined {
   font-size: 18px;
 }
 
-.btn-add-user {
+.btn-add-driver {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -125,91 +142,12 @@
   transition: all 0.2s;
 }
 
-.btn-add-user:hover {
+.btn-add-driver:hover {
   background: #FCD34D;
 }
 
-.btn-add-user .material-symbols-outlined {
+.btn-add-driver .material-symbols-outlined {
   font-size: 18px;
-}
-
-/* Filters Row */
-.filters-row {
-  display: flex;
-  gap: 12px;
-  padding: 20px 24px;
-  border-bottom: 1px solid #E5E7EB;
-  align-items: center;
-}
-
-.search-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: white;
-  border: 1px solid #D1D5DB;
-  border-radius: 8px;
-  flex: 1;
-  max-width: 320px;
-}
-
-.search-filter .material-symbols-outlined {
-  font-size: 20px;
-  color: #9CA3AF;
-}
-
-.search-filter input {
-  border: none;
-  outline: none;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
-  color: #111827;
-  flex: 1;
-  background: transparent;
-}
-
-.search-filter input::placeholder {
-  color: #9CA3AF;
-}
-
-.filter-select {
-  padding: 10px 14px;
-  background: white;
-  border: 1px solid #D1D5DB;
-  border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
-  color: #374151;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.filter-select:hover {
-  border-color: #9CA3AF;
-}
-
-.filter-select:focus {
-  border-color: #FCD34D;
-  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.1);
-}
-
-.clear-filters {
-  padding: 10px 16px;
-  background: transparent;
-  border: none;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: #D97706;
-  cursor: pointer;
-  margin-left: auto;
-  transition: color 0.2s;
-}
-
-.clear-filters:hover {
-  color: #B45309;
 }
 
 /* Table Container */
@@ -217,18 +155,18 @@
   overflow-x: auto;
 }
 
-.users-table {
+.drivers-table {
   width: 100%;
   border-collapse: collapse;
   font-family: 'Poppins', sans-serif;
 }
 
-.users-table thead {
+.drivers-table thead {
   background: #F9FAFB;
   border-bottom: 1px solid #E5E7EB;
 }
 
-.users-table th {
+.drivers-table th {
   padding: 12px 24px;
   text-align: left;
   font-size: 12px;
@@ -238,19 +176,19 @@
   letter-spacing: 0.5px;
 }
 
-.users-table th.checkbox-col {
+.drivers-table th.checkbox-col {
   width: 48px;
   padding-left: 24px;
 }
 
-.users-table td {
+.drivers-table td {
   padding: 16px 24px;
   border-bottom: 1px solid #E5E7EB;
   font-size: 14px;
   color: #111827;
 }
 
-.users-table tbody tr:hover {
+.drivers-table tbody tr:hover {
   background: #F9FAFB;
 }
 
@@ -261,49 +199,74 @@
   accent-color: #FCD34D;
 }
 
-/* User Cell */
-.user-info-cell {
+/* Driver Cell */
+.driver-info-cell {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.user-avatar {
+.driver-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.user-name-text {
+.driver-name-text {
   font-size: 14px;
   font-weight: 600;
   color: #111827;
   margin-bottom: 2px;
 }
 
-.user-joined {
+.driver-phone {
   font-size: 12px;
   color: #6B7280;
   font-weight: 400;
 }
 
-/* Contact Cell */
-.contact-cell {
+/* Vehicle Cell */
+.vehicle-cell {
   color: #374151;
-  font-weight: 400;
 }
 
-/* Rides Cell */
-.rides-cell {
-  color: #111827;
+.vehicle-model {
+  font-size: 14px;
   font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
 }
 
-/* Date Cell */
-.date-cell {
-  color: #374151;
+.vehicle-year {
+  font-size: 12px;
+  color: #6B7280;
   font-weight: 400;
+}
+
+/* Status Badge */
+.driver-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.driver-status-badge.driver-status-active {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.driver-status-badge.driver-status-offline {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.driver-status-badge.driver-status-suspended {
+  background: #FEE2E2;
+  color: #DC2626;
 }
 
 /* Rating Cell */
@@ -320,29 +283,16 @@
   font-size: 16px;
 }
 
-/* Status Badge */
-.status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+/* Rides Cell */
+.rides-cell {
+  color: #111827;
   font-weight: 500;
-  text-transform: capitalize;
 }
 
-.status-badge.status-active {
-  background: #DCFCE7;
-  color: #16A34A;
-}
-
-.status-badge.status-inactive {
-  background: #F3F4F6;
-  color: #6B7280;
-}
-
-.status-badge.status-suspended {
-  background: #FEE2E2;
-  color: #DC2626;
+/* Earnings Cell */
+.earnings-cell {
+  color: #111827;
+  font-weight: 600;
 }
 
 /* Actions Cell */
@@ -368,30 +318,41 @@
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
-  .filters-row {
-    flex-wrap: wrap;
-  }
-  
-  .search-filter {
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 1280px) {
   .card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
   
+  .header-left,
   .header-actions {
     width: 100%;
   }
   
+  .filters-row {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .filters-row {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .filter-select {
+    width: 100%;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+  }
+  
   .btn-export,
-  .btn-add-user {
-    flex: 1;
+  .btn-add-driver {
+    width: 100%;
+    justify-content: center;
   }
 }
 

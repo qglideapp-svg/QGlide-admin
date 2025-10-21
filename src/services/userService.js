@@ -578,6 +578,114 @@ export const exportUsersToCSV = async (status = '') => {
   }
 };
 
+// Fetch user ride history
+export const fetchUserRideHistory = async (userId) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const url = `${API_BASE_URL}/admin-ride-history?user_id=${userId}`;
+    
+    console.log('🚀 FETCH USER RIDE HISTORY REQUEST:', {
+      '🔗 URL': url,
+      '🆔 User ID': userId,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    console.log('📡 FETCH RIDE HISTORY HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 RIDE HISTORY RESPONSE:', JSON.stringify(data, null, 2));
+    
+    // Extract rides from response
+    let ridesArray = [];
+    
+    if (Array.isArray(data)) {
+      ridesArray = data;
+      console.log('✅ Found rides as direct array');
+    }
+    else if (data.data && data.data.rides && Array.isArray(data.data.rides)) {
+      ridesArray = data.data.rides;
+      console.log('✅ Found rides in data.data.rides');
+    }
+    else if (data.rides && Array.isArray(data.rides)) {
+      ridesArray = data.rides;
+      console.log('✅ Found rides in data.rides');
+    }
+    else if (data.data && Array.isArray(data.data)) {
+      ridesArray = data.data;
+      console.log('✅ Found rides in data.data');
+    }
+    else if (data.results && Array.isArray(data.results)) {
+      ridesArray = data.results;
+      console.log('✅ Found rides in data.results');
+    }
+    else {
+      console.log('❌ No rides array found in response');
+      console.log('Available keys:', Object.keys(data));
+    }
+    
+    console.log('🔍 RIDE HISTORY DEBUG:', {
+      '📡 Raw Response': data,
+      '🔍 Response Type': typeof data,
+      '📊 Is Object': typeof data === 'object',
+      '🔢 Response Keys': Object.keys(data || {}),
+      '📝 Rides Array': ridesArray,
+      '📏 Rides Length': ridesArray.length,
+      '🔍 First Ride': ridesArray[0] || 'No rides',
+      '📋 All Rides': ridesArray
+    });
+    
+    return { 
+      success: true, 
+      data: {
+        rides: ridesArray,
+        totalCount: data.data?.total_count || data.totalCount || data.total || data.count || ridesArray.length,
+        totalPages: data.data?.total_pages || data.totalPages || Math.ceil((data.data?.total_count || data.totalCount || data.total || data.count || ridesArray.length) / 20),
+        currentPage: data.data?.page || data.page || 1,
+        hasNextPage: data.data?.hasNextPage || data.hasNextPage || false,
+        hasPrevPage: data.data?.hasPrevPage || data.hasPrevPage || false
+      }
+    };
+  } catch (error) {
+    console.error('❌ FETCH RIDE HISTORY ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to fetch user ride history' 
+    };
+  }
+};
+
 // Transform user data from API format to UI format
 export const transformUserData = (apiUser) => {
   return {
