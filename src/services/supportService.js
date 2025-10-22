@@ -1,201 +1,495 @@
-// Mock data for support tickets
-const mockTickets = [
-  {
-    id: 'TKT-001',
-    title: 'Unable to complete payment',
-    requester: 'John Doe',
-    status: 'open',
-    priority: 'high',
-    date: '2024-10-14',
-    timestamp: new Date('2024-10-14T10:30:00').getTime(),
-    assignedAgent: 'Admin',
-    conversation: [
-      {
-        id: 1,
-        sender: 'user',
-        senderName: 'John Doe',
-        message: 'I tried to pay for my ride but the payment kept failing. Can you help?',
-        timestamp: new Date('2024-10-14T10:30:00').getTime(),
-      },
-      {
-        id: 2,
-        sender: 'admin',
-        senderName: 'Support Team',
-        message: 'Hello John, I can help you with that. Can you tell me which payment method you were using?',
-        timestamp: new Date('2024-10-14T10:35:00').getTime(),
-      },
-      {
-        id: 3,
-        sender: 'user',
-        senderName: 'John Doe',
-        message: 'I was using my credit card ending in 4532',
-        timestamp: new Date('2024-10-14T10:38:00').getTime(),
-      },
-    ],
-  },
-  {
-    id: 'TKT-002',
-    title: 'Driver was rude during trip',
-    requester: 'Sarah Johnson',
-    status: 'open',
-    priority: 'medium',
-    date: '2024-10-14',
-    timestamp: new Date('2024-10-14T09:15:00').getTime(),
-    assignedAgent: 'Admin',
-    conversation: [
-      {
-        id: 1,
-        sender: 'user',
-        senderName: 'Sarah Johnson',
-        message: 'My driver was very unprofessional and rude. I want to file a formal complaint.',
-        timestamp: new Date('2024-10-14T09:15:00').getTime(),
-      },
-    ],
-  },
-  {
-    id: 'TKT-003',
-    title: 'Wrong pickup location',
-    requester: 'Mike Chen',
-    status: 'open',
-    priority: 'low',
-    date: '2024-10-13',
-    timestamp: new Date('2024-10-13T16:45:00').getTime(),
-    assignedAgent: 'Admin',
-    conversation: [
-      {
-        id: 1,
-        sender: 'user',
-        senderName: 'Mike Chen',
-        message: 'The driver went to the wrong pickup location even though I entered the correct address.',
-        timestamp: new Date('2024-10-13T16:45:00').getTime(),
-      },
-      {
-        id: 2,
-        sender: 'admin',
-        senderName: 'Support Team',
-        message: 'I apologize for the inconvenience. Let me look into this for you.',
-        timestamp: new Date('2024-10-13T16:50:00').getTime(),
-      },
-    ],
-  },
-  {
-    id: 'TKT-004',
-    title: 'Refund request for cancelled ride',
-    requester: 'Emily Davis',
-    status: 'resolved',
-    priority: 'medium',
-    date: '2024-10-12',
-    timestamp: new Date('2024-10-12T14:20:00').getTime(),
-    assignedAgent: 'Admin',
-    conversation: [
-      {
-        id: 1,
-        sender: 'user',
-        senderName: 'Emily Davis',
-        message: 'I was charged for a ride that got cancelled. Can I get a refund?',
-        timestamp: new Date('2024-10-12T14:20:00').getTime(),
-      },
-      {
-        id: 2,
-        sender: 'admin',
-        senderName: 'Support Team',
-        message: 'I can see the charge. Let me process your refund right away.',
-        timestamp: new Date('2024-10-12T14:25:00').getTime(),
-      },
-      {
-        id: 3,
-        sender: 'admin',
-        senderName: 'Support Team',
-        message: 'Your refund has been processed. You should see it in 3-5 business days.',
-        timestamp: new Date('2024-10-12T14:30:00').getTime(),
-      },
-    ],
-  },
-  {
-    id: 'TKT-005',
-    title: 'App keeps crashing',
-    requester: 'Robert Brown',
-    status: 'pending',
-    priority: 'high',
-    date: '2024-10-13',
-    timestamp: new Date('2024-10-13T11:00:00').getTime(),
-    assignedAgent: 'Admin',
-    conversation: [
-      {
-        id: 1,
-        sender: 'user',
-        senderName: 'Robert Brown',
-        message: 'The app crashes every time I try to book a ride. This is very frustrating!',
-        timestamp: new Date('2024-10-13T11:00:00').getTime(),
-      },
-      {
-        id: 2,
-        sender: 'admin',
-        senderName: 'Support Team',
-        message: 'I understand your frustration. Can you tell me what device and OS version you are using?',
-        timestamp: new Date('2024-10-13T11:05:00').getTime(),
-      },
-    ],
-  },
-];
+import { getAuthToken } from './authService';
+
+const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
 // Fetch support tickets with optional filter
 export const fetchSupportTickets = async (filter = 'open') => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  if (filter === 'all') {
-    return mockTickets;
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    // Build URL with status parameter
+    let url = `${API_BASE_URL}/admin-support-tickets-list`;
+    if (filter !== 'all') {
+      const statusParam = filter === 'closed' ? 'resolved' : filter;
+      url += `?status=${statusParam}`;
+    }
+
+    console.log('🚀 FETCH SUPPORT TICKETS REQUEST:', {
+      '🔗 API': url,
+      '📊 Filter': filter,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('📡 FETCH SUPPORT TICKETS HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 RAW SUPPORT TICKETS API RESPONSE:', JSON.stringify(data, null, 2));
+    
+    // Parse API response - check multiple possible structures
+    let ticketsArray = [];
+    
+    if (Array.isArray(data)) {
+      ticketsArray = data;
+      console.log('✅ Found tickets as direct array');
+    } else if (data.data && Array.isArray(data.data.tickets)) {
+      ticketsArray = data.data.tickets;
+      console.log('✅ Found tickets in data.data.tickets');
+    } else if (data.tickets && Array.isArray(data.tickets)) {
+      ticketsArray = data.tickets;
+      console.log('✅ Found tickets in data.tickets');
+    } else if (data.data && Array.isArray(data.data)) {
+      ticketsArray = data.data;
+      console.log('✅ Found tickets in data.data');
+    } else if (data.results && Array.isArray(data.results)) {
+      ticketsArray = data.results;
+      console.log('✅ Found tickets in data.results');
+    } else {
+      console.log('❌ No tickets array found in response');
+      console.log('Available keys:', Object.keys(data));
+    }
+
+    // Transform API tickets to match UI format
+    const transformedTickets = ticketsArray.map(transformTicketData);
+    
+    console.log('🔍 SUPPORT TICKETS DEBUG:', {
+      '📡 Raw Response': data,
+      '🔍 Response Type': typeof data,
+      '📊 Is Object': typeof data === 'object',
+      '🔢 Response Keys': Object.keys(data || {}),
+      '📝 Tickets Array': ticketsArray,
+      '📏 Tickets Length': ticketsArray.length,
+      '🔍 First Ticket': ticketsArray[0] || 'No tickets',
+      '⚙️ Transformed Tickets': transformedTickets,
+      '📊 Filter Applied': filter
+    });
+    
+    return transformedTickets;
+  } catch (error) {
+    console.error('❌ FETCH SUPPORT TICKETS ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    // Return empty array on error to prevent UI breakage
+    return [];
   }
-  
-  return mockTickets.filter(ticket => ticket.status === filter);
 };
 
 // Fetch details for a specific ticket
 export const fetchTicketDetails = async (ticketId) => {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  
-  const ticket = mockTickets.find(t => t.id === ticketId);
-  if (!ticket) {
-    throw new Error('Ticket not found');
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    console.log('🚀 FETCH TICKET DETAILS REQUEST:', {
+      '🔗 API': `${API_BASE_URL}/admin-support-ticket-details`,
+      '🆔 Ticket ID': ticketId,
+      '🔑 Has Token': !!token,
+      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(`${API_BASE_URL}/admin-support-ticket-details?ticket_id=${ticketId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('📡 FETCH TICKET DETAILS HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '🔗 URL': response.url,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 RAW TICKET DETAILS RESPONSE:', JSON.stringify(data, null, 2));
+    console.log('🔍 RESPONSE STRUCTURE ANALYSIS:', {
+      '📊 Has Success': !!data.success,
+      '📊 Success Value': data.success,
+      '📊 Has Data': !!data.data,
+      '📊 Data Keys': data.data ? Object.keys(data.data) : 'No data',
+      '📊 Has Ticket': !!(data.data && data.data.ticket),
+      '📊 Ticket Keys': data.data && data.data.ticket ? Object.keys(data.data.ticket) : 'No ticket',
+      '📊 Has Conversation': !!(data.data && data.data.ticket && data.data.ticket.conversation),
+      '📊 Conversation Length': data.data && data.data.ticket && data.data.ticket.conversation ? data.data.ticket.conversation.length : 0
+    });
+    
+    // TEMPORARY: Let's see the EXACT structure
+    console.log('🚨 DEBUGGING - FULL RESPONSE:', data);
+    console.log('🚨 DEBUGGING - DATA OBJECT:', data.data);
+    if (data.data) {
+      console.log('🚨 DEBUGGING - DATA KEYS:', Object.keys(data.data));
+      if (data.data.ticket) {
+        console.log('🚨 DEBUGGING - TICKET OBJECT:', data.data.ticket);
+        console.log('🚨 DEBUGGING - TICKET KEYS:', Object.keys(data.data.ticket));
+      }
+    }
+    
+    // Extract ticket from response - try multiple possible structures
+    let ticketData = null;
+    
+    if (data.success && data.data && data.data.ticket) {
+      ticketData = data.data.ticket;
+      
+      // IMPORTANT: Messages are at data.messages, not inside ticket object
+      if (data.data.messages && Array.isArray(data.data.messages)) {
+        ticketData.messages = data.data.messages;
+        console.log('✅ MESSAGES ATTACHED FROM data.messages:', data.data.messages.length, 'messages');
+      }
+      
+      console.log('✅ TICKET DETAILS EXTRACTED SUCCESSFULLY:', {
+        '📊 Ticket Data': ticketData,
+        '🔍 Ticket ID': ticketData.id,
+        '📝 Ticket Title': ticketData.title || ticketData.subject,
+        '👤 Requester': ticketData.requester || ticketData.user?.name,
+        '📊 Status': ticketData.status,
+        '💬 Messages Length': ticketData.messages ? ticketData.messages.length : 0,
+        '💬 Messages': ticketData.messages
+      });
+    } else if (data.data && data.data.id) {
+      // Direct ticket data structure
+      ticketData = data.data;
+      console.log('✅ TICKET DETAILS EXTRACTED (DIRECT STRUCTURE):', {
+        '📊 Ticket Data': ticketData,
+        '🔍 Ticket ID': ticketData.id,
+        '📝 Ticket Title': ticketData.title,
+        '👤 Requester': ticketData.requester,
+        '📊 Status': ticketData.status,
+        '💬 Conversation Length': ticketData.conversation ? ticketData.conversation.length : 0,
+        '💬 Conversation': ticketData.conversation
+      });
+    } else if (data.id) {
+      // Ticket data at root level
+      ticketData = data;
+      console.log('✅ TICKET DETAILS EXTRACTED (ROOT LEVEL):', {
+        '📊 Ticket Data': ticketData,
+        '🔍 Ticket ID': ticketData.id,
+        '📝 Ticket Title': ticketData.title,
+        '👤 Requester': ticketData.requester,
+        '📊 Status': ticketData.status,
+        '💬 Conversation Length': ticketData.conversation ? ticketData.conversation.length : 0,
+        '💬 Conversation': ticketData.conversation
+      });
+    }
+    
+    if (ticketData) {
+      return transformTicketData(ticketData);
+    }
+    
+    console.log('❌ INVALID TICKET DETAILS RESPONSE STRUCTURE:', {
+      '📊 Raw Data': data,
+      '🔍 Success': data.success,
+      '🔍 Has Data': !!data.data,
+      '🔍 Has Ticket': !!data.data?.ticket
+    });
+    
+    throw new Error('Invalid response structure');
+  } catch (error) {
+    console.error('❌ FETCH TICKET DETAILS ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '📝 Error Stack': error.stack,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    throw error;
   }
-  
-  return ticket;
 };
 
 // Send a message in a ticket conversation
-export const sendMessage = async (ticketId, content) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  const ticket = mockTickets.find(t => t.id === ticketId);
-  if (!ticket) {
-    throw new Error('Ticket not found');
+export const sendMessage = async (ticketId, content, isInternalNote = false) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    console.log('🚀 SEND MESSAGE REQUEST:', {
+      '🔗 API': `${API_BASE_URL}/admin-reply-ticket`,
+      '🆔 Ticket ID': ticketId,
+      '📝 Message Content': content,
+      '🔍 Is Internal Note': isInternalNote,
+      '🔑 Has Token': !!token,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(`${API_BASE_URL}/admin-reply-ticket`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ticket_id: ticketId,
+        message: content,
+        is_internal_note: isInternalNote
+      })
+    });
+
+    console.log('📡 SEND MESSAGE HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 SEND MESSAGE RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return data;
+  } catch (error) {
+    console.error('❌ SEND MESSAGE ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    throw error;
   }
-  
-  const newMessage = {
-    id: ticket.conversation.length + 1,
-    sender: 'admin',
-    senderName: 'Support Team',
-    message: content,
-    timestamp: Date.now(),
-  };
-  
-  ticket.conversation.push(newMessage);
-  
-  return newMessage;
 };
 
 // Mark a ticket as resolved
-export const markAsResolved = async (ticketId) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  const ticket = mockTickets.find(t => t.id === ticketId);
-  if (!ticket) {
-    throw new Error('Ticket not found');
+export const markAsResolved = async (ticketId, priority) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    console.log('🚀 MARK AS RESOLVED REQUEST:', {
+      '🔗 API': `${API_BASE_URL}/admin-update-ticket-status`,
+      '🆔 Ticket ID': ticketId,
+      '📊 Status': 'resolved',
+      '📊 Priority': priority,
+      '🔑 Has Token': !!token,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(`${API_BASE_URL}/admin-update-ticket-status`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ticket_id: ticketId,
+        status: 'resolved',
+        priority: priority
+      })
+    });
+
+    console.log('📡 MARK AS RESOLVED HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 MARK AS RESOLVED RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return data;
+  } catch (error) {
+    console.error('❌ MARK AS RESOLVED ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    throw error;
+  }
+};
+
+// Mark a ticket as pending
+export const markAsPending = async (ticketId, priority) => {
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    console.log('🚀 MARK AS PENDING REQUEST:', {
+      '🔗 API': `${API_BASE_URL}/admin-update-ticket-status`,
+      '🆔 Ticket ID': ticketId,
+      '📊 Status': 'pending',
+      '📊 Priority': priority,
+      '🔑 Has Token': !!token,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const response = await fetch(`${API_BASE_URL}/admin-update-ticket-status`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ticket_id: ticketId,
+        status: 'pending',
+        priority: priority
+      })
+    });
+
+    console.log('📡 MARK AS PENDING HTTP RESPONSE:', {
+      '✅ Status': response.status,
+      '📝 Status Text': response.statusText,
+      '✅ OK': response.ok
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 MARK AS PENDING RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return data;
+  } catch (error) {
+    console.error('❌ MARK AS PENDING ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    throw error;
+  }
+};
+
+// Transform ticket data from API format to UI format
+export const transformTicketData = (apiTicket) => {
+  // Handle different conversation field names
+  let conversation = [];
+  if (apiTicket.conversation && Array.isArray(apiTicket.conversation)) {
+    conversation = apiTicket.conversation;
+  } else if (apiTicket.messages && Array.isArray(apiTicket.messages)) {
+    conversation = apiTicket.messages;
+  } else if (apiTicket.chat_history && Array.isArray(apiTicket.chat_history)) {
+    conversation = apiTicket.chat_history;
+  } else if (apiTicket.replies && Array.isArray(apiTicket.replies)) {
+    conversation = apiTicket.replies;
   }
   
-  ticket.status = 'resolved';
+  console.log('🔄 TRANSFORMING TICKET DATA:', {
+    '📊 Original Ticket': apiTicket,
+    '💬 Conversation Field': conversation,
+    '💬 Conversation Length': conversation.length,
+    '💬 First Message': conversation[0] || 'No messages'
+  });
+
+  // Log if conversation is empty
+  if (conversation.length === 0) {
+    console.log('⚠️ EMPTY CONVERSATION - No messages found in API response');
+    console.log('📊 Available fields in apiTicket:', Object.keys(apiTicket));
+  }
+
+  // Transform messages from API format to UI format
+  // API format: { sender_type: "user"/"admin", sender_name: "...", message: "...", created_at: "..." }
+  // UI format: { sender: "user"/"admin", senderName: "...", message: "...", timestamp: number }
+  conversation = conversation.map((msg, index) => {
+    console.log('🔄 TRANSFORMING MESSAGE:', {
+      '📊 Original Message': msg,
+      '🔍 Sender Type': msg.sender_type,
+      '🔍 Sender Name': msg.sender_name,
+      '🔍 Message Content': msg.message,
+      '🔍 Created At': msg.created_at
+    });
+
+    const senderType = msg.sender_type || msg.sender || 'user';
+    const derivedSenderName = msg.sender_name
+      || msg.senderName
+      || (senderType === 'user' ? (apiTicket.user?.name || apiTicket.requester || 'User') : 'Admin User');
+
+    const transformedMsg = {
+      id: msg.id || index + 1,
+      sender: senderType,
+      senderName: derivedSenderName,
+      message: msg.message || '',
+      timestamp: msg.created_at ? new Date(msg.created_at).getTime() : (msg.timestamp || Date.now())
+    };
+
+    console.log('✅ TRANSFORMED MESSAGE:', {
+      '📊 Transformed Message': transformedMsg,
+      '🔍 Final Sender': transformedMsg.sender,
+      '🔍 Final Sender Name': transformedMsg.senderName
+    });
+
+    return transformedMsg;
+  });
+
+  const transformedTicket = {
+    id: apiTicket.id || apiTicket.ticket_id || apiTicket.support_id || '',
+    title: apiTicket.title || apiTicket.subject || apiTicket.issue_title || 'No Title',
+    requester: apiTicket.requester || apiTicket.user?.name || apiTicket.user_name || apiTicket.customer_name || '',
+    status: apiTicket.status || 'open',
+    priority: apiTicket.priority || 'medium',
+    date: apiTicket.created_at ? new Date(apiTicket.created_at).toLocaleDateString() : 
+          apiTicket.date || new Date().toLocaleDateString(),
+    timestamp: apiTicket.created_at ? new Date(apiTicket.created_at).getTime() : 
+               apiTicket.timestamp || Date.now(),
+    assignedAgent: apiTicket.assigned_agent || apiTicket.agent_name || 'Admin',
+    conversation: conversation
+  };
   
-  return ticket;
+  console.log('✅ TRANSFORMED TICKET DATA:', {
+    '📊 Transformed Ticket': transformedTicket,
+    '💬 Final Conversation Length': transformedTicket.conversation.length,
+    '💬 Transformed Conversation': transformedTicket.conversation
+  });
+  
+  return transformedTicket;
 };
 

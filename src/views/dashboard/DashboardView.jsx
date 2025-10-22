@@ -11,7 +11,7 @@ import notificationsIcon from '../../assets/icons/notifications.png';
 import { fetchDashboardData, fetchRidesAnalytics } from '../../services/dashboardService';
 import { logoutUser } from '../../services/authService';
 import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../../services/financialService';
-import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved } from '../../services/supportService';
+import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved, markAsPending } from '../../services/supportService';
 import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
 import Toast from '../../components/Toast';
 
@@ -46,9 +46,10 @@ export default function DashboardView() {
   // Support states
   const [supportTickets, setSupportTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [ticketFilter, setTicketFilter] = useState('open');
+  const [ticketFilter, setTicketFilter] = useState('all');
   const [isSupportLoading, setIsSupportLoading] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
+  const [pollingInterval, setPollingInterval] = useState(null);
   
   // Analytics states
   const [analyticsMetrics, setAnalyticsMetrics] = useState(null);
@@ -106,7 +107,19 @@ export default function DashboardView() {
     } else if (activeSection === 'analytics') {
       loadAnalyticsReportData();
     }
+    
+    // Stop polling when leaving support section
+    if (activeSection !== 'support') {
+      stopTicketPolling();
+    }
   }, [activeSection, ticketFilter]);
+
+  // Cleanup polling interval on component unmount
+  useEffect(() => {
+    return () => {
+      stopTicketPolling();
+    };
+  }, []);
 
   // Close export dropdown when clicking outside
   useEffect(() => {
@@ -512,8 +525,75 @@ export default function DashboardView() {
     try {
       const details = await fetchTicketDetails(ticket.id);
       setSelectedTicket(details);
+      
+      // Start polling for this ticket
+      startTicketPolling(ticket.id);
     } catch (err) {
       console.error('Error fetching ticket details:', err);
+    }
+  };
+
+  // Start polling for ticket details every 2 seconds
+  const startTicketPolling = (ticketId) => {
+    // Clear any existing polling interval
+    stopTicketPolling();
+    
+    console.log('🔄 Starting ticket polling for ticket:', ticketId);
+    console.log('🔄 Polling interval will run every 2 seconds');
+    
+    const interval = setInterval(async () => {
+      try {
+        console.log('🔄 POLLING EXECUTED - Fetching ticket details for:', ticketId);
+        const details = await fetchTicketDetails(ticketId);
+        console.log('🔄 POLLING RESULT:', {
+          '🆔 Ticket ID': details.id,
+          '💬 Conversation Length': details.conversation ? details.conversation.length : 0,
+          '💬 Conversation': details.conversation,
+          '⏰ Poll Time': new Date().toISOString()
+        });
+        
+        setSelectedTicket(prevTicket => {
+          // Only update if ticket ID matches (user hasn't switched tickets)
+          if (prevTicket && prevTicket.id === ticketId) {
+            console.log('🔄 UPDATING TICKET STATE:', {
+              '📊 Previous Conversation Length': prevTicket.conversation ? prevTicket.conversation.length : 0,
+              '📊 New Conversation Length': details.conversation ? details.conversation.length : 0,
+              '📊 Conversation Changed': (prevTicket.conversation ? prevTicket.conversation.length : 0) !== (details.conversation ? details.conversation.length : 0),
+              '⏰ Update Time': new Date().toISOString()
+            });
+            return details;
+          } else {
+            console.log('🔄 SKIPPING UPDATE - Ticket ID mismatch:', {
+              '📊 Previous Ticket ID': prevTicket ? prevTicket.id : 'No previous ticket',
+              '📊 Current Ticket ID': ticketId,
+              '⏰ Skip Time': new Date().toISOString()
+            });
+          }
+          return prevTicket;
+        });
+      } catch (err) {
+        console.error('❌ POLLING ERROR:', err);
+        // Stop polling on error
+        stopTicketPolling();
+      }
+    }, 2000); // Poll every 2 seconds
+    
+    console.log('✅ POLLING INTERVAL SET:', interval);
+    setPollingInterval(interval);
+  };
+
+  // Stop polling for ticket details
+  const stopTicketPolling = () => {
+    if (pollingInterval) {
+      console.log('🛑 STOPPING TICKET POLLING:', {
+        '🔄 Interval ID': pollingInterval,
+        '⏰ Stop Time': new Date().toISOString(),
+        '📍 Call Stack': new Error().stack
+      });
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    } else {
+      console.log('ℹ️ No polling interval to stop');
     }
   };
   
@@ -524,9 +604,12 @@ export default function DashboardView() {
       await sendMessage(selectedTicket.id, replyMessage);
       setReplyMessage('');
       
-      // Refresh the ticket details to show the new message
+      // Refresh the ticket details to show the new message immediately
       const updatedTicket = await fetchTicketDetails(selectedTicket.id);
       setSelectedTicket(updatedTicket);
+      
+      // Restart polling to continue getting updates
+      startTicketPolling(selectedTicket.id);
     } catch (err) {
       console.error('Error sending message:', err);
     }
@@ -536,7 +619,10 @@ export default function DashboardView() {
     if (!selectedTicket) return;
     
     try {
-      await markAsResolved(selectedTicket.id);
+      await markAsResolved(selectedTicket.id, selectedTicket.priority);
+      
+      // Stop polling since ticket is resolved
+      stopTicketPolling();
       
       // Refresh support data
       await loadSupportData();
@@ -548,9 +634,33 @@ export default function DashboardView() {
     }
   };
 
+  const handleMarkAsPending = async () => {
+    if (!selectedTicket) return;
+    
+    try {
+      await markAsPending(selectedTicket.id, selectedTicket.priority);
+      
+      // Refresh support data
+      await loadSupportData();
+      
+      // Update selected ticket status and continue polling
+      setSelectedTicket(prev => prev ? { ...prev, status: 'pending' } : null);
+      
+      // Continue polling for pending tickets
+      startTicketPolling(selectedTicket.id);
+    } catch (err) {
+      console.error('Error marking ticket as pending:', err);
+    }
+  };
+
   const closeToast = () => {
     setShowToast(false);
     setError(null);
+  };
+
+  const showToastMessage = (message, type = 'error') => {
+    setError(message);
+    setShowToast(true);
   };
 
   const handleLogout = async () => {
@@ -994,6 +1104,13 @@ export default function DashboardView() {
                   <div className="tickets-sidebar">
                     <div className="ticket-filters">
                       <button 
+                        className={`filter-tab ${ticketFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => setTicketFilter('all')}
+                      >
+                        All
+                        <span className="count">{supportTickets.length}</span>
+                      </button>
+                      <button 
                         className={`filter-tab ${ticketFilter === 'open' ? 'active' : ''}`}
                         onClick={() => setTicketFilter('open')}
                       >
@@ -1008,16 +1125,24 @@ export default function DashboardView() {
                         <span className="count">{supportTickets.filter(t => t.status === 'pending').length}</span>
                       </button>
                       <button 
-                        className={`filter-tab ${ticketFilter === 'resolved' ? 'active' : ''}`}
-                        onClick={() => setTicketFilter('resolved')}
+                        className={`filter-tab ${ticketFilter === 'closed' ? 'active' : ''}`}
+                        onClick={() => setTicketFilter('closed')}
                       >
-                        Resolved
-                        <span className="count">{supportTickets.filter(t => t.status === 'resolved').length}</span>
+                        Closed
+                        <span className="count">{supportTickets.filter(t => t.status === 'closed' || t.status === 'resolved').length}</span>
                       </button>
                     </div>
 
                     <div className="tickets-list">
-                      {supportTickets.map((ticket) => (
+                      {supportTickets
+                        .filter((ticket) => {
+                          if (ticketFilter === 'all') return true;
+                          if (ticketFilter === 'open') return ticket.status === 'open';
+                          if (ticketFilter === 'pending') return ticket.status === 'pending';
+                          if (ticketFilter === 'closed') return ticket.status === 'closed' || ticket.status === 'resolved';
+                          return true;
+                        })
+                        .map((ticket) => (
                         <div 
                           key={ticket.id}
                           className={`ticket-item ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
@@ -1029,7 +1154,9 @@ export default function DashboardView() {
                           </div>
                           <div className="ticket-title">{ticket.title}</div>
                           <div className="ticket-meta">
-                            <span className="requester">{ticket.requester}</span>
+                            {typeof ticket.requester === 'string' && ticket.requester.trim() && ticket.requester.trim().toLowerCase() !== 'unknown' ? (
+                              <span className="requester">{ticket.requester}</span>
+                            ) : null}
                             <span className="date">{ticket.date}</span>
                           </div>
                         </div>
@@ -1044,12 +1171,31 @@ export default function DashboardView() {
                         <div className="ticket-details-header">
                           <div className="ticket-title-section">
                             <h2>{selectedTicket.title}</h2>
-                            <span className={`status-badge ${selectedTicket.status}`}>
-                              {selectedTicket.status}
-                            </span>
+                            <div className="ticket-status-container">
+                              <span className={`status-badge ${selectedTicket.status}`}>
+                                {selectedTicket.status}
+                              </span>
+                              {pollingInterval && (
+                                <span className="polling-indicator" title="Auto-refreshing messages">
+                                  <span className="material-symbols-outlined">sync</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="ticket-actions">
-                            {selectedTicket.status !== 'resolved' && (
+                            {selectedTicket.status === 'open' && (
+                              <>
+                                <button className="resolve-btn" onClick={handleMarkAsResolved}>
+                                  <span className="material-symbols-outlined">check_circle</span>
+                                  Mark as Resolved
+                                </button>
+                                <button className="pending-btn" onClick={handleMarkAsPending}>
+                                  <span className="material-symbols-outlined">schedule</span>
+                                  Mark as Pending
+                                </button>
+                              </>
+                            )}
+                            {selectedTicket.status === 'pending' && (
                               <button className="resolve-btn" onClick={handleMarkAsResolved}>
                                 <span className="material-symbols-outlined">check_circle</span>
                                 Mark as Resolved
@@ -1063,10 +1209,12 @@ export default function DashboardView() {
                             <span className="label">Ticket ID:</span>
                             <span className="value">{selectedTicket.id}</span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">Requester:</span>
-                            <span className="value">{selectedTicket.requester}</span>
-                          </div>
+                          {typeof selectedTicket.requester === 'string' && selectedTicket.requester.trim() && selectedTicket.requester.trim().toLowerCase() !== 'unknown' ? (
+                            <div className="info-item">
+                              <span className="label">Requester:</span>
+                              <span className="value">{selectedTicket.requester}</span>
+                            </div>
+                          ) : null}
                           <div className="info-item">
                             <span className="label">Priority:</span>
                             <span className={`priority-badge ${selectedTicket.priority}`}>
@@ -1094,7 +1242,7 @@ export default function DashboardView() {
                             ))}
                           </div>
 
-                          {selectedTicket.status !== 'resolved' && (
+                          {selectedTicket.status !== 'resolved' && selectedTicket.status !== 'closed' && (
                             <div className="reply-area">
                               <textarea
                                 className="reply-input"
