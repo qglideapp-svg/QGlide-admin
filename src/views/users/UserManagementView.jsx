@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './UserManagementView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchUsersList, transformUserData, exportUsersToCSV, createUser } from '../../services/userService';
-import AddUserModal from '../../components/AddUserModal';
-import Toast from '../../components/Toast';
+import AddUserModal from '../../components/modals/AddUserModal';
+import Toast from '../../components/common/Toast';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -151,6 +151,10 @@ export default function UserManagementView() {
       navigate('/dashboard');
     } else if (navItem === 'ride-management') {
       navigate('/ride-management');
+    } else if (navItem === 'courier-management') {
+      navigate('/courier-management');
+    } else if (navItem === 'rental-management') {
+      navigate('/rental-management');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
@@ -353,6 +357,8 @@ export default function UserManagementView() {
         <nav className="slist">
           <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="local_shipping" label="Courier Management" onClick={() => handleNavClick('courier-management')} />
+          <NavItem icon="car_rental" label="Rental Management" onClick={() => handleNavClick('rental-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" active={true} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />

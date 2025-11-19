@@ -13,7 +13,7 @@ import { logoutUser } from '../../services/authService';
 import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../../services/financialService';
 import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved, markAsPending } from '../../services/supportService';
 import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
-import Toast from '../../components/Toast';
+import Toast from '../../components/common/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -168,13 +168,19 @@ export default function DashboardView() {
       if (result.success) {
         const overview = result.data.data.dashboard_overview;
         const transformedData = {
-          totalRidesToday: overview.total_rides_last_7_days.value,
-          ridesGrowth: overview.total_rides_last_7_days.change_percent,
-          totalRevenue: overview.total_revenue_last_7_days.value,
-          revenueGrowth: overview.total_revenue_last_7_days.change_percent,
-          activeDrivers: overview.active_drivers.value,
-          successRate: overview.ride_success_rate_last_7_days.value,
-          successRateGrowth: overview.ride_success_rate_last_7_days.change_percent
+          totalRidesToday: overview.total_rides_last_7_days?.value || 0,
+          ridesGrowth: overview.total_rides_last_7_days?.change_percent || 0,
+          totalRevenue: overview.total_revenue_last_7_days?.value || 0,
+          revenueGrowth: overview.total_revenue_last_7_days?.change_percent || 0,
+          activeDrivers: overview.active_drivers?.value || 0,
+          successRate: overview.ride_success_rate_last_7_days?.value || 0,
+          successRateGrowth: overview.ride_success_rate_last_7_days?.change_percent || 0,
+          totalCourierToday: overview.total_courier_last_7_days?.value || overview.total_courier_today?.value || 0,
+          courierGrowth: overview.total_courier_last_7_days?.change_percent || overview.total_courier_today?.change_percent || 0,
+          activeCourier: overview.active_courier?.value || 0,
+          totalRentalsToday: overview.total_rentals_last_7_days?.value || overview.total_rentals_today?.value || 0,
+          rentalsGrowth: overview.total_rentals_last_7_days?.change_percent || overview.total_rentals_today?.change_percent || 0,
+          activeRentals: overview.active_rentals?.value || 0
         };
         setDashboardData(transformedData);
       } else {
@@ -507,6 +513,10 @@ export default function DashboardView() {
       setActiveSection('overview');
     } else if (navItem === 'ride-management') {
       navigate('/ride-management');
+    } else if (navItem === 'courier-management') {
+      navigate('/courier-management');
+    } else if (navItem === 'rental-management') {
+      navigate('/rental-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
     } else if (navItem === 'driver-management') {
@@ -727,6 +737,8 @@ export default function DashboardView() {
         <nav className="slist">
           <NavItem icon="space_dashboard" label="Dashboard" active={activeSection === 'overview'} onClick={() => handleNavClick('overview')} />
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="local_shipping" label="Courier Management" onClick={() => handleNavClick('courier-management')} />
+          <NavItem icon="car_rental" label="Rental Management" onClick={() => handleNavClick('rental-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
@@ -817,6 +829,30 @@ export default function DashboardView() {
                 <div className={`ksub ${dashboardData?.successRateGrowth && dashboardData.successRateGrowth >= 0 ? 'good' : 'bad'}`}>
                   {dashboardData?.successRateGrowth ? `${dashboardData.successRateGrowth >= 0 ? '+' : ''}${dashboardData.successRateGrowth}% vs yesterday` : 'No data'}
                 </div>
+              </div>
+              <div className="kcard">
+                <div className="khead"><span>Total Courier Today</span><span className="kbadge blue"><span className="material-symbols-outlined">local_shipping</span></span></div>
+                <div className="kmain">{dashboardData?.totalCourierToday ? formatNumber(dashboardData.totalCourierToday) : '0'}</div>
+                <div className={`ksub ${dashboardData?.courierGrowth && dashboardData.courierGrowth >= 0 ? 'good' : 'bad'}`}>
+                  {dashboardData?.courierGrowth ? `${dashboardData.courierGrowth >= 0 ? '+' : ''}${dashboardData.courierGrowth}% vs yesterday` : 'No data'}
+                </div>
+              </div>
+              <div className="kcard">
+                <div className="khead"><span>Active Courier</span><span className="kbadge yellow"><span className="material-symbols-outlined">delivery_dining</span></span></div>
+                <div className="kmain">{dashboardData?.activeCourier ? formatNumber(dashboardData.activeCourier) : '0'}</div>
+                <div className="ksub">Active now</div>
+              </div>
+              <div className="kcard">
+                <div className="khead"><span>Total Rentals Today</span><span className="kbadge blue"><span className="material-symbols-outlined">car_rental</span></span></div>
+                <div className="kmain">{dashboardData?.totalRentalsToday ? formatNumber(dashboardData.totalRentalsToday) : '0'}</div>
+                <div className={`ksub ${dashboardData?.rentalsGrowth && dashboardData.rentalsGrowth >= 0 ? 'good' : 'bad'}`}>
+                  {dashboardData?.rentalsGrowth ? `${dashboardData.rentalsGrowth >= 0 ? '+' : ''}${dashboardData.rentalsGrowth}% vs yesterday` : 'No data'}
+                </div>
+              </div>
+              <div className="kcard">
+                <div className="khead"><span>Active Rentals</span><span className="kbadge yellow"><span className="material-symbols-outlined">directions_car</span></span></div>
+                <div className="kmain">{dashboardData?.activeRentals ? formatNumber(dashboardData.activeRentals) : '0'}</div>
+                <div className="ksub">Active now</div>
               </div>
             </section>
           )}

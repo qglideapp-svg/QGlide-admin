@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './RideManagementView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchRidesList } from '../../services/ridesService';
-import Toast from '../../components/Toast';
+import Toast from '../../components/common/Toast';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -181,6 +181,12 @@ export default function RideManagementView() {
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
       navigate('/dashboard');
+    } else if (navItem === 'ride-management') {
+      navigate('/ride-management');
+    } else if (navItem === 'courier-management') {
+      navigate('/courier-management');
+    } else if (navItem === 'rental-management') {
+      navigate('/rental-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
     } else if (navItem === 'driver-management') {
@@ -281,6 +287,8 @@ export default function RideManagementView() {
         <nav className="slist">
           <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label="Ride Management" active={true} />
+          <NavItem icon="local_shipping" label="Courier Management" onClick={() => handleNavClick('courier-management')} />
+          <NavItem icon="car_rental" label="Rental Management" onClick={() => handleNavClick('rental-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />

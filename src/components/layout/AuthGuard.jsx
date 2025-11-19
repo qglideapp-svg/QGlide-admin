@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuthToken } from '../services/authService';
+import { getAuthToken } from '../../services/authService';
 
 const AuthGuard = ({ children }) => {
   const navigate = useNavigate();

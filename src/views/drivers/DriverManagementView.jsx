@@ -147,8 +147,14 @@ export default function DriverManagementView() {
       navigate('/dashboard');
     } else if (navItem === 'ride-management') {
       navigate('/ride-management');
+    } else if (navItem === 'courier-management') {
+      navigate('/courier-management');
+    } else if (navItem === 'rental-management') {
+      navigate('/rental-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
+    } else if (navItem === 'driver-management') {
+      navigate('/driver-management');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
     } else if (navItem === 'support') {
@@ -278,6 +284,8 @@ export default function DriverManagementView() {
         <nav className="slist">
           <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="local_shipping" label="Courier Management" onClick={() => handleNavClick('courier-management')} />
+          <NavItem icon="car_rental" label="Rental Management" onClick={() => handleNavClick('rental-management')} />
           <NavItem icon="directions_car" label="Driver Management" active={true} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />

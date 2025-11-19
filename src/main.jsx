@@ -14,7 +14,9 @@ import DriverProfileView from './views/drivers/DriverProfileView.jsx';
 import UserProfileView from './views/users/UserProfileView.jsx';
 import ReportsGeneratorView from './views/reports/ReportsGeneratorView.jsx';
 import SettingsView from './views/settings/SettingsView.jsx';
-import AuthGuard from './components/AuthGuard.jsx';
+import CourierManagementView from './views/courier/CourierManagementView.jsx';
+import RentalManagementView from './views/rentals/RentalManagementView.jsx';
+import AuthGuard from './components/layout/AuthGuard.jsx';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -65,6 +67,16 @@ createRoot(document.getElementById('root')).render(
         <Route path="/settings" element={
           <AuthGuard>
             <SettingsView />
+          </AuthGuard>
+        } />
+        <Route path="/courier-management" element={
+          <AuthGuard>
+            <CourierManagementView />
+          </AuthGuard>
+        } />
+        <Route path="/rental-management" element={
+          <AuthGuard>
+            <RentalManagementView />
           </AuthGuard>
         } />
       </Routes>
