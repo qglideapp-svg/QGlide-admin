@@ -495,8 +495,6 @@ export default function DriverProfileView() {
         <nav className="slist">
           <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
-          <NavItem icon="local_shipping" label="Courier Management" onClick={() => handleNavClick('courier-management')} />
-          <NavItem icon="car_rental" label="Rental Management" onClick={() => handleNavClick('rental-management')} />
           <NavItem icon="directions_car" label="Driver Management" active={true} onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
