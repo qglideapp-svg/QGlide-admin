@@ -1,0 +1,399 @@
+/* Import Poppins font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import '../../components/layout/CollapsibleSidebar.css';
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Withdrawal Management Layout */
+.withdrawal-management { 
+  display: flex; 
+  font-family: 'Poppins', sans-serif; 
+}
+
+.withdrawal-management .container {
+  padding: 24px;
+}
+
+.withdrawal-management-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.header-left h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.withdrawal-count {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0;
+  font-weight: 400;
+}
+
+.header-filters {
+  display: flex;
+  gap: 12px;
+}
+
+.filter-select {
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-select:hover {
+  border-color: #9CA3AF;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Table Container */
+.table-container {
+  overflow-x: auto;
+}
+
+.withdrawals-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.withdrawals-table thead {
+  background: #F9FAFB;
+}
+
+.withdrawals-table th {
+  padding: 12px 24px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.withdrawals-table th:last-child {
+  width: 280px;
+  min-width: 280px;
+}
+
+.withdrawals-table tbody tr {
+  border-bottom: 1px solid #E5E7EB;
+  transition: background-color 0.2s;
+}
+
+.withdrawals-table tbody tr:hover {
+  background-color: #F9FAFB;
+}
+
+.withdrawals-table td {
+  padding: 16px 24px;
+  font-size: 14px;
+  color: #111827;
+}
+
+/* Driver Cell */
+.driver-cell {
+  min-width: 200px;
+}
+
+.driver-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.driver-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.driver-name {
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.driver-id {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+/* Amount Cell */
+.amount-cell {
+  font-weight: 600;
+  color: #059669;
+  font-size: 15px;
+}
+
+/* Bank Cell */
+.bank-cell {
+  min-width: 150px;
+}
+
+.bank-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bank-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.bank-account {
+  font-size: 12px;
+  color: #6B7280;
+  font-family: monospace;
+}
+
+/* Date Cell */
+.date-cell {
+  color: #6B7280;
+  font-size: 13px;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.status-pending {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.status-badge.status-approved {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.status-badge.status-rejected {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.status-badge.status-completed {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* Actions Cell */
+.actions-cell {
+  min-width: 280px;
+  width: 280px;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  min-width: 110px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.action-btn.approve-btn {
+  background: #10B981;
+  color: white;
+}
+
+.action-btn.approve-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.action-btn.reject-btn {
+  background: #EF4444;
+  color: white;
+}
+
+.action-btn.reject-btn:hover:not(:disabled) {
+  background: #DC2626;
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.no-actions {
+  color: #9CA3AF;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E5E7EB;
+  border-top: 3px solid #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-container p {
+  color: #6B7280;
+  font-size: 14px;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.page-btn {
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .withdrawals-table {
+    font-size: 12px;
+  }
+  
+  .withdrawals-table th,
+  .withdrawals-table td {
+    padding: 8px 12px;
+  }
+  
+  .actions-cell {
+    min-width: 200px;
+    width: 200px;
+  }
+  
+  .actions {
+    flex-direction: row;
+    gap: 6px;
+  }
+  
+  .action-btn {
+    min-width: 90px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}

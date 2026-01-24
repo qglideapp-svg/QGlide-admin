@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './RideDetailsView.css';
 import { fetchRideDetails } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import MapRoute from '../../components/common/MapRoute';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -329,6 +330,8 @@ export default function RideDetailsView() {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
+    } else if (navItem === 'withdrawals') {
+      navigate('/withdrawals');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -393,6 +396,7 @@ export default function RideDetailsView() {
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -429,6 +433,7 @@ export default function RideDetailsView() {
             </div>
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
+            <ThemeToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">

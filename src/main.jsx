@@ -2,8 +2,10 @@ import React from 'react';
 import '@fontsource/poppins/400.css';
 import '@fontsource/poppins/600.css';
 import '@fontsource/poppins/700.css';
+import './styles/theme.css';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import LoginView from './views/auth/LoginView.jsx';
 import DashboardView from './views/dashboard/DashboardView.jsx';
 import RideManagementView from './views/rides/RideManagementView.jsx';
@@ -16,12 +18,14 @@ import ReportsGeneratorView from './views/reports/ReportsGeneratorView.jsx';
 import SettingsView from './views/settings/SettingsView.jsx';
 import CourierManagementView from './views/courier/CourierManagementView.jsx';
 import RentalManagementView from './views/rentals/RentalManagementView.jsx';
+import WithdrawalManagementView from './views/withdrawals/WithdrawalManagementView.jsx';
 import AuthGuard from './components/layout/AuthGuard.jsx';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Routes>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginView />} />
         <Route path="/dashboard" element={
@@ -79,7 +83,13 @@ createRoot(document.getElementById('root')).render(
             <RentalManagementView />
           </AuthGuard>
         } />
-      </Routes>
-    </BrowserRouter>
+        <Route path="/withdrawals" element={
+          <AuthGuard>
+            <WithdrawalManagementView />
+          </AuthGuard>
+        } />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   </React.StrictMode>
 );

@@ -61,11 +61,24 @@ const mockApiKeys = {
   qpay: 'qpay_sk_live_1234567890abcdefghijklmnopqrstuvwxyz'
 };
 
+// Mock fare cost settings
+const mockFareCosts = {
+  baseFare: 5.00,
+  costPerKilometer: 1.50,
+  costPerMinute: 0.30,
+  airportSurcharge: 25.00,
+  minimumFare: 10.00,
+  surgeMultiplier: 1.0,
+  nightSurcharge: 5.00,
+  peakHourSurcharge: 3.00
+};
+
 // Mock system settings
 const mockSystemSettings = {
   language: 'english', // 'english' or 'arabic'
   theme: 'dark', // 'light' or 'dark'
-  apiKeys: mockApiKeys
+  apiKeys: mockApiKeys,
+  fareCosts: mockFareCosts
 };
 
 // Simulate API delay
@@ -262,5 +275,31 @@ export const searchSettings = async (searchTerm) => {
       roles: filteredRoles,
       templates: filteredTemplates
     }
+  };
+};
+
+// Fetch fare cost settings
+export const fetchFareCosts = async () => {
+  await delay(300);
+  return {
+    success: true,
+    data: mockFareCosts
+  };
+};
+
+// Update fare cost settings
+export const updateFareCosts = async (fareCostData) => {
+  await delay(500);
+  
+  // Update the mock fare costs
+  Object.assign(mockFareCosts, fareCostData);
+  
+  // Also update in system settings
+  mockSystemSettings.fareCosts = mockFareCosts;
+  
+  return {
+    success: true,
+    data: mockFareCosts,
+    message: 'Fare costs updated successfully'
   };
 };

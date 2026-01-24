@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './ReportsGeneratorView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchReports, generateReport, deleteReport, retryReport, downloadReport, getReportOptions, searchReports } from '../../services/reportsService';
+import { useTheme } from '../../contexts/ThemeContext';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -30,6 +32,7 @@ const StatusBadge = ({ status }) => {
 
 export default function ReportsGeneratorView() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // State for reports data
@@ -40,7 +43,6 @@ export default function ReportsGeneratorView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   
   // State for report configuration
   const [reportConfig, setReportConfig] = useState({
@@ -211,6 +213,8 @@ export default function ReportsGeneratorView() {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
+    } else if (navItem === 'withdrawals') {
+      navigate('/withdrawals');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -220,11 +224,6 @@ export default function ReportsGeneratorView() {
     }
   };
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
-  };
 
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
@@ -239,7 +238,7 @@ export default function ReportsGeneratorView() {
   };
 
   return (
-    <div className={`reports-generator grid-root ${isDarkMode ? 'dark-mode' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`reports-generator grid-root ${theme === 'dark' ? 'dark-mode' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className={`side ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sbrand">
           <img src={logo} alt="QGlide" className="slogo" />
@@ -250,6 +249,7 @@ export default function ReportsGeneratorView() {
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" active={true} />
@@ -298,9 +298,7 @@ export default function ReportsGeneratorView() {
                 <span className="material-symbols-outlined">search</span>
               </button>
             </div>
-            <button className="theme-toggle" aria-label="dark mode" onClick={toggleDarkMode}>
-              <span className="material-symbols-outlined">{isDarkMode ? 'light_mode' : 'dark_mode'}</span>
-            </button>
+            <ThemeToggle />
             <button className="notifications-btn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <span className="notification-dot"></span>

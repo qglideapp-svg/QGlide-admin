@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SettingsView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings } from '../../services/settingsService';
+import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings, fetchFareCosts, updateFareCosts } from '../../services/settingsService';
+import { useTheme } from '../../contexts/ThemeContext';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -17,18 +19,30 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export default function SettingsView() {
   const navigate = useNavigate();
+  const { theme, setThemeMode } = useTheme();
   
   // State management
   const [roles, setRoles] = useState([]);
   const [notificationTemplates, setNotificationTemplates] = useState([]);
   const [systemSettings, setSystemSettings] = useState({
     language: 'english',
-    theme: 'dark',
+    theme: 'light',
     apiKeys: {
       googleMaps: '',
       qpay: ''
     }
   });
+  const [fareCosts, setFareCosts] = useState({
+    baseFare: 5.00,
+    costPerKilometer: 1.50,
+    costPerMinute: 0.30,
+    airportSurcharge: 25.00,
+    minimumFare: 10.00,
+    surgeMultiplier: 1.0,
+    nightSurcharge: 5.00,
+    peakHourSurcharge: 3.00
+  });
+  const [isSavingFareCosts, setIsSavingFareCosts] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
@@ -47,10 +61,11 @@ export default function SettingsView() {
   const loadSettingsData = async () => {
     setIsLoading(true);
     try {
-      const [rolesResult, templatesResult, settingsResult] = await Promise.all([
+      const [rolesResult, templatesResult, settingsResult, fareCostsResult] = await Promise.all([
         fetchRoles(),
         fetchNotificationTemplates(),
-        fetchSystemSettings()
+        fetchSystemSettings(),
+        fetchFareCosts()
       ]);
 
       if (rolesResult.success) {
@@ -61,6 +76,13 @@ export default function SettingsView() {
       }
       if (settingsResult.success) {
         setSystemSettings(settingsResult.data);
+        // Sync theme from settings to context
+        if (settingsResult.data.theme) {
+          setThemeMode(settingsResult.data.theme);
+        }
+      }
+      if (fareCostsResult.success) {
+        setFareCosts(fareCostsResult.data);
       }
     } catch (error) {
       console.error('Error loading settings data:', error);
@@ -94,11 +116,13 @@ export default function SettingsView() {
     }
   };
 
-  const handleThemeToggle = async (theme) => {
+  const handleThemeToggle = async (newTheme) => {
     try {
-      const result = await toggleTheme(theme);
+      const result = await toggleTheme(newTheme);
       if (result.success) {
-        setSystemSettings(prev => ({ ...prev, theme }));
+        setSystemSettings(prev => ({ ...prev, theme: newTheme }));
+        // Update theme context
+        setThemeMode(newTheme);
         showToastMessage('Theme updated successfully', 'success');
       }
     } catch (error) {
@@ -177,6 +201,31 @@ export default function SettingsView() {
     }
   };
 
+  const handleFareCostChange = (field, value) => {
+    const numValue = parseFloat(value) || 0;
+    setFareCosts(prev => ({
+      ...prev,
+      [field]: numValue
+    }));
+  };
+
+  const handleSaveFareCosts = async () => {
+    setIsSavingFareCosts(true);
+    try {
+      const result = await updateFareCosts(fareCosts);
+      if (result.success) {
+        showToastMessage(result.message || 'Fare costs updated successfully', 'success');
+      } else {
+        showToastMessage(result.error || 'Failed to update fare costs', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating fare costs:', error);
+      showToastMessage('Failed to update fare costs', 'error');
+    } finally {
+      setIsSavingFareCosts(false);
+    }
+  };
+
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') {
       navigate('/dashboard');
@@ -192,6 +241,8 @@ export default function SettingsView() {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
+    } else if (navItem === 'withdrawals') {
+      navigate('/withdrawals');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -230,6 +281,7 @@ export default function SettingsView() {
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -273,6 +325,7 @@ export default function SettingsView() {
                 <span className="material-symbols-outlined">search</span>
               </button>
             </div>
+            <ThemeToggle />
             <button className="notifications-btn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <span className="notification-dot"></span>
@@ -324,14 +377,14 @@ export default function SettingsView() {
                         <label>Theme</label>
                         <div className="toggle-group">
                           <button
-                            className={`toggle-btn ${systemSettings.theme === 'light' ? 'active' : ''}`}
+                            className={`toggle-btn ${theme === 'light' ? 'active' : ''}`}
                             onClick={() => handleThemeToggle('light')}
                           >
-                            <span className="material-symbols-outlined">settings</span>
+                            <span className="material-symbols-outlined">light_mode</span>
                             Light
                           </button>
                           <button
-                            className={`toggle-btn ${systemSettings.theme === 'dark' ? 'active' : ''}`}
+                            className={`toggle-btn ${theme === 'dark' ? 'active' : ''}`}
                             onClick={() => handleThemeToggle('dark')}
                           >
                             <span className="material-symbols-outlined">dark_mode</span>
@@ -378,6 +431,178 @@ export default function SettingsView() {
                             <span className="material-symbols-outlined">content_copy</span>
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fare Cost Management Section */}
+              <div className="settings-card fare-cost-card">
+                <div className="card-header">
+                  <h2>Fare Cost Management</h2>
+                  <button 
+                    className="save-fare-costs-btn" 
+                    onClick={handleSaveFareCosts}
+                    disabled={isSavingFareCosts}
+                  >
+                    <span className="material-symbols-outlined">
+                      {isSavingFareCosts ? 'hourglass_empty' : 'save'}
+                    </span>
+                    {isSavingFareCosts ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+                <div className="card-content">
+                  <div className="fare-costs-grid">
+                    <div className="fare-cost-section">
+                      <h3>Base Pricing</h3>
+                      <div className="fare-cost-group">
+                        <label htmlFor="baseFare">Base Fare (QAR)</label>
+                        <div className="fare-input-wrapper">
+                          <span className="currency-symbol">QAR</span>
+                          <input
+                            id="baseFare"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={fareCosts.baseFare}
+                            onChange={(e) => handleFareCostChange('baseFare', e.target.value)}
+                            className="fare-input"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <p className="fare-description">Starting fare for all rides</p>
+                      </div>
+                      <div className="fare-cost-group">
+                        <label htmlFor="minimumFare">Minimum Fare (QAR)</label>
+                        <div className="fare-input-wrapper">
+                          <span className="currency-symbol">QAR</span>
+                          <input
+                            id="minimumFare"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={fareCosts.minimumFare}
+                            onChange={(e) => handleFareCostChange('minimumFare', e.target.value)}
+                            className="fare-input"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <p className="fare-description">Minimum amount charged per ride</p>
+                      </div>
+                    </div>
+
+                    <div className="fare-cost-section">
+                      <h3>Distance & Time</h3>
+                      <div className="fare-cost-group">
+                        <label htmlFor="costPerKilometer">Cost per Kilometer (QAR)</label>
+                        <div className="fare-input-wrapper">
+                          <span className="currency-symbol">QAR</span>
+                          <input
+                            id="costPerKilometer"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={fareCosts.costPerKilometer}
+                            onChange={(e) => handleFareCostChange('costPerKilometer', e.target.value)}
+                            className="fare-input"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <p className="fare-description">Charged per kilometer traveled</p>
+                      </div>
+                      <div className="fare-cost-group">
+                        <label htmlFor="costPerMinute">Cost per Minute (QAR)</label>
+                        <div className="fare-input-wrapper">
+                          <span className="currency-symbol">QAR</span>
+                          <input
+                            id="costPerMinute"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={fareCosts.costPerMinute}
+                            onChange={(e) => handleFareCostChange('costPerMinute', e.target.value)}
+                            className="fare-input"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <p className="fare-description">Charged per minute of ride duration</p>
+                      </div>
+                    </div>
+
+                    <div className="fare-cost-section">
+                      <h3>Surcharges</h3>
+                      <div className="fare-cost-group">
+                        <label htmlFor="airportSurcharge">Airport Surcharge (QAR)</label>
+                        <div className="fare-input-wrapper">
+                          <span className="currency-symbol">QAR</span>
+                          <input
+                            id="airportSurcharge"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={fareCosts.airportSurcharge}
+                            onChange={(e) => handleFareCostChange('airportSurcharge', e.target.value)}
+                            className="fare-input"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <p className="fare-description">Additional fee for airport pickups/drop-offs</p>
+                      </div>
+                      <div className="fare-cost-group">
+                        <label htmlFor="nightSurcharge">Night Surcharge (QAR)</label>
+                        <div className="fare-input-wrapper">
+                          <span className="currency-symbol">QAR</span>
+                          <input
+                            id="nightSurcharge"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={fareCosts.nightSurcharge}
+                            onChange={(e) => handleFareCostChange('nightSurcharge', e.target.value)}
+                            className="fare-input"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <p className="fare-description">Additional fee for rides during night hours</p>
+                      </div>
+                      <div className="fare-cost-group">
+                        <label htmlFor="peakHourSurcharge">Peak Hour Surcharge (QAR)</label>
+                        <div className="fare-input-wrapper">
+                          <span className="currency-symbol">QAR</span>
+                          <input
+                            id="peakHourSurcharge"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={fareCosts.peakHourSurcharge}
+                            onChange={(e) => handleFareCostChange('peakHourSurcharge', e.target.value)}
+                            className="fare-input"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <p className="fare-description">Additional fee during peak hours</p>
+                      </div>
+                    </div>
+
+                    <div className="fare-cost-section">
+                      <h3>Dynamic Pricing</h3>
+                      <div className="fare-cost-group">
+                        <label htmlFor="surgeMultiplier">Surge Multiplier</label>
+                        <div className="fare-input-wrapper">
+                          <input
+                            id="surgeMultiplier"
+                            type="number"
+                            step="0.1"
+                            min="1.0"
+                            value={fareCosts.surgeMultiplier}
+                            onChange={(e) => handleFareCostChange('surgeMultiplier', e.target.value)}
+                            className="fare-input"
+                            placeholder="1.0"
+                          />
+                          <span className="multiplier-symbol">x</span>
+                        </div>
+                        <p className="fare-description">Multiplier applied during high demand (default: 1.0x)</p>
                       </div>
                     </div>
                   </div>

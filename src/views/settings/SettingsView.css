@@ -336,6 +336,134 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
 }
 .delete-link:hover { color: #dc2626; }
 
+/* Fare Cost Management */
+.fare-cost-card {
+  margin-bottom: 24px;
+}
+
+.save-fare-costs-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--success-green);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-fare-costs-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.save-fare-costs-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-fare-costs-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.fare-costs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 32px;
+}
+
+.fare-cost-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fare-cost-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0 0 8px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--gold);
+}
+
+.fare-cost-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fare-cost-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+.fare-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency-symbol {
+  position: absolute;
+  left: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-light);
+  z-index: 1;
+}
+
+.multiplier-symbol {
+  position: absolute;
+  right: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-light);
+  z-index: 1;
+}
+
+.fare-input {
+  width: 100%;
+  padding: 12px 12px 12px 60px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: 'Poppins', sans-serif;
+}
+
+.fare-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+.fare-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.fare-input[type="number"]::-webkit-outer-spin-button,
+.fare-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.fare-description {
+  font-size: 12px;
+  color: var(--text-light);
+  margin: 0;
+  font-style: italic;
+}
+
 /* Notification Templates */
 .templates-grid { 
   display: grid; 
@@ -524,6 +652,7 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
 /* Responsive Design */
 @media (max-width: 1024px) {
   .settings-grid { grid-template-columns: 1fr; gap: 24px; }
+  .fare-costs-grid { grid-template-columns: 1fr; gap: 24px; }
   .templates-grid { grid-template-columns: 1fr; }
   .search-input { width: 150px; }
 }

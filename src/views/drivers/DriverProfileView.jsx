@@ -8,6 +8,7 @@ import SuspendDriverModal from '../../components/modals/SuspendDriverModal';
 import EditDriverModal from '../../components/modals/EditDriverModal';
 import DeleteDriverModal from '../../components/modals/DeleteDriverModal';
 import DocumentViewModal from '../../components/modals/DocumentViewModal';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -461,6 +462,8 @@ export default function DriverProfileView() {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
+    } else if (navItem === 'withdrawals') {
+      navigate('/withdrawals');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -498,6 +501,7 @@ export default function DriverProfileView() {
           <NavItem icon="directions_car" label="Driver Management" active={true} onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -538,9 +542,7 @@ export default function DriverProfileView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder="Search..." />
             </div>
-            <button className="ibtn" aria-label="dark mode">
-              <span className="material-symbols-outlined">dark_mode</span>
-            </button>
+            <ThemeToggle />
             <button className="ibtn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <i className="dot" />

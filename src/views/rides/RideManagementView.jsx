@@ -4,6 +4,7 @@ import './RideManagementView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchRidesList } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -199,6 +200,8 @@ export default function RideManagementView() {
       navigate('/dashboard?section=analytics');
     } else if (navItem === 'reports') {
       navigate('/reports');
+    } else if (navItem === 'withdrawals') {
+      navigate('/withdrawals');
     }
   };
 
@@ -290,6 +293,7 @@ export default function RideManagementView() {
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -327,6 +331,7 @@ export default function RideManagementView() {
           <div className="acts">
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
+            <ThemeToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">

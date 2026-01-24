@@ -14,6 +14,8 @@ import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportT
 import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved, markAsPending } from '../../services/supportService';
 import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
 import Toast from '../../components/common/Toast';
+import ThemeToggle from '../../components/common/ThemeToggle';
+import AdminWithdrawModal from '../../components/modals/AdminWithdrawModal';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -42,6 +44,8 @@ export default function DashboardView() {
   const [payoutRequests, setPayoutRequests] = useState([]);
   const [isFinancialLoading, setIsFinancialLoading] = useState(false);
   const [transactionFilter, setTransactionFilter] = useState('All Types');
+  const [showAdminWithdrawModal, setShowAdminWithdrawModal] = useState(false);
+  const [isProcessingWithdraw, setIsProcessingWithdraw] = useState(false);
   
   // Support states
   const [supportTickets, setSupportTickets] = useState([]);
@@ -200,10 +204,10 @@ export default function DashboardView() {
     setIsFinancialLoading(true);
     
     try {
-      const [overviewResult, transactionsResult, payoutsResult] = await Promise.all([
+      const [overviewResult, transactionsResult, payoutRequestsResult] = await Promise.all([
         fetchFinancialOverview(),
         fetchTransactions({ type: transactionFilter }),
-        fetchPayoutRequests()
+        fetchPayoutRequests('pending') // Fetch pending payout requests from the dedicated API
       ]);
       
       if (overviewResult.success) {
@@ -214,8 +218,10 @@ export default function DashboardView() {
         setTransactions(transactionsResult.data);
       }
       
-      if (payoutsResult.success) {
-        setPayoutRequests(payoutsResult.data);
+      if (payoutRequestsResult.success) {
+        // Limit to first 10 payout requests
+        const payoutRequestsList = (payoutRequestsResult.data || []).slice(0, 10);
+        setPayoutRequests(payoutRequestsList);
       }
     } catch (err) {
       console.error('Financial data error:', err);
@@ -523,6 +529,8 @@ export default function DashboardView() {
       navigate('/driver-management');
     } else if (navItem === 'reports') {
       navigate('/reports');
+    } else if (navItem === 'withdrawals') {
+      navigate('/withdrawals');
     }
     // Add other navigation handlers as needed
   }, [navigate]);
@@ -673,6 +681,31 @@ export default function DashboardView() {
     setShowToast(true);
   };
 
+  const handleAdminWithdraw = async (withdrawData) => {
+    setIsProcessingWithdraw(true);
+    try {
+      // TODO: Implement API call for admin withdrawal
+      console.log('Admin withdraw data:', withdrawData);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      showToastMessage('Withdrawal request submitted successfully', 'success');
+      setShowAdminWithdrawModal(false);
+      
+      // Reload financial overview to update balance
+      const overviewResult = await fetchFinancialOverview();
+      if (overviewResult.success) {
+        setFinancialOverview(overviewResult.data);
+      }
+    } catch (err) {
+      console.error('Admin withdraw error:', err);
+      showToastMessage('Failed to submit withdrawal request', 'error');
+    } finally {
+      setIsProcessingWithdraw(false);
+    }
+  };
+
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
       try {
@@ -700,8 +733,24 @@ export default function DashboardView() {
 
   // Format currency
   const formatCurrency = (amount) => {
-    if (typeof amount !== 'number') return amount;
-    return `QAR ${amount.toLocaleString()}`;
+    if (amount === null || amount === undefined) return 'QAR 0';
+    // Handle object with value property
+    if (typeof amount === 'object' && amount.value !== undefined) {
+      const numValue = typeof amount.value === 'number' ? amount.value : parseFloat(amount.value);
+      if (isNaN(numValue)) return 'QAR 0';
+      return `QAR ${numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    // Handle number
+    if (typeof amount === 'number') {
+      return `QAR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    // Handle string
+    if (typeof amount === 'string') {
+      const numValue = parseFloat(amount);
+      if (isNaN(numValue)) return 'QAR 0';
+      return `QAR ${numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return 'QAR 0';
   };
 
   // Format percentage
@@ -740,6 +789,7 @@ export default function DashboardView() {
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="support_agent" label="Support" active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" active={activeSection === 'analytics'} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -783,6 +833,7 @@ export default function DashboardView() {
             </div>
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
+            <ThemeToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">
@@ -987,7 +1038,18 @@ export default function DashboardView() {
                         <div className="metric-info">
                           <span className="metric-label">Commissions (MTD)</span>
                           <span className="metric-trend positive">
-                            {financialOverview?.commissions?.trend ? `+${financialOverview.commissions.trend}% vs last month` : ''}
+                            {(() => {
+                              const trend = financialOverview?.commissions?.trend;
+                              if (!trend) return '';
+                              // Extract numeric value if it's an object
+                              const trendValue = typeof trend === 'number' 
+                                ? trend 
+                                : (typeof trend === 'object' && trend.value !== undefined 
+                                  ? (typeof trend.value === 'number' ? trend.value : parseFloat(trend.value))
+                                  : parseFloat(trend));
+                              if (isNaN(trendValue)) return '';
+                              return `+${trendValue}% vs last month`;
+                            })()}
                           </span>
                         </div>
                         <div className="metric-icon green">
@@ -996,6 +1058,16 @@ export default function DashboardView() {
                       </div>
                       <div className="metric-value">
                         {financialOverview?.commissions?.amount ? formatCurrency(financialOverview.commissions.amount) : 'QAR 0'}
+                      </div>
+                      <div className="metric-actions">
+                        <button 
+                          className="admin-withdraw-btn"
+                          onClick={() => setShowAdminWithdrawModal(true)}
+                          title="Withdraw admin commissions"
+                        >
+                          <span className="material-symbols-outlined">account_balance_wallet</span>
+                          Admin Withdraw
+                        </button>
                       </div>
                     </div>
 
@@ -1082,17 +1154,62 @@ export default function DashboardView() {
                     <div className="payouts-panel">
                       <div className="panel-header">
                         <h3>Payout Requests</h3>
+                        <button 
+                          className="view-all-btn"
+                          onClick={() => navigate('/withdrawals')}
+                          title="View all withdrawals"
+                        >
+                          View All
+                          <span className="material-symbols-outlined">arrow_forward</span>
+                        </button>
                       </div>
                       <div className="payout-list">
-                        {payoutRequests.map((payout) => (
-                          <div key={payout.id} className="payout-item">
-                            <img src={payout.avatar} alt={payout.driverName} className="payout-avatar" />
-                            <div className="payout-info">
-                              <div className="payout-name">{payout.driverName}</div>
-                              <div className="payout-amount">{formatCurrency(payout.amount)}</div>
-                            </div>
+                        {payoutRequests.length === 0 ? (
+                          <div className="no-payouts">
+                            <span className="material-symbols-outlined">inbox</span>
+                            <p>No payout requests</p>
                           </div>
-                        ))}
+                        ) : (
+                          payoutRequests.map((payout) => {
+                            const status = payout.status?.toLowerCase() || 'pending';
+                            const statusClass = status === 'completed' ? 'completed' : 
+                                               status === 'approved' ? 'approved' : 
+                                               status === 'rejected' ? 'rejected' : 'pending';
+                            
+                            // Use driverName from API response, fallback to user field
+                            const driverName = payout.driverName || payout.user?.replace(' (Driver)', '') || payout.user || 'Unknown Driver';
+                            
+                            // Use avatar from API response, or generate one based on driver name
+                            const avatarUrl = payout.avatar || payout.driver_avatar || (() => {
+                              const nameHash = driverName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                              return `https://i.pravatar.cc/80?img=${(nameHash % 70) + 1}`;
+                            })();
+                            
+                            return (
+                              <div 
+                                key={payout.id} 
+                                className={`payout-item ${statusClass}`}
+                                onClick={() => navigate('/withdrawals')}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                <img 
+                                  src={avatarUrl} 
+                                  alt={driverName} 
+                                  className="payout-avatar" 
+                                />
+                                <div className="payout-info">
+                                  <div className="payout-name">{driverName}</div>
+                                  <div className="payout-amount">{formatCurrency(payout.amount)}</div>
+                                  <div className="payout-status">
+                                    <span className={`status-badge ${statusClass}`}>
+                                      {payout.status || 'Pending'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   </section>
@@ -1712,6 +1829,14 @@ export default function DashboardView() {
           onClose={closeToast}
         />
       )}
+      
+      <AdminWithdrawModal
+        isOpen={showAdminWithdrawModal}
+        onClose={() => setShowAdminWithdrawModal(false)}
+        onConfirm={handleAdminWithdraw}
+        availableBalance={financialOverview?.commissions?.amount}
+        isLoading={isProcessingWithdraw}
+      />
 
       {/* Section Selection Modal */}
       {showSectionModal && (

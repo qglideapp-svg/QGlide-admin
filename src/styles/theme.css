@@ -1,0 +1,315 @@
+/* Light Mode (Default) */
+:root,
+:root.light-mode {
+  --bg: #f6f8fb;
+  --text: #6b7280;
+  --muted: #9ca3af;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --shadow: 0 6px 20px rgba(2, 8, 23, 0.06);
+  --accent: #f5e6b8;
+  --primary-blue: #1e40af;
+  --text-dark: #111827;
+  --text-light: #6b7280;
+  --gold: #fbbf24;
+  --gold-hover: #f59e0b;
+  --success-green: #10b981;
+  --warning-orange: #f59e0b;
+  --error-red: #ef4444;
+  --sidebar-bg: #ffffff;
+  --header-bg: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #e5e7eb;
+}
+
+/* Dark Mode */
+:root.dark-mode {
+  --bg: #0f172a;
+  --text: #cbd5e1;
+  --muted: #94a3b8;
+  --card: #1e293b;
+  --border: #334155;
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --accent: #fbbf24;
+  --primary-blue: #60a5fa;
+  --text-dark: #f1f5f9;
+  --text-light: #cbd5e1;
+  --gold: #fbbf24;
+  --gold-hover: #f59e0b;
+  --success-green: #10b981;
+  --warning-orange: #f59e0b;
+  --error-red: #ef4444;
+  --sidebar-bg: #1e293b;
+  --header-bg: #1e293b;
+  --input-bg: #1e293b;
+  --input-border: #334155;
+}
+
+/* Apply theme to body */
+body {
+  background: var(--bg);
+  color: var(--text-dark);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode sidebar */
+.dark-mode .side {
+  background: var(--sidebar-bg);
+  border-right-color: var(--border);
+}
+
+.dark-mode .snav {
+  color: var(--text);
+}
+
+.dark-mode .snav.active {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+}
+
+.dark-mode .settings,
+.dark-mode .urow {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark-mode .meta .name {
+  color: var(--text-dark);
+}
+
+.dark-mode .meta .role {
+  color: var(--text-light);
+}
+
+/* Dark mode header */
+.dark-mode .top {
+  background: var(--header-bg);
+  border-bottom-color: var(--border);
+}
+
+.dark-mode .titles h1 {
+  color: var(--text-dark);
+}
+
+.dark-mode .titles .sub {
+  color: var(--text-light);
+}
+
+/* Dark mode cards */
+.dark-mode .settings-card,
+.dark-mode .withdrawal-management-card,
+.dark-mode .user-management-card,
+.dark-mode .driver-management-card,
+.dark-mode .ride-management-card {
+  background: var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .card-header {
+  border-bottom-color: var(--border);
+}
+
+.dark-mode .card-header h2 {
+  color: var(--text-dark);
+}
+
+/* Dark mode inputs */
+.dark-mode input,
+.dark-mode select,
+.dark-mode textarea {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-dark);
+}
+
+.dark-mode input:focus,
+.dark-mode select:focus,
+.dark-mode textarea:focus {
+  border-color: var(--gold);
+}
+
+/* Dark mode tables */
+.dark-mode table thead {
+  background: #334155;
+}
+
+.dark-mode table th {
+  color: var(--text-dark);
+  border-bottom-color: var(--border);
+}
+
+.dark-mode table td {
+  color: var(--text-dark);
+  border-bottom-color: var(--border);
+}
+
+.dark-mode table tbody tr:hover {
+  background: #334155;
+}
+
+/* Dark mode buttons */
+.dark-mode .toggle-btn {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text-dark);
+}
+
+.dark-mode .toggle-btn.active {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+}
+
+.dark-mode .chip {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text-dark);
+}
+
+.dark-mode .chip.on {
+  background: var(--gold);
+  color: #000;
+}
+
+/* Dark mode search */
+.dark-mode .search-input {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-dark);
+}
+
+/* Dark mode user info */
+.dark-mode .user-info {
+  background: var(--card);
+}
+
+.dark-mode .user-name {
+  color: var(--text-dark);
+}
+
+/* Dark mode pagination */
+.dark-mode .page-btn {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text-dark);
+}
+
+.dark-mode .page-btn:hover:not(:disabled) {
+  background: #334155;
+}
+
+/* Dark mode modals */
+.dark-mode .modal-content {
+  background: var(--card);
+  color: var(--text-dark);
+}
+
+.dark-mode .modal-content h3 {
+  color: var(--text-dark);
+}
+
+/* Dark mode loading */
+.dark-mode .loading-container p {
+  color: var(--text-light);
+}
+
+/* Dark mode empty state */
+.dark-mode .empty-state h3 {
+  color: var(--text-dark);
+}
+
+.dark-mode .empty-state p {
+  color: var(--text-light);
+}
+
+/* Dark mode dashboard overview cards */
+.dark-mode .kmain {
+  color: #ffffff !important;
+}
+
+/* Dark mode financial management metric values */
+.dark-mode .metric-value {
+  color: #ffffff !important;
+}
+
+.dark-mode .analytics-metric-card .metric-value {
+  color: #ffffff !important;
+}
+
+/* Dark mode payout/withdrawal items */
+.dark-mode .payout-item:hover {
+  background: #334155;
+  border-color: var(--border);
+}
+
+.dark-mode .payout-name {
+  color: var(--text-dark);
+}
+
+.dark-mode .payout-amount {
+  color: var(--gold);
+}
+
+.dark-mode .view-all-btn {
+  border-color: var(--border);
+  color: var(--text-dark);
+}
+
+.dark-mode .view-all-btn:hover {
+  background: #334155;
+  border-color: var(--gold);
+}
+
+.dark-mode .no-payouts {
+  color: var(--text-light);
+}
+
+/* Dark mode admin withdraw button */
+.dark-mode .admin-withdraw-btn {
+  background: var(--gold, #fbbf24);
+  color: #000;
+}
+
+.dark-mode .admin-withdraw-btn:hover {
+  background: var(--gold-hover, #f59e0b);
+}
+
+.dark-mode .metric-actions {
+  border-top-color: var(--border, #334155);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  height: 38px;
+  width: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-dark);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--accent);
+  border-color: var(--gold);
+}
+
+.theme-toggle-btn .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--text-dark);
+}
+
+.dark-mode .theme-toggle-btn {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text-dark);
+}
+
+.dark-mode .theme-toggle-btn:hover {
+  background: #334155;
+  border-color: var(--gold);
+}
