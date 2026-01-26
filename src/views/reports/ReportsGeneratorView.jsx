@@ -62,10 +62,6 @@ export default function ReportsGeneratorView() {
   useEffect(() => {
     loadReports();
     loadReportOptions();
-    
-    // Load dark mode preference from localStorage
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setIsDarkMode(savedDarkMode);
   }, []);
 
   const loadReports = async () => {
@@ -263,7 +259,7 @@ export default function ReportsGeneratorView() {
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
             <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
@@ -304,7 +300,7 @@ export default function ReportsGeneratorView() {
               <span className="notification-dot"></span>
             </button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
+              <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>

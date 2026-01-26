@@ -688,15 +688,91 @@ export const fetchUserRideHistory = async (userId) => {
 
 // Transform user data from API format to UI format
 export const transformUserData = (apiUser) => {
-  return {
-    id: apiUser.id || apiUser.user_id || '',
-    name: apiUser.full_name || apiUser.name || 'Unknown User',
-    avatar: apiUser.avatar_url || apiUser.profile_picture || 'https://i.pravatar.cc/40',
-    joinedDate: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split('T')[0] : 'N/A',
-    contact: apiUser.email || apiUser.phone || apiUser.phone_number || 'N/A',
-    totalRides: parseInt(apiUser.total_rides || apiUser.rides_count || 0),
-    lastRide: apiUser.last_ride_date || 'N/A',
-    rating: parseFloat(apiUser.rating || apiUser.average_rating || 0),
-    status: apiUser.status || 'Active'
+  // Handle null/undefined
+  if (!apiUser || typeof apiUser !== 'object') {
+    console.warn('⚠️ transformUserData: Invalid apiUser input', apiUser);
+    return {
+      id: '',
+      name: 'Unknown User',
+      avatar: 'https://i.pravatar.cc/40',
+      joinedDate: 'N/A',
+      contact: 'N/A',
+      totalRides: 0,
+      lastRide: 'N/A',
+      rating: 0,
+      status: 'Active'
+    };
+  }
+
+  // Helper function to safely extract string values
+  const getString = (value, fallback = 'N/A') => {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'string') return value.trim() || fallback;
+    if (typeof value === 'object') {
+      console.warn('⚠️ transformUserData: Expected string but got object', value);
+      return fallback;
+    }
+    return String(value);
   };
+
+  // Helper function to safely extract number values
+  const getNumber = (value, fallback = 0) => {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'number') return isNaN(value) ? fallback : value;
+    if (typeof value === 'object') {
+      console.warn('⚠️ transformUserData: Expected number but got object', value);
+      return fallback;
+    }
+    const num = parseInt(value, 10);
+    return isNaN(num) ? fallback : num;
+  };
+
+  // Helper function to safely extract float values
+  const getFloat = (value, fallback = 0) => {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'number') return isNaN(value) ? fallback : value;
+    if (typeof value === 'object') {
+      console.warn('⚠️ transformUserData: Expected number but got object', value);
+      return fallback;
+    }
+    const num = parseFloat(value);
+    return isNaN(num) ? fallback : num;
+  };
+
+  // Safely extract contact info - check multiple possible field names
+  const contact = apiUser.email || apiUser.phone || apiUser.phone_number || apiUser.contact || apiUser.phoneNumber;
+  const contactValue = getString(contact, 'N/A');
+
+  // Safely extract last ride date - check multiple possible field names
+  const lastRide = apiUser.last_ride_date || apiUser.last_ride || apiUser.lastRide || apiUser.last_ride_date || apiUser.lastRideDate;
+  const lastRideValue = getString(lastRide, 'N/A');
+
+  // Safely extract total rides - check multiple possible field names
+  const totalRides = apiUser.total_rides || apiUser.rides_count || apiUser.totalRides || apiUser.ridesCount || apiUser.total_rides_count;
+  const totalRidesValue = getNumber(totalRides, 0);
+
+  const transformed = {
+    id: getString(apiUser.id || apiUser.user_id || apiUser.userId, ''),
+    name: getString(apiUser.full_name || apiUser.name || apiUser.fullName, 'Unknown User'),
+    avatar: getString(apiUser.avatar_url || apiUser.profile_picture || apiUser.avatar || apiUser.avatarUrl, 'https://i.pravatar.cc/40'),
+    joinedDate: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split('T')[0] : 'N/A',
+    contact: contactValue,
+    totalRides: totalRidesValue,
+    lastRide: lastRideValue,
+    rating: getFloat(apiUser.rating || apiUser.average_rating || apiUser.avg_rating || apiUser.averageRating, 0),
+    status: getString(apiUser.status, 'Active')
+  };
+
+  // Log transformation for debugging
+  if (typeof contact === 'object' || typeof lastRide === 'object' || typeof totalRides === 'object') {
+    console.warn('⚠️ transformUserData: Found object values in API response', {
+      original: apiUser,
+      transformed: transformed,
+      contactType: typeof contact,
+      lastRideType: typeof lastRide,
+      totalRidesType: typeof totalRides
+    });
+  }
+
+  return transformed;
 };

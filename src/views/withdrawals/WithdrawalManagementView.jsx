@@ -271,7 +271,7 @@ export default function WithdrawalManagementView() {
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
             <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
@@ -304,7 +304,7 @@ export default function WithdrawalManagementView() {
               <i className="dot" />
             </button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
+              <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
@@ -368,19 +368,23 @@ export default function WithdrawalManagementView() {
                         <tr key={withdrawal.id} className="withdrawal-row">
                           <td className="driver-cell">
                             <div className="driver-info">
-                              <img 
-                                src={withdrawal.driver_avatar || `https://i.pravatar.cc/40?img=${Math.floor(Math.random() * 10)}`} 
-                                alt={withdrawal.driver_name || 'Driver'} 
-                                className="driver-avatar" 
-                                onError={(e) => {
-                                  e.target.src = `https://i.pravatar.cc/40?img=${Math.floor(Math.random() * 10)}`;
-                                }}
-                              />
+                              {withdrawal.driver_avatar ? (
+                                <img 
+                                  src={withdrawal.driver_avatar} 
+                                  alt={withdrawal.driver_name || 'Driver'} 
+                                  className="driver-avatar" 
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div className="driver-avatar-placeholder">N/A</div>
+                              )}
                               <div>
                                 <div className="driver-name">
                                   {typeof withdrawal.driver_name === 'string' 
                                     ? withdrawal.driver_name 
-                                    : (withdrawal.driver_name?.name || withdrawal.driver_name?.driver_name || 'Unknown Driver')}
+                                    : (withdrawal.driver_name?.name || withdrawal.driver_name?.driver_name || 'N/A')}
                                 </div>
                                 <div className="driver-id">
                                   ID: {typeof withdrawal.driver_id === 'string' 

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import './Toast.css';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Toast = ({ message, type = 'error', onClose, duration = 5000 }) => {
+  const { t } = useLanguage();
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ const Toast = ({ message, type = 'error', onClose, duration = 5000 }) => {
           {type === 'info' && 'ℹ️'}
         </span>
         <span className="toast-message">{message}</span>
-        <button className="toast-close" onClick={handleClose}>
+        <button className="toast-close" onClick={handleClose} aria-label={t('common.close')}>
           <span className="material-symbols-outlined">close</span>
         </button>
       </div>

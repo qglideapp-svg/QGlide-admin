@@ -4,9 +4,11 @@ import './LoginView.css';
 import logoSrc from '../../assets/images/logo.png';
 import { loginUser, storeAuthToken } from '../../services/authService';
 import Toast from '../../components/common/Toast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function LoginView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +20,7 @@ export default function LoginView() {
     e.preventDefault();
     
     if (!email || !password) {
-      setToastMessage('Please enter both email and password');
+      setToastMessage(t('auth.enterBothFields'));
       setShowToast(true);
       return;
     }
@@ -52,11 +54,11 @@ export default function LoginView() {
         }
         navigate('/dashboard');
       } else {
-        setToastMessage(result.error || 'Login failed. Please try again.');
+        setToastMessage(result.error || t('auth.loginFailed'));
         setShowToast(true);
       }
     } catch (error) {
-      setToastMessage('An unexpected error occurred. Please try again.');
+      setToastMessage(t('auth.unexpectedError'));
       setShowToast(true);
     } finally {
       setIsLoading(false);
@@ -75,9 +77,8 @@ export default function LoginView() {
           <img src={logoSrc} alt="QGlide Logo" className="logo" />
         </div>
         <div className="left-copy">
-          <h1>Streamline Your<br/>Operations.</h1>
-          <p>Efficiently manage rides, drivers, and
-            analytics from one central hub.</p>
+          <h1>{t('auth.streamlineOperations')}</h1>
+          <p>{t('auth.manageHub')}</p>
         </div>
         <div className="cityline" />
       </div>
@@ -90,15 +91,15 @@ export default function LoginView() {
         </div>
 
         <form className="card" onSubmit={handleLogin}>
-          <h2>Admin Portal Login</h2>
-          <p className="subtitle">Welcome back! Please enter your details.</p>
+          <h2>{t('auth.adminPortalLogin')}</h2>
+          <p className="subtitle">{t('auth.welcomeBack')}</p>
 
-          <label className="label">Email Address</label>
+          <label className="label">{t('auth.email')}</label>
           <div className="input with-icon">
             <span className="icon material-symbols-outlined">mail</span>
             <input 
               type="email" 
-              placeholder="Enter your email" 
+              placeholder={t('auth.enterEmail')} 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
@@ -106,12 +107,12 @@ export default function LoginView() {
             />
           </div>
 
-          <label className="label">Password</label>
+          <label className="label">{t('auth.password')}</label>
           <div className="input with-icon">
             <span className="icon material-symbols-outlined">lock</span>
             <input 
               type={showPassword ? 'text' : 'password'} 
-              placeholder="Enter your password"
+              placeholder={t('auth.enterPassword')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
@@ -122,7 +123,7 @@ export default function LoginView() {
               type="button"
               aria-label="toggle password"
               onClick={() => setShowPassword(v => !v)}
-              title={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               disabled={isLoading}
             >
               {showPassword ? 'visibility_off' : 'visibility'}
@@ -132,23 +133,23 @@ export default function LoginView() {
           <div className="row between">
             <label className="checkbox">
               <input type="checkbox" disabled={isLoading} />
-              <span>Remember Me</span>
+              <span>{t('auth.rememberMe')}</span>
             </label>
-            <button className="link" type="button" disabled={isLoading}>Forgot Password?</button>
+            <button className="link" type="button" disabled={isLoading}>{t('auth.forgotPassword')}</button>
           </div>
 
           <button className="primary" type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <span className="loading-spinner"></span>
-                Signing In...
+                {t('auth.signingIn')}
               </>
             ) : (
-              'Sign In'
+              t('auth.login')
             )}
           </button>
 
-          <p className="footer">© 2025 QGlide. All Rights Reserved.</p>
+          <p className="footer">{t('auth.copyright')}</p>
         </form>
       </div>
       

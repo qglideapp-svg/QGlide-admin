@@ -216,27 +216,34 @@
   font-size: 18px;
 }
 
-.btn-delete {
+.btn-unsuspend {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: #dc2626;
-  border: 1px solid #b91c1c;
+  background: #DCFCE7;
+  border: 1px solid #BBF7D0;
   border-radius: 8px;
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: #16A34A;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-delete:hover {
-  background: #b91c1c;
+.btn-unsuspend:hover:not(:disabled) {
+  background: #16A34A;
+  color: white;
+  border-color: #16A34A;
 }
 
-.btn-delete .material-symbols-outlined {
+.btn-unsuspend:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-unsuspend .material-symbols-outlined {
   font-size: 18px;
 }
 
@@ -513,7 +520,7 @@
   .btn-edit-profile,
   .btn-approve,
   .btn-suspend,
-  .btn-delete {
+  .btn-unsuspend {
     width: 100%;
     justify-content: center;
   }

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './EditDriverModal.css';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const EditDriverModal = ({ isOpen, onClose, onConfirm, driverData, isLoading }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -59,94 +61,94 @@ const EditDriverModal = ({ isOpen, onClose, onConfirm, driverData, isLoading }) 
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content edit-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Edit Driver Profile</h2>
+          <h2>{t('modals.editDriverProfile')}</h2>
           <button className="modal-close" onClick={handleClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="full_name">Full Name *</label>
+                <label htmlFor="full_name">{t('modals.fullName')}</label>
                 <input
                   type="text"
                   id="full_name"
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleInputChange}
-                  placeholder="Enter driver's full name"
+                  placeholder={t('modals.enterFullName')}
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="phone">Phone Number</label>
+                <label htmlFor="phone">{t('modals.phoneNumber')}</label>
                 <input
                   type="tel"
                   id="phone"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="Enter phone number"
+                  placeholder={t('modals.enterPhoneNumber')}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="vehicle_model">Vehicle Model</label>
+                <label htmlFor="vehicle_model">{t('modals.vehicleModel')}</label>
                 <input
                   type="text"
                   id="vehicle_model"
                   name="vehicle_model"
                   value={formData.vehicle_model}
                   onChange={handleInputChange}
-                  placeholder="Enter vehicle model"
+                  placeholder={t('modals.enterVehicleModel')}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="vehicle_year">Vehicle Year</label>
+                <label htmlFor="vehicle_year">{t('modals.vehicleYear')}</label>
                 <input
                   type="number"
                   id="vehicle_year"
                   name="vehicle_year"
                   value={formData.vehicle_year}
                   onChange={handleInputChange}
-                  placeholder="Enter vehicle year"
+                  placeholder={t('modals.enterVehicleYear')}
                   min="1990"
                   max={new Date().getFullYear() + 1}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="vehicle_color">Vehicle Color</label>
+                <label htmlFor="vehicle_color">{t('modals.vehicleColor')}</label>
                 <input
                   type="text"
                   id="vehicle_color"
                   name="vehicle_color"
                   value={formData.vehicle_color}
                   onChange={handleInputChange}
-                  placeholder="Enter vehicle color"
+                  placeholder={t('modals.enterVehicleColor')}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="license_plate">License Plate</label>
+                <label htmlFor="license_plate">{t('modals.licensePlate')}</label>
                 <input
                   type="text"
                   id="license_plate"
                   name="license_plate"
                   value={formData.license_plate}
                   onChange={handleInputChange}
-                  placeholder="Enter license plate"
+                  placeholder={t('modals.enterLicensePlate')}
                 />
               </div>
             </div>
           </div>
           <div className="modal-footer">
             <button type="button" className="btn-cancel" onClick={handleClose}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" className="btn-save" disabled={isLoading || !formData.full_name.trim()}>
-              {isLoading ? 'Saving...' : 'Save Changes'}
+              {isLoading ? t('modals.saving') : t('modals.saveChanges')}
             </button>
           </div>
         </form>

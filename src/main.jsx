@@ -6,6 +6,7 @@ import './styles/theme.css';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
+import { LanguageProvider } from './contexts/LanguageContext.jsx';
 import LoginView from './views/auth/LoginView.jsx';
 import DashboardView from './views/dashboard/DashboardView.jsx';
 import RideManagementView from './views/rides/RideManagementView.jsx';
@@ -23,8 +24,9 @@ import AuthGuard from './components/layout/AuthGuard.jsx';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <BrowserRouter>
+    <LanguageProvider>
+      <ThemeProvider>
+        <BrowserRouter>
         <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginView />} />
@@ -90,6 +92,7 @@ createRoot(document.getElementById('root')).render(
         } />
         </Routes>
       </BrowserRouter>
-    </ThemeProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   </React.StrictMode>
 );

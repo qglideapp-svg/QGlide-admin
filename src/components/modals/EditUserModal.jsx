@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './EditUserModal.css';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const EditUserModal = ({ isOpen, onClose, onConfirm, userData, isLoading }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -41,19 +43,19 @@ const EditUserModal = ({ isOpen, onClose, onConfirm, userData, isLoading }) => {
     const newErrors = {};
     
     if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Full name is required';
+      newErrors.full_name = t('modals.fullNameRequired');
     }
     
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = t('modals.phoneRequired');
     } else if (!/^[\+]?[0-9\s\-\(\)]+$/.test(formData.phone.trim())) {
-      newErrors.phone = 'Please enter a valid phone number';
+      newErrors.phone = t('modals.validPhone');
     }
     
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('modals.emailRequired');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('modals.validEmail');
     }
     
     setErrors(newErrors);
@@ -83,26 +85,26 @@ const EditUserModal = ({ isOpen, onClose, onConfirm, userData, isLoading }) => {
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content edit-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Edit User Profile</h2>
+          <h2>{t('modals.editUserProfile')}</h2>
           <button className="modal-close" onClick={handleClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="info-banner">
               <span className="info-icon">ℹ️</span>
-              <p><strong>Information:</strong> Update the user's profile details below.</p>
+              <p><strong>{t('modals.information')}:</strong> {t('modals.updateUserDetails')}</p>
             </div>
-            <p>You are editing the profile for <strong>{userData?.name || 'Unknown User'}</strong>.</p>
+            <p>{t('modals.editingProfileFor')} <strong>{userData?.name || t('modals.unknownUser')}</strong>.</p>
             
             <div className="form-group">
-              <label htmlFor="full_name">Full Name:</label>
+              <label htmlFor="full_name">{t('modals.fullName')}</label>
               <input
                 type="text"
                 id="full_name"
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleInputChange}
-                placeholder="Enter full name"
+                placeholder={t('modals.enterFullName')}
                 required
                 className={errors.full_name ? 'error' : ''}
               />
@@ -110,14 +112,14 @@ const EditUserModal = ({ isOpen, onClose, onConfirm, userData, isLoading }) => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="phone">Phone Number:</label>
+              <label htmlFor="phone">{t('modals.phoneNumber')}</label>
               <input
                 type="tel"
                 id="phone"
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                placeholder="Enter phone number (e.g., +974 5599 1234)"
+                placeholder={t('modals.enterPhoneExample2')}
                 required
                 className={errors.phone ? 'error' : ''}
               />
@@ -125,14 +127,14 @@ const EditUserModal = ({ isOpen, onClose, onConfirm, userData, isLoading }) => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="email">Email Address:</label>
+              <label htmlFor="email">{t('modals.email')}</label>
               <input
                 type="email"
                 id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                placeholder="Enter email address"
+                placeholder={t('modals.enterEmail')}
                 required
                 className={errors.email ? 'error' : ''}
               />
@@ -141,10 +143,10 @@ const EditUserModal = ({ isOpen, onClose, onConfirm, userData, isLoading }) => {
           </div>
           <div className="modal-footer">
             <button type="button" className="btn-cancel" onClick={handleClose}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" className="btn-save" disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save Changes'}
+              {isLoading ? t('modals.saving') : t('modals.saveChanges')}
             </button>
           </div>
         </form>

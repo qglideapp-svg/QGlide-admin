@@ -1,6 +1,7 @@
 import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
 export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
   try {
@@ -11,9 +12,10 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    // Build URL with search and status parameters if provided
-    let url = `${API_BASE_URL}/admin-drivers-list`;
+    // Build URL with type, search and status parameters
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const params = [];
+    params.push('type=drivers'); // Add type parameter for unified endpoint
     
     if (searchTerm && searchTerm.trim()) {
       params.push(`search=${encodeURIComponent(searchTerm.trim())}`);
@@ -23,16 +25,15 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
       params.push(`status=${encodeURIComponent(statusFilter.toLowerCase())}`);
     }
     
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
-    }
+    const queryString = params.join('&');
+    const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
 
     console.log('🚀 API REQUEST DETAILS:', {
       '🔗 URL': url,
       '🔍 Search Term': searchTerm,
       '📊 Status Filter': statusFilter,
       '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '🔑 Has Anon Key': !!anonKey,
       '⏰ Timestamp': new Date().toISOString(),
       '🔍 Making request to admin-drivers-list endpoint': true
     });
@@ -42,6 +43,7 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'apikey': anonKey,
       },
     });
 
@@ -279,6 +281,66 @@ export const approveDriver = async (driverId) => {
     return { 
       success: false, 
       error: error.message || 'Failed to approve driver' 
+    };
+  }
+};
+
+// Unsuspend driver by ID with optional reason
+export const unsuspendDriver = async (driverId, reason = '') => {
+  try {
+    const token = getAuthToken();
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const url = `${API_BASE_URL}/admin-unsuspend-driver`;
+    
+    console.log('🚀 UNSUSPEND DRIVER REQUEST:', {
+      '🔗 URL': url,
+      '🆔 Driver ID': driverId,
+      '📝 Reason': reason,
+      '🔑 Has Token': !!token,
+      '🔑 Has Anon Key': !!anonKey,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'apikey': anonKey,
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        driver_id: driverId,
+        reason: reason || 'Suspension lifted after review'
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('📡 UNSUSPEND DRIVER RESPONSE:', JSON.stringify(data, null, 2));
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ UNSUSPEND DRIVER ERROR:', {
+      '🚨 Error Message': error.message,
+      '🔍 Error Type': error.constructor.name,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to unsuspend driver' 
     };
   }
 };

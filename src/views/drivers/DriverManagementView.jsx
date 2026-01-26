@@ -4,6 +4,7 @@ import './DriverManagementView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchDriversList, transformDriverData, exportDriversToCSV } from '../../services/driverService';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -31,6 +32,7 @@ const StatusBadge = ({ status }) => {
 
 export default function DriverManagementView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // API-related state
@@ -285,29 +287,29 @@ export default function DriverManagementView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
-          <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
-          <NavItem icon="directions_car" label="Driver Management" active={true} />
-          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
-          <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
-          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
-          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
+          <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
+          <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="directions_car" label={t('navigation.driverManagement')} active={true} />
+          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">
           <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
-            <span>Settings</span>
+            <span>{t('common.settings')}</span>
           </button>
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
-            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+            <button className="logout-btn-sidebar" aria-label={t('common.logout')} onClick={handleLogout}>
               <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
@@ -321,8 +323,8 @@ export default function DriverManagementView() {
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div>
-            <h1>Driver Management</h1>
-            <p className="sub">Search, filter, and manage all drivers on the platform.</p>
+            <h1>{t('drivers.driverManagement')}</h1>
+            <p className="sub">{t('drivers.searchDrivers')}</p>
             </div>
           </div>
           <div className="acts">
@@ -331,7 +333,7 @@ export default function DriverManagementView() {
                 {isLoading ? 'hourglass_empty' : 'search'}
               </span>
               <input 
-                placeholder="Search drivers..." 
+                placeholder={t('drivers.searchDrivers')} 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 disabled={isLoading}
@@ -340,13 +342,13 @@ export default function DriverManagementView() {
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
             <ThemeToggle />
-            <button className="ibtn" aria-label="notifications">
+            <button className="ibtn" aria-label={t('common.notifications')}>
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <i className="dot" />
             </button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
-              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+              <span className="user-name">QGlide Admin</span>
+              <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
             </div>
@@ -363,23 +365,23 @@ export default function DriverManagementView() {
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
-                    <option value="All Statuses">All Statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Offline">Offline</option>
-                    <option value="Suspended">Suspended</option>
+                    <option value="All Statuses">{t('drivers.allStatuses')}</option>
+                    <option value="Active">{t('common.active')}</option>
+                    <option value="Offline">{t('common.offline')}</option>
+                    <option value="Suspended">{t('common.suspended')}</option>
                   </select>
                   <select 
                     className="filter-select"
                     value={ratingFilter}
                     onChange={(e) => setRatingFilter(e.target.value)}
                   >
-                    <option value="Any Rating">Any Rating</option>
+                    <option value="Any Rating">{t('drivers.anyRating')}</option>
                     <option value="4.5+">4.5+</option>
                     <option value="4.0+">4.0+</option>
                     <option value="3.5+">3.5+</option>
                   </select>
                   <button className="clear-filters" onClick={handleClearFilters}>
-                    Clear Filters
+                    {t('drivers.clearFilters')}
                   </button>
                 </div>
               </div>
@@ -392,11 +394,11 @@ export default function DriverManagementView() {
                   <span className="material-symbols-outlined">
                     {isExporting ? 'hourglass_empty' : 'download'}
                   </span>
-                  {isExporting ? 'Exporting...' : 'Export CSV'}
+                  {isExporting ? t('drivers.exporting') : t('drivers.exportCSV')}
                 </button>
                 <button className="btn-add-driver">
                   <span className="material-symbols-outlined">add</span>
-                  Add Driver
+                  {t('drivers.addDriver')}
                 </button>
               </div>
             </div>
@@ -412,13 +414,13 @@ export default function DriverManagementView() {
                         checked={selectedDrivers.length === filteredDrivers.length && filteredDrivers.length > 0}
                       />
                     </th>
-                    <th>DRIVER NAME</th>
-                    <th>VEHICLE</th>
-                    <th>STATUS</th>
-                    <th>RATING</th>
-                    <th>TOTAL RIDES</th>
-                    <th>EARNINGS (QAR)</th>
-                    <th>ACTIONS</th>
+                    <th>{t('drivers.driverName')}</th>
+                    <th>{t('drivers.vehicle')}</th>
+                    <th>{t('common.status')}</th>
+                    <th>{t('drivers.rating')}</th>
+                    <th>{t('drivers.totalRides')}</th>
+                    <th>{t('drivers.earnings')}</th>
+                    <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -434,7 +436,7 @@ export default function DriverManagementView() {
                             borderRadius: '50%', 
                             animation: 'spin 1s linear infinite' 
                           }}></div>
-                          <span style={{ color: '#6b7280' }}>Loading drivers...</span>
+                          <span style={{ color: '#6b7280' }}>{t('drivers.loadingDrivers')}</span>
                         </div>
                       </td>
                     </tr>
@@ -443,7 +445,7 @@ export default function DriverManagementView() {
                       <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ef4444' }}>error</span>
-                          <div style={{ color: '#ef4444', fontWeight: '500' }}>Error loading drivers</div>
+                          <div style={{ color: '#ef4444', fontWeight: '500' }}>{t('common.error')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>{error}</div>
                           <button 
                             onClick={loadDrivers}
@@ -457,7 +459,7 @@ export default function DriverManagementView() {
                               fontSize: '14px'
                             }}
                           >
-                            Try Again
+                            {t('common.tryAgain')}
                           </button>
                         </div>
                       </td>
@@ -467,11 +469,11 @@ export default function DriverManagementView() {
                       <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
-                          <div style={{ color: '#374151', fontWeight: '500' }}>No drivers found</div>
+                          <div style={{ color: '#374151', fontWeight: '500' }}>{t('drivers.noDriversFound')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>
                             {searchTerm || statusFilter !== 'All Statuses' || ratingFilter !== 'Any Rating' 
-                              ? 'Try adjusting your search term or filter criteria' 
-                              : 'No drivers are currently registered on the platform'
+                              ? t('drivers.tryAdjustingFilters') 
+                              : t('drivers.noDriversRegistered')
                             }
                           </div>
                         </div>
@@ -529,7 +531,7 @@ export default function DriverManagementView() {
                 backgroundColor: '#f9fafb'
               }}>
                 <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                  Showing {filteredDrivers.length} of {totalCount} drivers
+                  {t('drivers.showing')} {filteredDrivers.length} {t('drivers.of')} {totalCount} {t('drivers.drivers')}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
@@ -545,7 +547,7 @@ export default function DriverManagementView() {
                       fontSize: '14px'
                     }}
                   >
-                    Previous
+                    {t('common.previous')}
                   </button>
                   
                   <div style={{ display: 'flex', gap: '4px' }}>
@@ -594,7 +596,7 @@ export default function DriverManagementView() {
                       fontSize: '14px'
                     }}
                   >
-                    Next
+                    {t('common.next')}
                   </button>
                 </div>
               </div>

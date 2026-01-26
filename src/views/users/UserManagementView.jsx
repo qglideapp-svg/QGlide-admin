@@ -6,6 +6,7 @@ import { fetchUsersList, transformUserData, exportUsersToCSV, createUser } from 
 import AddUserModal from '../../components/modals/AddUserModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -33,6 +34,7 @@ const StatusBadge = ({ status }) => {
 
 export default function UserManagementView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // API-related state
@@ -172,7 +174,7 @@ export default function UserManagementView() {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+    if (window.confirm(t('common.confirmLogout'))) {
       try {
         await logoutUser();
         navigate('/login');
@@ -358,29 +360,29 @@ export default function UserManagementView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
-          <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
-          <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" active={true} />
-          <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
-          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
-          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
+          <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
+          <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
+          <NavItem icon="group" label={t('navigation.userManagement')} active={true} />
+          <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">
           <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
-            <span>Settings</span>
+            <span>{t('common.settings')}</span>
           </button>
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
-            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+            <button className="logout-btn-sidebar" aria-label={t('common.logout')} onClick={handleLogout}>
               <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
@@ -394,26 +396,26 @@ export default function UserManagementView() {
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div>
-            <h1>User Management</h1>
-            <p className="sub">View, manage, and interact with all registered users.</p>
+            <h1>{t('users.userManagement')}</h1>
+            <p className="sub">{t('users.manageUsers')}</p>
             </div>
           </div>
           <div className="acts">
             <div className="search">
               <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search..." />
+              <input placeholder={t('common.search')} />
             </div>
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
             <ThemeToggle />
-            <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
-            <button className="ibtn" aria-label="notifications">
+            <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label={t('common.notifications')}>
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <i className="dot" />
             </button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
-              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+              <span className="user-name">QGlide Admin</span>
+              <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
             </div>
@@ -424,8 +426,8 @@ export default function UserManagementView() {
           <div className="user-management-card">
             <div className="card-header">
               <div className="header-left">
-                <h2>All Users</h2>
-                <p className="user-count">Total of {totalCount.toLocaleString()} users</p>
+                <h2>{t('users.allUsers')}</h2>
+                <p className="user-count">{t('users.totalOf')} {totalCount.toLocaleString()} {t('users.users')}</p>
               </div>
               <div className="header-actions">
                 <button 
@@ -436,11 +438,11 @@ export default function UserManagementView() {
                   <span className="material-symbols-outlined">
                     {isExporting ? 'hourglass_empty' : 'upload'}
                   </span>
-                  {isExporting ? 'Exporting...' : 'Export'}
+                  {isExporting ? t('users.exporting') : t('common.export')}
                 </button>
                 <button className="btn-add-user" onClick={handleAddUserClick}>
                   <span className="material-symbols-outlined">add</span>
-                  Add User
+                  {t('users.addUser')}
                 </button>
               </div>
             </div>
@@ -452,7 +454,7 @@ export default function UserManagementView() {
                 </span>
                 <input 
                   type="text" 
-                  placeholder="Search users..." 
+                  placeholder={t('users.searchUsers')} 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   disabled={isLoading}
@@ -463,22 +465,22 @@ export default function UserManagementView() {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="All">Status: All</option>
-                <option value="Active">Status: Active</option>
-                <option value="Inactive">Status: Inactive</option>
-                <option value="Suspended">Status: Suspended</option>
+                <option value="All">{t('common.status')}: {t('common.all')}</option>
+                <option value="Active">{t('common.status')}: {t('common.active')}</option>
+                <option value="Inactive">{t('common.status')}: {t('common.inactive')}</option>
+                <option value="Suspended">{t('common.status')}: {t('common.suspended')}</option>
               </select>
               <select 
                 className="filter-select"
                 value={ratingFilter}
                 onChange={(e) => setRatingFilter(e.target.value)}
               >
-                <option value="Any">Rating: Any</option>
-                <option value="4.5+">Rating: 4.5+</option>
-                <option value="4.0+">Rating: 4.0+</option>
+                <option value="Any">{t('users.rating')}: {t('users.anyRating')}</option>
+                <option value="4.5+">{t('users.rating')}: 4.5+</option>
+                <option value="4.0+">{t('users.rating')}: 4.0+</option>
               </select>
               <button className="clear-filters" onClick={handleClearFilters}>
-                Clear Filters
+                {t('users.clearFilters')}
               </button>
             </div>
 
@@ -493,13 +495,13 @@ export default function UserManagementView() {
                         checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                       />
                     </th>
-                    <th>USER</th>
-                    <th>CONTACT</th>
-                    <th>TOTAL RIDES</th>
-                    <th>LAST RIDE</th>
-                    <th>RATING</th>
-                    <th>STATUS</th>
-                    <th>ACTIONS</th>
+                    <th>{t('users.user')}</th>
+                    <th>{t('users.contact')}</th>
+                    <th>{t('users.totalRides')}</th>
+                    <th>{t('users.lastRide')}</th>
+                    <th>{t('users.rating')}</th>
+                    <th>{t('users.status')}</th>
+                    <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -515,7 +517,7 @@ export default function UserManagementView() {
                             borderRadius: '50%', 
                             animation: 'spin 1s linear infinite' 
                           }}></div>
-                          <span style={{ color: '#6b7280' }}>Loading users...</span>
+                          <span style={{ color: '#6b7280' }}>{t('users.loadingUsers')}</span>
                         </div>
                       </td>
                     </tr>
@@ -524,7 +526,7 @@ export default function UserManagementView() {
                       <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ef4444' }}>error</span>
-                          <div style={{ color: '#ef4444', fontWeight: '500' }}>Error loading users</div>
+                          <div style={{ color: '#ef4444', fontWeight: '500' }}>{t('common.error')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>{error}</div>
                           <button 
                             onClick={loadUsers}
@@ -538,7 +540,7 @@ export default function UserManagementView() {
                               fontSize: '14px'
                             }}
                           >
-                            Try Again
+                            {t('common.tryAgain')}
                           </button>
                         </div>
                       </td>
@@ -548,11 +550,11 @@ export default function UserManagementView() {
                       <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
-                          <div style={{ color: '#374151', fontWeight: '500' }}>No users found</div>
+                          <div style={{ color: '#374151', fontWeight: '500' }}>{t('users.noUsersFound')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>
                             {searchTerm || statusFilter !== 'All' || ratingFilter !== 'Any' 
-                              ? 'Try adjusting your search term or filter criteria' 
-                              : 'No users are currently registered on the platform'
+                              ? t('users.tryAdjustingFilters') 
+                              : t('users.noUsersRegistered')
                             }
                           </div>
                         </div>
@@ -577,11 +579,11 @@ export default function UserManagementView() {
                           </div>
                         </div>
                       </td>
-                      <td className="contact-cell">{user.contact}</td>
-                      <td className="rides-cell">{user.totalRides}</td>
-                      <td className="date-cell">{user.lastRide}</td>
+                      <td className="contact-cell">{user.contact || 'N/A'}</td>
+                      <td className="rides-cell">{user.totalRides || 0}</td>
+                      <td className="date-cell">{user.lastRide || 'N/A'}</td>
                       <td className="rating-cell">
-                        <span className="star-icon">★</span> {user.rating.toFixed(1)}
+                        <span className="star-icon">★</span> {user.rating ? (typeof user.rating === 'number' ? user.rating.toFixed(1) : parseFloat(user.rating).toFixed(1)) : '0.0'}
                       </td>
                       <td><StatusBadge status={user.status} /></td>
                       <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
@@ -607,7 +609,7 @@ export default function UserManagementView() {
                 backgroundColor: '#f9fafb'
               }}>
                 <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                  Showing {filteredUsers.length} of {totalCount} users
+                  {t('users.showing')} {filteredUsers.length} {t('users.of')} {totalCount} {t('users.users')}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
@@ -623,7 +625,7 @@ export default function UserManagementView() {
                       fontSize: '14px'
                     }}
                   >
-                    Previous
+                    {t('common.previous')}
                   </button>
                   
                   <div style={{ display: 'flex', gap: '4px' }}>
@@ -672,7 +674,7 @@ export default function UserManagementView() {
                       fontSize: '14px'
                     }}
                   >
-                    Next
+                    {t('common.next')}
                   </button>
                 </div>
               </div>

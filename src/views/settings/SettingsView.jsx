@@ -4,6 +4,7 @@ import './SettingsView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings, fetchFareCosts, updateFareCosts } from '../../services/settingsService';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -20,6 +21,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 export default function SettingsView() {
   const navigate = useNavigate();
   const { theme, setThemeMode } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   
   // State management
   const [roles, setRoles] = useState([]);
@@ -80,13 +82,17 @@ export default function SettingsView() {
         if (settingsResult.data.theme) {
           setThemeMode(settingsResult.data.theme);
         }
+        // Sync language from settings to context
+        if (settingsResult.data.language) {
+          setLanguage(settingsResult.data.language);
+        }
       }
       if (fareCostsResult.success) {
         setFareCosts(fareCostsResult.data);
       }
     } catch (error) {
       console.error('Error loading settings data:', error);
-      showToastMessage('Failed to load settings data', 'error');
+      showToastMessage(t('settings.failedToLoad'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -103,16 +109,17 @@ export default function SettingsView() {
     setToastMessage('');
   };
 
-  const handleLanguageToggle = async (language) => {
+  const handleLanguageToggle = async (lang) => {
     try {
-      const result = await toggleLanguage(language);
+      const result = await toggleLanguage(lang);
       if (result.success) {
-        setSystemSettings(prev => ({ ...prev, language }));
-        showToastMessage('Language updated successfully', 'success');
+        setLanguage(lang);
+        setSystemSettings(prev => ({ ...prev, language: lang }));
+        showToastMessage(t('settings.languageUpdated'), 'success');
       }
     } catch (error) {
       console.error('Error updating language:', error);
-      showToastMessage('Failed to update language', 'error');
+      showToastMessage(t('settings.failedToUpdate'), 'error');
     }
   };
 
@@ -123,11 +130,11 @@ export default function SettingsView() {
         setSystemSettings(prev => ({ ...prev, theme: newTheme }));
         // Update theme context
         setThemeMode(newTheme);
-        showToastMessage('Theme updated successfully', 'success');
+        showToastMessage(t('settings.themeUpdated'), 'success');
       }
     } catch (error) {
       console.error('Error updating theme:', error);
-      showToastMessage('Failed to update theme', 'error');
+      showToastMessage(t('settings.failedToUpdate'), 'error');
     }
   };
 
@@ -147,7 +154,7 @@ export default function SettingsView() {
 
   const handleAddRole = async () => {
     if (!newRoleData.name || !newRoleData.permissions) {
-      showToastMessage('Please fill in all fields', 'error');
+      showToastMessage(t('common.fillAllFields'), 'error');
       return;
     }
 
@@ -157,25 +164,25 @@ export default function SettingsView() {
         setRoles(prev => [...prev, result.data]);
         setShowAddRoleModal(false);
         setNewRoleData({ name: '', permissions: '' });
-        showToastMessage('Role added successfully', 'success');
+        showToastMessage(t('toast.roleAdded'), 'success');
       }
     } catch (error) {
       console.error('Error adding role:', error);
-      showToastMessage('Failed to add role', 'error');
+      showToastMessage(t('toast.failedToAdd'), 'error');
     }
   };
 
   const handleDeleteRole = async (roleId) => {
-    if (window.confirm('Are you sure you want to delete this role?')) {
+    if (window.confirm(t('modals.confirmDelete'))) {
       try {
         const result = await deleteRole(roleId);
         if (result.success) {
           setRoles(prev => prev.filter(role => role.id !== roleId));
-          showToastMessage('Role deleted successfully', 'success');
+          showToastMessage(t('toast.roleDeleted'), 'success');
         }
       } catch (error) {
         console.error('Error deleting role:', error);
-        showToastMessage('Failed to delete role', 'error');
+        showToastMessage(t('toast.failedToDelete'), 'error');
       }
     }
   };
@@ -214,13 +221,13 @@ export default function SettingsView() {
     try {
       const result = await updateFareCosts(fareCosts);
       if (result.success) {
-        showToastMessage(result.message || 'Fare costs updated successfully', 'success');
+        showToastMessage(result.message || t('settings.fareCostsUpdated'), 'success');
       } else {
-        showToastMessage(result.error || 'Failed to update fare costs', 'error');
+        showToastMessage(result.error || t('settings.failedToUpdate'), 'error');
       }
     } catch (error) {
       console.error('Error updating fare costs:', error);
-      showToastMessage('Failed to update fare costs', 'error');
+      showToastMessage(t('settings.failedToUpdate'), 'error');
     } finally {
       setIsSavingFareCosts(false);
     }
@@ -253,7 +260,7 @@ export default function SettingsView() {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+    if (window.confirm(t('common.confirmLogout'))) {
       try {
         await logoutUser();
         navigate('/login');
@@ -276,29 +283,29 @@ export default function SettingsView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
-          <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
-          <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
-          <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
-          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
-          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
+          <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
+          <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
+          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">
           <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
-            <span>Settings</span>
+            <span>{t('common.settings')}</span>
           </button>
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
-            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+            <button className="logout-btn-sidebar" aria-label={t('common.logout')} onClick={handleLogout}>
               <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
@@ -308,14 +315,14 @@ export default function SettingsView() {
       <main className="main">
         <header className="top">
           <div className="titles">
-            <h1>Admin Settings</h1>
-            <p className="sub">Manage your platform's configuration and preferences.</p>
+            <h1>{t('settings.adminSettings')}</h1>
+            <p className="sub">{t('settings.manageConfiguration')}</p>
           </div>
           <div className="acts">
             <div className="search-container">
               <input
                 type="text"
-                placeholder="Search settings..."
+                placeholder={t('settings.searchSettings')}
                 className="search-input"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -331,7 +338,7 @@ export default function SettingsView() {
               <span className="notification-dot"></span>
             </button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
+              <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
@@ -343,30 +350,30 @@ export default function SettingsView() {
           {isLoading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <p>Loading settings...</p>
+              <p>{t('common.loading')}</p>
             </div>
           ) : (
             <>
               {/* System Settings Section */}
               <div className="settings-card system-settings-card">
                 <div className="card-header">
-                  <h2>System Settings</h2>
+                  <h2>{t('settings.systemSettings')}</h2>
                 </div>
                 <div className="card-content">
                   <div className="settings-grid">
                     <div className="settings-section">
-                      <h3>Display & Language</h3>
+                      <h3>{t('settings.displayLanguage')}</h3>
                       <div className="setting-group">
-                        <label>Language</label>
+                        <label>{t('settings.language')}</label>
                         <div className="toggle-group">
                           <button
-                            className={`toggle-btn ${systemSettings.language === 'english' ? 'active' : ''}`}
+                            className={`toggle-btn ${language === 'english' ? 'active' : ''}`}
                             onClick={() => handleLanguageToggle('english')}
                           >
                             English
                           </button>
                           <button
-                            className={`toggle-btn ${systemSettings.language === 'arabic' ? 'active' : ''}`}
+                            className={`toggle-btn ${language === 'arabic' ? 'active' : ''}`}
                             onClick={() => handleLanguageToggle('arabic')}
                           >
                             العربية
@@ -374,30 +381,30 @@ export default function SettingsView() {
                         </div>
                       </div>
                       <div className="setting-group">
-                        <label>Theme</label>
+                        <label>{t('settings.theme')}</label>
                         <div className="toggle-group">
                           <button
                             className={`toggle-btn ${theme === 'light' ? 'active' : ''}`}
                             onClick={() => handleThemeToggle('light')}
                           >
                             <span className="material-symbols-outlined">light_mode</span>
-                            Light
+                            {t('settings.light')}
                           </button>
                           <button
                             className={`toggle-btn ${theme === 'dark' ? 'active' : ''}`}
                             onClick={() => handleThemeToggle('dark')}
                           >
                             <span className="material-symbols-outlined">dark_mode</span>
-                            Dark
+                            {t('settings.dark')}
                           </button>
                         </div>
                       </div>
                     </div>
 
                     <div className="settings-section">
-                      <h3>API Keys</h3>
+                      <h3>{t('settings.apiKeys')}</h3>
                       <div className="setting-group">
-                        <label>Google Maps API Key</label>
+                        <label>{t('settings.googleMapsApiKey')}</label>
                         <div className="api-key-input">
                           <input
                             type="text"
@@ -408,14 +415,14 @@ export default function SettingsView() {
                           <button
                             className="copy-btn"
                             onClick={() => handleCopyApiKey('googleMaps')}
-                            title="Copy API Key"
+                            title={t('settings.copyApiKey')}
                           >
                             <span className="material-symbols-outlined">content_copy</span>
                           </button>
                         </div>
                       </div>
                       <div className="setting-group">
-                        <label>QPay API Key</label>
+                        <label>{t('settings.qpayApiKey')}</label>
                         <div className="api-key-input">
                           <input
                             type="text"
@@ -426,7 +433,7 @@ export default function SettingsView() {
                           <button
                             className="copy-btn"
                             onClick={() => handleCopyApiKey('qpay')}
-                            title="Copy API Key"
+                            title={t('settings.copyApiKey')}
                           >
                             <span className="material-symbols-outlined">content_copy</span>
                           </button>
@@ -440,7 +447,7 @@ export default function SettingsView() {
               {/* Fare Cost Management Section */}
               <div className="settings-card fare-cost-card">
                 <div className="card-header">
-                  <h2>Fare Cost Management</h2>
+                  <h2>{t('settings.fareCostManagement')}</h2>
                   <button 
                     className="save-fare-costs-btn" 
                     onClick={handleSaveFareCosts}
@@ -449,15 +456,15 @@ export default function SettingsView() {
                     <span className="material-symbols-outlined">
                       {isSavingFareCosts ? 'hourglass_empty' : 'save'}
                     </span>
-                    {isSavingFareCosts ? 'Saving...' : 'Save Changes'}
+                    {isSavingFareCosts ? t('settings.saving') : t('settings.saveChanges')}
                   </button>
                 </div>
                 <div className="card-content">
                   <div className="fare-costs-grid">
                     <div className="fare-cost-section">
-                      <h3>Base Pricing</h3>
+                      <h3>{t('settings.basePricing')}</h3>
                       <div className="fare-cost-group">
-                        <label htmlFor="baseFare">Base Fare (QAR)</label>
+                        <label htmlFor="baseFare">{t('settings.baseFare')}</label>
                         <div className="fare-input-wrapper">
                           <span className="currency-symbol">QAR</span>
                           <input
@@ -471,10 +478,10 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">Starting fare for all rides</p>
+                        <p className="fare-description">{t('settings.startingFare')}</p>
                       </div>
                       <div className="fare-cost-group">
-                        <label htmlFor="minimumFare">Minimum Fare (QAR)</label>
+                        <label htmlFor="minimumFare">{t('settings.minimumFare')}</label>
                         <div className="fare-input-wrapper">
                           <span className="currency-symbol">QAR</span>
                           <input
@@ -488,14 +495,14 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">Minimum amount charged per ride</p>
+                        <p className="fare-description">{t('settings.minimumAmount')}</p>
                       </div>
                     </div>
 
                     <div className="fare-cost-section">
-                      <h3>Distance & Time</h3>
+                      <h3>{t('settings.distanceTime')}</h3>
                       <div className="fare-cost-group">
-                        <label htmlFor="costPerKilometer">Cost per Kilometer (QAR)</label>
+                        <label htmlFor="costPerKilometer">{t('settings.costPerKilometer')}</label>
                         <div className="fare-input-wrapper">
                           <span className="currency-symbol">QAR</span>
                           <input
@@ -509,10 +516,10 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">Charged per kilometer traveled</p>
+                        <p className="fare-description">{t('settings.chargedPerKm')}</p>
                       </div>
                       <div className="fare-cost-group">
-                        <label htmlFor="costPerMinute">Cost per Minute (QAR)</label>
+                        <label htmlFor="costPerMinute">{t('settings.costPerMinute')}</label>
                         <div className="fare-input-wrapper">
                           <span className="currency-symbol">QAR</span>
                           <input
@@ -526,14 +533,14 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">Charged per minute of ride duration</p>
+                        <p className="fare-description">{t('settings.chargedPerMinute')}</p>
                       </div>
                     </div>
 
                     <div className="fare-cost-section">
-                      <h3>Surcharges</h3>
+                      <h3>{t('settings.surcharges')}</h3>
                       <div className="fare-cost-group">
-                        <label htmlFor="airportSurcharge">Airport Surcharge (QAR)</label>
+                        <label htmlFor="airportSurcharge">{t('settings.airportSurcharge')}</label>
                         <div className="fare-input-wrapper">
                           <span className="currency-symbol">QAR</span>
                           <input
@@ -547,10 +554,10 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">Additional fee for airport pickups/drop-offs</p>
+                        <p className="fare-description">{t('settings.airportFee')}</p>
                       </div>
                       <div className="fare-cost-group">
-                        <label htmlFor="nightSurcharge">Night Surcharge (QAR)</label>
+                        <label htmlFor="nightSurcharge">{t('settings.nightSurcharge')}</label>
                         <div className="fare-input-wrapper">
                           <span className="currency-symbol">QAR</span>
                           <input
@@ -564,10 +571,10 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">Additional fee for rides during night hours</p>
+                        <p className="fare-description">{t('settings.nightFee')}</p>
                       </div>
                       <div className="fare-cost-group">
-                        <label htmlFor="peakHourSurcharge">Peak Hour Surcharge (QAR)</label>
+                        <label htmlFor="peakHourSurcharge">{t('settings.peakHourSurcharge')}</label>
                         <div className="fare-input-wrapper">
                           <span className="currency-symbol">QAR</span>
                           <input
@@ -581,14 +588,14 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">Additional fee during peak hours</p>
+                        <p className="fare-description">{t('settings.peakHourFee')}</p>
                       </div>
                     </div>
 
                     <div className="fare-cost-section">
-                      <h3>Dynamic Pricing</h3>
+                      <h3>{t('settings.dynamicPricing')}</h3>
                       <div className="fare-cost-group">
-                        <label htmlFor="surgeMultiplier">Surge Multiplier</label>
+                        <label htmlFor="surgeMultiplier">{t('settings.surgeMultiplier')}</label>
                         <div className="fare-input-wrapper">
                           <input
                             id="surgeMultiplier"
@@ -602,7 +609,7 @@ export default function SettingsView() {
                           />
                           <span className="multiplier-symbol">x</span>
                         </div>
-                        <p className="fare-description">Multiplier applied during high demand (default: 1.0x)</p>
+                        <p className="fare-description">{t('settings.multiplierDescription')}</p>
                       </div>
                     </div>
                   </div>
@@ -612,10 +619,10 @@ export default function SettingsView() {
               {/* Admin Role Management Section */}
               <div className="settings-card role-management-card">
                 <div className="card-header">
-                  <h2>Admin Role Management</h2>
+                  <h2>{t('settings.adminRoleManagement')}</h2>
                   <button className="add-role-btn" onClick={() => setShowAddRoleModal(true)}>
                     <span className="material-symbols-outlined">add</span>
-                    Add New Role
+                    {t('settings.addNewRole')}
                   </button>
                 </div>
                 <div className="card-content">
@@ -623,10 +630,10 @@ export default function SettingsView() {
                     <table className="roles-table">
                       <thead>
                         <tr>
-                          <th>ROLE NAME</th>
-                          <th>PERMISSIONS</th>
-                          <th>USERS</th>
-                          <th>ACTIONS</th>
+                          <th>{t('settings.roleName')}</th>
+                          <th>{t('settings.permissions')}</th>
+                          <th>{t('settings.users')}</th>
+                          <th>{t('settings.actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -637,13 +644,13 @@ export default function SettingsView() {
                             <td className="user-count">{role.users}</td>
                             <td className="actions-cell">
                               <div className="action-links">
-                                <button className="edit-link">Edit</button>
+                                <button className="edit-link">{t('settings.edit')}</button>
                                 {role.canDelete && (
                                   <button 
                                     className="delete-link"
                                     onClick={() => handleDeleteRole(role.id)}
                                   >
-                                    Delete
+                                    {t('settings.delete')}
                                   </button>
                                 )}
                               </div>
@@ -659,7 +666,7 @@ export default function SettingsView() {
               {/* Notification Templates Section */}
               <div className="settings-card notification-templates-card">
                 <div className="card-header">
-                  <h2>Notification Templates</h2>
+                  <h2>{t('settings.notificationTemplates')}</h2>
                 </div>
                 <div className="card-content">
                   <div className="templates-grid">
@@ -686,33 +693,33 @@ export default function SettingsView() {
       {showAddRoleModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>Add New Role</h3>
+            <h3>{t('settings.addNewRole')}</h3>
             <div className="form-group">
-              <label>Role Name</label>
+              <label>{t('settings.roleName')}</label>
               <input
                 type="text"
                 value={newRoleData.name}
                 onChange={(e) => setNewRoleData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter role name"
+                placeholder={t('settings.roleName')}
                 className="form-input"
               />
             </div>
             <div className="form-group">
-              <label>Permissions</label>
+              <label>{t('settings.permissions')}</label>
               <textarea
                 value={newRoleData.permissions}
                 onChange={(e) => setNewRoleData(prev => ({ ...prev, permissions: e.target.value }))}
-                placeholder="Enter permissions"
+                placeholder={t('settings.permissions')}
                 className="form-textarea"
                 rows="3"
               />
             </div>
             <div className="modal-actions">
               <button className="cancel-btn" onClick={() => setShowAddRoleModal(false)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button className="add-btn" onClick={handleAddRole}>
-                Add Role
+                {t('settings.addNewRole')}
               </button>
             </div>
           </div>

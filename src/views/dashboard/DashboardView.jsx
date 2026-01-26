@@ -16,6 +16,7 @@ import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetch
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import AdminWithdrawModal from '../../components/modals/AdminWithdrawModal';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -28,6 +29,7 @@ export default function DashboardView() {
   // v2.1 - Fix menu responsiveness after navigation
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const [activeSection, setActiveSection] = useState('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
@@ -707,7 +709,7 @@ export default function DashboardView() {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+    if (window.confirm(t('common.confirmLogout'))) {
       try {
         const result = await logoutUser();
         
@@ -784,29 +786,29 @@ export default function DashboardView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" active={activeSection === 'overview'} onClick={() => handleNavClick('overview')} />
-          <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
-          <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
-          <NavItem icon="account_balance_wallet" label="Financial" active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
-          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="support_agent" label="Support" active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" active={activeSection === 'analytics'} onClick={() => handleNavClick('analytics')} />
-          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
+          <NavItem icon="space_dashboard" label={t('navigation.dashboard')} active={activeSection === 'overview'} onClick={() => handleNavClick('overview')} />
+          <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
+          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="account_balance_wallet" label={t('navigation.financial')} active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="support_agent" label={t('navigation.support')} active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label={t('navigation.analytics')} active={activeSection === 'analytics'} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">
           <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
-            <span>Settings</span>
+            <span>{t('common.settings')}</span>
           </button>
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
-            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+            <button className="logout-btn-sidebar" aria-label={t('common.logout')} onClick={handleLogout}>
               <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
@@ -822,23 +824,23 @@ export default function DashboardView() {
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div>
-            <h1>Dashboard Overview</h1>
-            <p className="sub">Welcome back, Amina. Here's what's happening today.</p>
+            <h1>{t('dashboard.title')}</h1>
+            <p className="sub">{t('dashboard.overview')}</p>
             </div>
           </div>
           <div className="acts">
             <div className="search">
               <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search..." />
+              <input placeholder={t('common.search')} />
             </div>
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
             <ThemeToggle />
-            <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
-            <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
+            <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label={t('common.notifications')}><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
-              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+              <span className="user-name">QGlide Admin</span>
+              <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
             </div>
@@ -849,59 +851,59 @@ export default function DashboardView() {
           {isLoading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <p>Loading dashboard data...</p>
+              <p>{t('common.loading')}</p>
             </div>
           ) : (
             <section className="kpis">
               <div className="kcard">
-                <div className="khead"><span>Total Rides Today</span><span className="kbadge blue"><img src={routeIcon} alt="route" className="kimg"/></span></div>
+                <div className="khead"><span>{t('dashboard.ridesToday')}</span><span className="kbadge blue"><img src={routeIcon} alt="route" className="kimg"/></span></div>
                 <div className="kmain">{dashboardData?.totalRidesToday ? formatNumber(dashboardData.totalRidesToday) : '0'}</div>
                 <div className={`ksub ${dashboardData?.ridesGrowth && dashboardData.ridesGrowth >= 0 ? 'good' : 'bad'}`}>
-                  {dashboardData?.ridesGrowth ? `${dashboardData.ridesGrowth >= 0 ? '+' : ''}${dashboardData.ridesGrowth}% vs yesterday` : 'No data'}
+                  {dashboardData?.ridesGrowth ? `${dashboardData.ridesGrowth >= 0 ? '+' : ''}${dashboardData.ridesGrowth}% vs yesterday` : t('common.noData')}
                 </div>
               </div>
               <div className="kcard">
-                <div className="khead"><span>Total Revenue</span><span className="kbadge green"><img src={moneyIcon} alt="money" className="kimg"/></span></div>
+                <div className="khead"><span>{t('dashboard.totalRevenue')}</span><span className="kbadge green"><img src={moneyIcon} alt="money" className="kimg"/></span></div>
                 <div className="kmain">{dashboardData?.totalRevenue ? formatCurrency(dashboardData.totalRevenue) : 'QAR 0'}</div>
                 <div className={`ksub ${dashboardData?.revenueGrowth && dashboardData.revenueGrowth >= 0 ? 'good' : 'bad'}`}>
-                  {dashboardData?.revenueGrowth ? `${dashboardData.revenueGrowth >= 0 ? '+' : ''}${dashboardData.revenueGrowth}% vs yesterday` : 'No data'}
+                  {dashboardData?.revenueGrowth ? `${dashboardData.revenueGrowth >= 0 ? '+' : ''}${dashboardData.revenueGrowth}% vs yesterday` : t('common.noData')}
                 </div>
               </div>
               <div className="kcard">
-                <div className="khead"><span>Active Drivers</span><span className="kbadge yellow"><img src={activeIcon} alt="active" className="kimg"/></span></div>
+                <div className="khead"><span>{t('dashboard.activeDrivers')}</span><span className="kbadge yellow"><img src={activeIcon} alt="active" className="kimg"/></span></div>
                 <div className="kmain">{dashboardData?.activeDrivers ? formatNumber(dashboardData.activeDrivers) : '0'}</div>
-                <div className="ksub">Online now</div>
+                <div className="ksub">{t('common.online')}</div>
               </div>
               <div className="kcard">
-                <div className="khead"><span>Ride Success Rate</span><span className="kbadge purple"><img src={checkIcon} alt="check" className="kimg"/></span></div>
+                <div className="khead"><span>{t('dashboard.rideSuccessRate')}</span><span className="kbadge purple"><img src={checkIcon} alt="check" className="kimg"/></span></div>
                 <div className="kmain">{dashboardData?.successRate ? formatPercentage(dashboardData.successRate) : '0%'}</div>
                 <div className={`ksub ${dashboardData?.successRateGrowth && dashboardData.successRateGrowth >= 0 ? 'good' : 'bad'}`}>
-                  {dashboardData?.successRateGrowth ? `${dashboardData.successRateGrowth >= 0 ? '+' : ''}${dashboardData.successRateGrowth}% vs yesterday` : 'No data'}
+                  {dashboardData?.successRateGrowth ? `${dashboardData.successRateGrowth >= 0 ? '+' : ''}${dashboardData.successRateGrowth}% vs yesterday` : t('common.noData')}
                 </div>
               </div>
               <div className="kcard">
-                <div className="khead"><span>Total Courier Today</span><span className="kbadge blue"><span className="material-symbols-outlined">local_shipping</span></span></div>
+                <div className="khead"><span>{t('dashboard.totalCourierToday')}</span><span className="kbadge blue"><span className="material-symbols-outlined">local_shipping</span></span></div>
                 <div className="kmain">{dashboardData?.totalCourierToday ? formatNumber(dashboardData.totalCourierToday) : '0'}</div>
                 <div className={`ksub ${dashboardData?.courierGrowth && dashboardData.courierGrowth >= 0 ? 'good' : 'bad'}`}>
-                  {dashboardData?.courierGrowth ? `${dashboardData.courierGrowth >= 0 ? '+' : ''}${dashboardData.courierGrowth}% vs yesterday` : 'No data'}
+                  {dashboardData?.courierGrowth ? `${dashboardData.courierGrowth >= 0 ? '+' : ''}${dashboardData.courierGrowth}% vs yesterday` : t('common.noData')}
                 </div>
               </div>
               <div className="kcard">
-                <div className="khead"><span>Active Courier</span><span className="kbadge yellow"><span className="material-symbols-outlined">delivery_dining</span></span></div>
+                <div className="khead"><span>{t('dashboard.activeCourier')}</span><span className="kbadge yellow"><span className="material-symbols-outlined">delivery_dining</span></span></div>
                 <div className="kmain">{dashboardData?.activeCourier ? formatNumber(dashboardData.activeCourier) : '0'}</div>
-                <div className="ksub">Active now</div>
+                <div className="ksub">{t('common.active')}</div>
               </div>
               <div className="kcard">
-                <div className="khead"><span>Total Rentals Today</span><span className="kbadge blue"><span className="material-symbols-outlined">car_rental</span></span></div>
+                <div className="khead"><span>{t('dashboard.totalRentalsToday')}</span><span className="kbadge blue"><span className="material-symbols-outlined">car_rental</span></span></div>
                 <div className="kmain">{dashboardData?.totalRentalsToday ? formatNumber(dashboardData.totalRentalsToday) : '0'}</div>
                 <div className={`ksub ${dashboardData?.rentalsGrowth && dashboardData.rentalsGrowth >= 0 ? 'good' : 'bad'}`}>
-                  {dashboardData?.rentalsGrowth ? `${dashboardData.rentalsGrowth >= 0 ? '+' : ''}${dashboardData.rentalsGrowth}% vs yesterday` : 'No data'}
+                  {dashboardData?.rentalsGrowth ? `${dashboardData.rentalsGrowth >= 0 ? '+' : ''}${dashboardData.rentalsGrowth}% vs yesterday` : t('common.noData')}
                 </div>
               </div>
               <div className="kcard">
-                <div className="khead"><span>Active Rentals</span><span className="kbadge yellow"><span className="material-symbols-outlined">directions_car</span></span></div>
+                <div className="khead"><span>{t('dashboard.activeRentals')}</span><span className="kbadge yellow"><span className="material-symbols-outlined">directions_car</span></span></div>
                 <div className="kmain">{dashboardData?.activeRentals ? formatNumber(dashboardData.activeRentals) : '0'}</div>
-                <div className="ksub">Active now</div>
+                <div className="ksub">{t('common.active')}</div>
               </div>
             </section>
           )}
@@ -909,25 +911,25 @@ export default function DashboardView() {
           <section className="grid2">
             <div className="panel stretch">
               <div className="phead">
-                <h3>Rides Over Time</h3>
+                <h3>{t('dashboard.ridesOverTime')}</h3>
                 <div className="filters">
                   <button 
                     className={`chip ${selectedTimeframe === 'week' ? 'on' : ''}`}
                     onClick={() => handleTimeframeChange('week')}
                   >
-                    Week
+                    {t('common.week')}
                   </button>
                   <button 
                     className={`chip ${selectedTimeframe === 'month' ? 'on' : ''}`}
                     onClick={() => handleTimeframeChange('month')}
                   >
-                    Month
+                    {t('common.month')}
                   </button>
                   <button 
                     className={`chip ${selectedTimeframe === 'year' ? 'on' : ''}`}
                     onClick={() => handleTimeframeChange('year')}
                   >
-                    Year
+                    {t('common.year')}
                   </button>
                 </div>
               </div>
@@ -935,45 +937,45 @@ export default function DashboardView() {
                 {isAnalyticsLoading ? (
                   <div className="analytics-loading">
                     <div className="loading-spinner"></div>
-                    <p>Loading analytics...</p>
+                    <p>{t('common.loading')}</p>
                   </div>
                 ) : analyticsData ? (
                   <div className="analytics-content">
                     {analyticsData.chartData && analyticsData.chartData.length > 0 ? (
                       <div className="chart-placeholder">
-                        <p>Chart data available: {analyticsData.chartData.length} data points</p>
+                        <p>{t('dashboard.chartDataAvailable')}: {analyticsData.chartData.length} {t('dashboard.dataPoints')}</p>
                         <div className="analytics-summary">
                           <div className="summary-item">
-                            <span className="label">Total Rides:</span>
+                            <span className="label">{t('dashboard.totalRides')}:</span>
                             <span className="value">{analyticsData.totalRides ? formatNumber(analyticsData.totalRides) : 'N/A'}</span>
                           </div>
                           <div className="summary-item">
-                            <span className="label">Average Daily:</span>
+                            <span className="label">{t('dashboard.averageDaily')}:</span>
                             <span className="value">{analyticsData.averageDaily ? formatNumber(analyticsData.averageDaily) : 'N/A'}</span>
                           </div>
                           <div className="summary-item">
-                            <span className="label">Peak Day:</span>
+                            <span className="label">{t('dashboard.peakDay')}:</span>
                             <span className="value">{analyticsData.peakDay || 'N/A'}</span>
                           </div>
                         </div>
                       </div>
                     ) : (
                       <div className="no-data">
-                        <p>No analytics data available for {selectedTimeframe} timeframe</p>
+                        <p>{t('dashboard.noAnalyticsData')} {selectedTimeframe}</p>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="no-data">
-                    <p>Failed to load analytics data</p>
+                    <p>{t('dashboard.failedToLoadAnalytics')}</p>
                   </div>
                 )}
               </div>
             </div>
             <div className="panel">
               <div className="phead">
-                <h3>Live Driver Map</h3>
-                <button className="link">View All</button>
+                <h3>{t('dashboard.liveDriverMap')}</h3>
+                <button className="link">{t('common.viewAll')}</button>
               </div>
               <div className="map" />
             </div>
@@ -988,21 +990,21 @@ export default function DashboardView() {
                   <span className="material-symbols-outlined">menu</span>
                 </button>
                 <div>
-                  <h1>Financial Management</h1>
-                  <p className="sub">Monitor transactions, manage payouts, and set commissions.</p>
+                  <h1>{t('financial.financialManagement')}</h1>
+                  <p className="sub">{t('financial.manageTransactions')}</p>
                 </div>
               </div>
               <div className="acts">
                 <div className="search">
                   <span className="material-symbols-outlined">search</span>
-                  <input placeholder="Search transactions..." />
+                  <input placeholder={t('financial.searchTransactions')} />
                 </div>
                 <button className="chip on">EN</button>
                 <button className="chip">AR</button>
                 <button className="ibtn" aria-label="dark-mode">
                   <span className="material-symbols-outlined">dark_mode</span>
                 </button>
-                <button className="ibtn" aria-label="notifications">
+                <button className="ibtn" aria-label={t('common.notifications')}>
                   <img src={notificationsIcon} alt="notifications" className="kimg" />
                   <i className="dot" />
                 </button>
@@ -1013,7 +1015,7 @@ export default function DashboardView() {
               {isFinancialLoading ? (
                 <div className="loading-container">
                   <div className="loading-spinner"></div>
-                  <p>Loading financial data...</p>
+                  <p>{t('common.loading')}</p>
                 </div>
               ) : (
                 <>
@@ -1021,8 +1023,8 @@ export default function DashboardView() {
                     <div className="metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">System Wallet Balance</span>
-                          <span className="metric-description">Total across all user wallets</span>
+                          <span className="metric-label">{t('financial.systemWalletBalance')}</span>
+                          <span className="metric-description">{t('financial.totalAcrossWallets')}</span>
                         </div>
                         <div className="metric-icon blue">
                           <span className="material-symbols-outlined">account_balance</span>
@@ -1036,7 +1038,7 @@ export default function DashboardView() {
                     <div className="metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">Commissions (MTD)</span>
+                          <span className="metric-label">{t('financial.commissionsMTD')}</span>
                           <span className="metric-trend positive">
                             {(() => {
                               const trend = financialOverview?.commissions?.trend;
@@ -1063,10 +1065,10 @@ export default function DashboardView() {
                         <button 
                           className="admin-withdraw-btn"
                           onClick={() => setShowAdminWithdrawModal(true)}
-                          title="Withdraw admin commissions"
+                          title={t('financial.adminWithdraw')}
                         >
                           <span className="material-symbols-outlined">account_balance_wallet</span>
-                          Admin Withdraw
+                          {t('financial.adminWithdraw')}
                         </button>
                       </div>
                     </div>
@@ -1074,8 +1076,8 @@ export default function DashboardView() {
                     <div className="metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">Pending Payouts</span>
-                          <span className="metric-description">Awaiting approval</span>
+                          <span className="metric-label">{t('financial.pendingPayouts')}</span>
+                          <span className="metric-description">{t('financial.awaitingApproval')}</span>
                         </div>
                         <div className="metric-icon orange">
                           <span className="material-symbols-outlined">hourglass_empty</span>
@@ -1090,7 +1092,7 @@ export default function DashboardView() {
                   <section className="financial-grid">
                     <div className="transactions-panel">
                       <div className="panel-header">
-                        <h3>All Transactions</h3>
+                        <h3>{t('financial.allTransactions')}</h3>
                         <div className="panel-controls">
                           <div className="date-picker-wrapper">
                             <input type="text" placeholder="mm/dd/yyyy" className="date-picker" />
@@ -1101,14 +1103,14 @@ export default function DashboardView() {
                             value={transactionFilter}
                             onChange={(e) => setTransactionFilter(e.target.value)}
                           >
-                            <option>All Types</option>
-                            <option>Fare</option>
-                            <option>Top-up</option>
-                            <option>Payout</option>
-                            <option>Refund</option>
+                            <option>{t('financial.allTypes')}</option>
+                            <option>{t('financial.fare')}</option>
+                            <option>{t('financial.topUp')}</option>
+                            <option>{t('financial.payout')}</option>
+                            <option>{t('financial.refund')}</option>
                           </select>
                           <button className="export-btn" onClick={handleExportCSV}>
-                            Export CSV
+                            {t('common.export')} CSV
                           </button>
                         </div>
                       </div>
@@ -1116,12 +1118,12 @@ export default function DashboardView() {
                         <table className="transactions-table">
                           <thead>
                             <tr>
-                              <th>TRANSACTION ID</th>
-                              <th>DATE</th>
-                              <th>USER/DRIVER</th>
-                              <th>TYPE</th>
-                              <th>AMOUNT</th>
-                              <th>STATUS</th>
+                              <th>{t('financial.transactionId')}</th>
+                              <th>{t('financial.date')}</th>
+                              <th>{t('financial.userDriver')}</th>
+                              <th>{t('financial.type')}</th>
+                              <th>{t('financial.amount')}</th>
+                              <th>{t('financial.status')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1153,13 +1155,13 @@ export default function DashboardView() {
 
                     <div className="payouts-panel">
                       <div className="panel-header">
-                        <h3>Payout Requests</h3>
+                        <h3>{t('financial.payoutRequests')}</h3>
                         <button 
                           className="view-all-btn"
                           onClick={() => navigate('/withdrawals')}
-                          title="View all withdrawals"
+                          title={t('financial.viewAllWithdrawals')}
                         >
-                          View All
+                          {t('common.viewAll')}
                           <span className="material-symbols-outlined">arrow_forward</span>
                         </button>
                       </div>
@@ -1167,7 +1169,7 @@ export default function DashboardView() {
                         {payoutRequests.length === 0 ? (
                           <div className="no-payouts">
                             <span className="material-symbols-outlined">inbox</span>
-                            <p>No payout requests</p>
+                            <p>{t('financial.noPayoutRequests')}</p>
                           </div>
                         ) : (
                           payoutRequests.map((payout) => {
@@ -1225,18 +1227,18 @@ export default function DashboardView() {
                   <span className="material-symbols-outlined">menu</span>
                 </button>
                 <div>
-                  <h1>Support Ticket Center</h1>
-                  <p className="sub">Manage customer inquiries and provide assistance.</p>
+                  <h1>{t('support.supportTicketCenter')}</h1>
+                  <p className="sub">{t('support.manageInquiries')}</p>
                 </div>
               </div>
               <div className="acts">
                 <div className="search">
                   <span className="material-symbols-outlined">search</span>
-                  <input placeholder="Search tickets..." />
+                  <input placeholder={t('support.searchTickets')} />
                 </div>
                 <button className="chip on">EN</button>
                 <button className="chip">AR</button>
-                <button className="ibtn" aria-label="notifications">
+                <button className="ibtn" aria-label={t('common.notifications')}>
                   <img src={notificationsIcon} alt="notifications" className="kimg" />
                   <i className="dot" />
                 </button>
@@ -1247,7 +1249,7 @@ export default function DashboardView() {
               {isSupportLoading ? (
                 <div className="loading-container">
                   <div className="loading-spinner"></div>
-                  <p>Loading support tickets...</p>
+                  <p>{t('support.loadingSupportTickets')}</p>
                 </div>
               ) : (
                 <div className="support-layout">
@@ -1258,28 +1260,28 @@ export default function DashboardView() {
                         className={`filter-tab ${ticketFilter === 'all' ? 'active' : ''}`}
                         onClick={() => setTicketFilter('all')}
                       >
-                        All
+                        {t('support.allTickets')}
                         <span className="count">{supportTickets.length}</span>
                       </button>
                       <button 
                         className={`filter-tab ${ticketFilter === 'open' ? 'active' : ''}`}
                         onClick={() => setTicketFilter('open')}
                       >
-                        Open
+                        {t('support.openTickets')}
                         <span className="count">{supportTickets.filter(t => t.status === 'open').length}</span>
                       </button>
                       <button 
                         className={`filter-tab ${ticketFilter === 'pending' ? 'active' : ''}`}
                         onClick={() => setTicketFilter('pending')}
                       >
-                        Pending
+                        {t('common.pending')}
                         <span className="count">{supportTickets.filter(t => t.status === 'pending').length}</span>
                       </button>
                       <button 
                         className={`filter-tab ${ticketFilter === 'closed' ? 'active' : ''}`}
                         onClick={() => setTicketFilter('closed')}
                       >
-                        Closed
+                        {t('support.resolvedTickets')}
                         <span className="count">{supportTickets.filter(t => t.status === 'closed' || t.status === 'resolved').length}</span>
                       </button>
                     </div>
@@ -1338,18 +1340,18 @@ export default function DashboardView() {
                               <>
                                 <button className="resolve-btn" onClick={handleMarkAsResolved}>
                                   <span className="material-symbols-outlined">check_circle</span>
-                                  Mark as Resolved
+                                  {t('support.markAsResolved')}
                                 </button>
                                 <button className="pending-btn" onClick={handleMarkAsPending}>
                                   <span className="material-symbols-outlined">schedule</span>
-                                  Mark as Pending
+                                  {t('support.markAsPending')}
                                 </button>
                               </>
                             )}
                             {selectedTicket.status === 'pending' && (
                               <button className="resolve-btn" onClick={handleMarkAsResolved}>
                                 <span className="material-symbols-outlined">check_circle</span>
-                                Mark as Resolved
+                                {t('support.markAsResolved')}
                               </button>
                             )}
                           </div>
@@ -1397,7 +1399,7 @@ export default function DashboardView() {
                             <div className="reply-area">
                               <textarea
                                 className="reply-input"
-                                placeholder="Type your reply..."
+                                placeholder={t('support.enterMessage')}
                                 value={replyMessage}
                                 onChange={(e) => setReplyMessage(e.target.value)}
                                 onKeyDown={(e) => {
@@ -1413,7 +1415,7 @@ export default function DashboardView() {
                                 disabled={!replyMessage.trim()}
                               >
                                 <span className="material-symbols-outlined">send</span>
-                                Send
+                                {t('support.send')}
                               </button>
                             </div>
                           )}
@@ -1422,7 +1424,7 @@ export default function DashboardView() {
                     ) : (
                       <div className="no-ticket-selected">
                         <span className="material-symbols-outlined">support_agent</span>
-                        <p>Select a ticket to view details and conversation</p>
+                        <p>{t('support.selectTicket')}</p>
                       </div>
                     )}
                   </div>
@@ -1438,8 +1440,8 @@ export default function DashboardView() {
                   <span className="material-symbols-outlined">menu</span>
                 </button>
                 <div>
-                  <h1>Analytics & Reports</h1>
-                  <p className="sub">Deep dive into your platform's performance metrics.</p>
+                  <h1>{t('analytics.analyticsReports')}</h1>
+                  <p className="sub">{t('analytics.deepDiveMetrics')}</p>
                 </div>
               </div>
               <div className="acts">
@@ -1453,14 +1455,14 @@ export default function DashboardView() {
                   {showDatePicker && (
                     <div className="date-picker-dropdown">
                       <div className="date-picker-header">
-                        <h4>Select Date Range</h4>
+                        <h4>{t('analytics.selectDateRange')}</h4>
                         <button className="close-btn" onClick={handleDateRangeCancel}>
                           <span className="material-symbols-outlined">close</span>
                         </button>
                       </div>
                       <div className="date-inputs">
                         <div className="date-input-group">
-                          <label>Start Date</label>
+                          <label>{t('analytics.startDate')}</label>
                           <input
                             type="date"
                             value={tempStartDate}
@@ -1469,7 +1471,7 @@ export default function DashboardView() {
                           />
                         </div>
                         <div className="date-input-group">
-                          <label>End Date</label>
+                          <label>{t('analytics.endDate')}</label>
                           <input
                             type="date"
                             value={tempEndDate}
@@ -1480,10 +1482,10 @@ export default function DashboardView() {
                       </div>
                       <div className="date-picker-actions">
                         <button className="cancel-btn" onClick={handleDateRangeCancel}>
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                         <button className="apply-btn" onClick={handleDateRangeApply}>
-                          Apply
+                          {t('common.apply')}
                         </button>
                       </div>
                     </div>
@@ -1498,7 +1500,7 @@ export default function DashboardView() {
                     <span className="material-symbols-outlined">
                       {isExporting ? 'hourglass_empty' : 'download'}
                     </span>
-                    {isExporting ? 'Exporting...' : 'Export Report'}
+                    {isExporting ? t('analytics.exporting') : t('analytics.exportReport')}
                     <span className="material-symbols-outlined">expand_more</span>
                   </button>
                   
@@ -1509,36 +1511,36 @@ export default function DashboardView() {
                         onClick={() => handleExportOption('all-csv')}
                       >
                         <span className="material-symbols-outlined">table_chart</span>
-                        Export All Data as CSV
+                        {t('analytics.exportAllCSV')}
                       </div>
                       <div 
                         className="export-dropdown-item"
                         onClick={() => handleExportOption('specific')}
                       >
                         <span className="material-symbols-outlined">checklist</span>
-                        Export Specific Sections
+                        {t('analytics.exportSpecificSections')}
                       </div>
                       <div 
                         className="export-dropdown-item"
                         onClick={() => handleExportOption('json')}
                       >
                         <span className="material-symbols-outlined">code</span>
-                        Export as JSON
+                        {t('analytics.exportAsJSON')}
                       </div>
                       <div 
                         className="export-dropdown-item"
                         onClick={() => handleExportOption('revenue-only')}
                       >
                         <span className="material-symbols-outlined">payments</span>
-                        Export Only Revenue Data
+                        {t('analytics.exportRevenueOnly')}
                       </div>
                     </div>
                   )}
                 </div>
-                <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
+                <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
                   <span className="material-symbols-outlined">settings</span>
                 </button>
-                <button className="ibtn" aria-label="notifications">
+                <button className="ibtn" aria-label={t('common.notifications')}>
                   <img src={notificationsIcon} alt="notifications" className="kimg" />
                   <i className="dot" />
                 </button>
@@ -1549,7 +1551,7 @@ export default function DashboardView() {
               {isAnalyticsDataLoading ? (
                 <div className="loading-container">
                   <div className="loading-spinner"></div>
-                  <p>Loading analytics data...</p>
+                  <p>{t('common.loading')}</p>
                 </div>
               ) : (
                 <>
@@ -1558,7 +1560,7 @@ export default function DashboardView() {
                     <div className="analytics-metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">Average Fare</span>
+                          <span className="metric-label">{t('analytics.averageFare')}</span>
                           <span className="metric-trend positive">
                             {analyticsMetrics?.averageFare?.trend || ''}
                           </span>
@@ -1575,7 +1577,7 @@ export default function DashboardView() {
                     <div className="analytics-metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">Peak Hours</span>
+                          <span className="metric-label">{t('analytics.peakHours')}</span>
                           <span className="metric-description">
                             {analyticsMetrics?.peakHours?.description || ''}
                           </span>
@@ -1592,7 +1594,7 @@ export default function DashboardView() {
                     <div className="analytics-metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">Avg. Driver Rating</span>
+                          <span className="metric-label">{t('analytics.avgDriverRating')}</span>
                           <span className="metric-trend positive">
                             {analyticsMetrics?.avgDriverRating?.trend || ''}
                           </span>
@@ -1609,7 +1611,7 @@ export default function DashboardView() {
                     <div className="analytics-metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">Total Distance</span>
+                          <span className="metric-label">{t('analytics.totalDistance')}</span>
                           <span className="metric-description">
                             {analyticsMetrics?.totalDistance?.description || ''}
                           </span>
@@ -1626,7 +1628,7 @@ export default function DashboardView() {
                     <div className="analytics-metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
-                          <span className="metric-label">Driver Acceptance Rate</span>
+                          <span className="metric-label">{t('analytics.driverAcceptanceRate')}</span>
                           <span className="metric-trend positive">
                             {analyticsMetrics?.driverAcceptanceRate?.trend || ''}
                           </span>
@@ -1646,7 +1648,7 @@ export default function DashboardView() {
                     {/* Rides by Region - Bar Chart */}
                     <div className="analytics-chart-panel">
                       <div className="chart-panel-header">
-                        <h3>Rides by Region</h3>
+                        <h3>{t('analytics.ridesByRegion')}</h3>
                       </div>
                       <div className="chart-content">
                         <div className="bar-chart">
@@ -1673,7 +1675,7 @@ export default function DashboardView() {
                     {/* Rides by Vehicle Type - Pie Chart */}
                     <div className="analytics-chart-panel">
                       <div className="chart-panel-header">
-                        <h3>Rides by Vehicle Type</h3>
+                        <h3>{t('analytics.ridesByVehicleType')}</h3>
                       </div>
                       <div className="chart-content">
                         <div className="pie-chart-container">
@@ -1711,7 +1713,7 @@ export default function DashboardView() {
                     {/* Driver Acceptance Rate - Bar Chart */}
                     <div className="analytics-chart-panel">
                       <div className="chart-panel-header">
-                        <h3>Driver Acceptance Rate</h3>
+                        <h3>{t('analytics.acceptanceRateByHour')}</h3>
                       </div>
                       <div className="chart-content">
                         <div className="bar-chart">
@@ -1741,16 +1743,16 @@ export default function DashboardView() {
                     {/* Driver Performance Leaderboard */}
                     <div className="analytics-chart-panel leaderboard-panel">
                       <div className="chart-panel-header">
-                        <h3>Driver Performance Leaderboard</h3>
+                        <h3>{t('analytics.driverLeaderboard')}</h3>
                       </div>
                       <div className="chart-content">
                         <table className="leaderboard-table">
                           <thead>
                             <tr>
-                              <th>DRIVER</th>
-                              <th>RIDES</th>
-                              <th>RATING</th>
-                              <th>ACCEPT %</th>
+                              <th>{t('analytics.driver')}</th>
+                              <th>{t('analytics.rides')}</th>
+                              <th>{t('analytics.rating')}</th>
+                              <th>{t('analytics.acceptPercent')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1780,7 +1782,7 @@ export default function DashboardView() {
                     {/* Revenue by Payment Type - Pie Chart */}
                     <div className="analytics-chart-panel">
                       <div className="chart-panel-header">
-                        <h3>Revenue by Payment Type</h3>
+                        <h3>{t('analytics.revenueByPaymentType')}</h3>
                       </div>
                       <div className="chart-content">
                         <div className="pie-chart-container">

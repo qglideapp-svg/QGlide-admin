@@ -5,6 +5,7 @@ import { logoutUser } from '../../services/authService';
 import { fetchRidesList } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -40,6 +41,7 @@ export default function RideManagementView() {
   console.log('RideManagementView component rendering...');
   
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [isLoading, setIsLoading] = useState(true);
@@ -210,7 +212,7 @@ export default function RideManagementView() {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+    if (window.confirm(t('common.confirmLogout'))) {
       try {
         const result = await logoutUser();
         navigate('/login');
@@ -288,29 +290,29 @@ export default function RideManagementView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
-          <NavItem icon="local_taxi" label="Ride Management" active={true} />
-          <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
-          <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
-          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
-          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
+          <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
+          <NavItem icon="local_taxi" label={t('navigation.rideManagement')} active={true} />
+          <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
+          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">
           <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
-            <span>Settings</span>
+            <span>{t('common.settings')}</span>
           </button>
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
-            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+            <button className="logout-btn-sidebar" aria-label={t('common.logout')} onClick={handleLogout}>
               <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
@@ -324,19 +326,19 @@ export default function RideManagementView() {
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div>
-              <h1>Ride Management</h1>
-              <p className="sub">Search, filter, and manage all platform rides.</p>
+              <h1>{t('rides.rideManagement')}</h1>
+              <p className="sub">{t('rides.manageRides')}</p>
             </div>
           </div>
           <div className="acts">
             <button className="chip on">EN</button>
             <button className="chip">AR</button>
             <ThemeToggle />
-            <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
-            <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
+            <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
+            <button className="ibtn" aria-label={t('common.notifications')}><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
-              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+              <span className="user-name">QGlide Admin</span>
+              <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
             </div>
@@ -349,25 +351,25 @@ export default function RideManagementView() {
               {isLoading ? (
                 <div className="loading-container">
                   <div className="loading-spinner"></div>
-                  <p>Loading rides...</p>
+                  <p>{t('rides.loadingRides')}</p>
                 </div>
               ) : !Array.isArray(rides) || rides.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">🚗</div>
-                  <h3>No rides found</h3>
-                  <p>There are no rides to display at the moment.</p>
+                  <h3>{t('rides.noRidesFound')}</h3>
+                  <p>{t('rides.noRidesMessage')}</p>
                 </div>
               ) : (
                 <table className="rides-table">
                   <thead>
                     <tr>
-                      <th>Ride ID</th>
-                      <th>User</th>
-                      <th>Driver</th>
-                      <th>Date & Time</th>
-                      <th>Fare</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th>{t('rides.rideId')}</th>
+                      <th>{t('rides.rider')}</th>
+                      <th>{t('rides.driver')}</th>
+                      <th>{t('rides.dateTime')}</th>
+                      <th>{t('rides.fare')}</th>
+                      <th>{t('rides.status')}</th>
+                      <th>{t('common.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>

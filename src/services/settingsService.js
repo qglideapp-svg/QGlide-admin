@@ -1,3 +1,20 @@
+import { getAuthToken } from './authService';
+
+const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
+
+// Mapping from UI field names to API config keys
+const FARE_CONFIG_KEY_MAP = {
+  baseFare: 'base_fare',
+  costPerKilometer: 'cost_per_kilometer',
+  costPerMinute: 'cost_per_minute',
+  airportSurcharge: 'airport_surcharge',
+  minimumFare: 'minimum_fare',
+  surgeMultiplier: 'surge_multiplier',
+  nightSurcharge: 'night_surcharge',
+  peakHourSurcharge: 'peak_hour_surcharge'
+};
+
 // Mock data for admin roles
 const mockRoles = [
   {
@@ -190,6 +207,13 @@ export const updateNotificationTemplate = async (templateId, templateData) => {
 // Fetch system settings
 export const fetchSystemSettings = async () => {
   await delay(300);
+  
+  // Get language from localStorage if available
+  const savedLanguage = localStorage.getItem('appLanguage');
+  if (savedLanguage) {
+    mockSystemSettings.language = savedLanguage;
+  }
+  
   return {
     success: true,
     data: mockSystemSettings
@@ -234,6 +258,9 @@ export const toggleLanguage = async (language) => {
   await delay(300);
   
   mockSystemSettings.language = language;
+  
+  // Sync with localStorage
+  localStorage.setItem('appLanguage', language);
   
   return {
     success: true,
@@ -289,17 +316,92 @@ export const fetchFareCosts = async () => {
 
 // Update fare cost settings
 export const updateFareCosts = async (fareCostData) => {
-  await delay(500);
-  
-  // Update the mock fare costs
-  Object.assign(mockFareCosts, fareCostData);
-  
-  // Also update in system settings
-  mockSystemSettings.fareCosts = mockFareCosts;
-  
-  return {
-    success: true,
-    data: mockFareCosts,
-    message: 'Fare costs updated successfully'
-  };
+  try {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    console.log('🚀 UPDATING FARE COSTS:', {
+      '📊 Fare Cost Data': fareCostData,
+      '🔑 Has Token': !!token,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+
+    // Update each fare config field via API
+    const updatePromises = Object.keys(fareCostData).map(async (fieldName) => {
+      const configKey = FARE_CONFIG_KEY_MAP[fieldName];
+      if (!configKey) {
+        console.warn(`⚠️ No config key mapping found for field: ${fieldName}`);
+        return null;
+      }
+
+      const configValue = fareCostData[fieldName];
+      
+      console.log(`🔄 Updating ${fieldName} (${configKey}):`, configValue);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin-fare-config`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            config_key: configKey,
+            config_value: parseFloat(configValue) || 0
+          }),
+        });
+
+        console.log(`📡 API Response for ${configKey}:`, {
+          '✅ Status': response.status,
+          '📝 Status Text': response.statusText,
+          '✅ OK': response.ok
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log(`✅ Successfully updated ${configKey}:`, data);
+        
+        return { fieldName, configKey, success: true, data };
+      } catch (error) {
+        console.error(`❌ Error updating ${configKey}:`, error);
+        return { fieldName, configKey, success: false, error: error.message };
+      }
+    });
+
+    // Wait for all updates to complete
+    const results = await Promise.all(updatePromises);
+    
+    // Check if any updates failed
+    const failedUpdates = results.filter(r => r && !r.success);
+    if (failedUpdates.length > 0) {
+      const errorMessages = failedUpdates.map(r => `${r.configKey}: ${r.error}`).join(', ');
+      throw new Error(`Failed to update some fare costs: ${errorMessages}`);
+    }
+
+    // Update local mock data for consistency
+    Object.assign(mockFareCosts, fareCostData);
+    mockSystemSettings.fareCosts = mockFareCosts;
+
+    console.log('✅ All fare costs updated successfully');
+
+    return {
+      success: true,
+      data: fareCostData,
+      message: 'Fare costs updated successfully'
+    };
+  } catch (error) {
+    console.error('❌ Error updating fare costs:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to update fare costs'
+    };
+  }
 };

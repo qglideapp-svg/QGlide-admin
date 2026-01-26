@@ -8,6 +8,7 @@ import EditUserModal from '../../components/modals/EditUserModal';
 import DeleteUserModal from '../../components/modals/DeleteUserModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -49,6 +50,7 @@ const RideStatusBadge = ({ status }) => {
 export default function UserProfileView() {
   const navigate = useNavigate();
   const { userId } = useParams();
+  const { t } = useLanguage();
 
   // API-related state
   const [userData, setUserData] = useState(null);
@@ -434,7 +436,7 @@ export default function UserProfileView() {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+    if (window.confirm(t('common.confirmLogout'))) {
       try {
         await logoutUser();
         navigate('/login');
@@ -456,29 +458,29 @@ export default function UserProfileView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
-          <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
-          <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" active={true} onClick={() => handleNavClick('user-management')} />
-          <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
-          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
-          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
+          <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
+          <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
+          <NavItem icon="group" label={t('navigation.userManagement')} active={true} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">
           <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
-            <span>Settings</span>
+            <span>{t('common.settings')}</span>
           </button>
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
-            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+            <button className="logout-btn-sidebar" aria-label={t('common.logout')} onClick={handleLogout}>
               <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
@@ -488,26 +490,26 @@ export default function UserProfileView() {
       <main className="main">
         <header className="top">
           <div className="titles">
-            <h1>User Profile</h1>
+            <h1>{t('users.userProfile')}</h1>
             <div className="breadcrumbs">
-              <span className="breadcrumb-link" onClick={handleBackToUsers}>User Management</span>
+              <span className="breadcrumb-link" onClick={handleBackToUsers}>{t('users.userManagement')}</span>
               <span className="breadcrumb-separator"> &gt; </span>
-              <span className="breadcrumb-current">Profile Details</span>
+              <span className="breadcrumb-current">{t('users.profileDetails')}</span>
             </div>
           </div>
           <div className="acts">
             <div className="search">
               <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search..." />
+              <input placeholder={t('common.search')} />
             </div>
             <ThemeToggle />
-            <button className="ibtn" aria-label="notifications">
+            <button className="ibtn" aria-label={t('common.notifications')}>
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <i className="dot" />
             </button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
-              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+              <span className="user-name">QGlide Admin</span>
+              <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
             </div>
@@ -518,24 +520,24 @@ export default function UserProfileView() {
           {isLoading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <div className="loading-text">Loading user details...</div>
+              <div className="loading-text">{t('users.loadingUserDetails')}</div>
             </div>
           ) : error ? (
             <div className="error-container">
               <div className="error-icon">⚠️</div>
-              <div className="error-title">Error Loading User</div>
+              <div className="error-title">{t('users.errorLoadingUser')}</div>
               <div className="error-message">{error}</div>
               <button className="retry-btn" onClick={loadUserData}>
-                Try Again
+                {t('common.tryAgain')}
               </button>
             </div>
           ) : !userData ? (
             <div className="error-container">
               <div className="error-icon">❌</div>
-              <div className="error-title">User Not Found</div>
-              <div className="error-message">The requested user could not be found.</div>
+              <div className="error-title">{t('users.userNotFound')}</div>
+              <div className="error-message">{t('users.requestedUserNotFound')}</div>
               <button className="retry-btn" onClick={() => navigate('/user-management')}>
-                Back to Users
+                {t('users.backToUsers')}
               </button>
             </div>
           ) : (
@@ -549,13 +551,13 @@ export default function UserProfileView() {
                     <img src={userData.avatar} alt={userData.name} className="user-avatar-large" />
                   </div>
                   <h2 className="user-name-large">{userData.name}</h2>
-                  <div className="user-id">User ID: #{userData.id}</div>
+                  <div className="user-id">{t('users.userId')}: #{userData.id}</div>
                   <StatusBadge status={userData.status} />
                 </div>
 
                 {/* Contact Information */}
                 <div className="info-section">
-                  <h3 className="section-title">Contact Information</h3>
+                  <h3 className="section-title">{t('users.contactInformation')}</h3>
                   <div className="info-list">
                     <div className="info-item">
                       <span className="material-symbols-outlined info-icon">mail</span>
@@ -567,22 +569,22 @@ export default function UserProfileView() {
                     </div>
                     <div className="info-item">
                       <span className="material-symbols-outlined info-icon">calendar_today</span>
-                      <span className="info-text">Joined: {userData.joinedDate}</span>
+                      <span className="info-text">{t('users.dateJoined')}: {userData.joinedDate}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Account Actions */}
                 <div className="actions-section">
-                  <h3 className="section-title">Account Actions</h3>
+                  <h3 className="section-title">{t('users.accountActions')}</h3>
                   <div className="action-buttons">
                     <button className="btn-edit-profile" onClick={handleEditClick}>
                       <span className="material-symbols-outlined">edit</span>
-                      Edit Profile
+                      {t('users.editProfile')}
                     </button>
                     <button className="btn-deactivate" onClick={handleDeactivateClick}>
                       <span className="material-symbols-outlined">block</span>
-                      Change Status
+                      {t('users.changeStatus')}
                     </button>
                   </div>
                 </div>
@@ -595,13 +597,13 @@ export default function UserProfileView() {
               <div className="wallet-card">
                 <div className="wallet-header">
                   <div>
-                    <h3 className="wallet-title">Wallet Balance</h3>
+                    <h3 className="wallet-title">{t('users.walletBalance')}</h3>
                     <div className="wallet-balance">QAR {userData.walletBalance.toFixed(2)}</div>
-                    <div className="wallet-subtitle">Last top-up: {userData.lastTopUp}</div>
+                    <div className="wallet-subtitle">{t('users.lastTopUp')}: {userData.lastTopUp}</div>
                   </div>
                   <div className="wallet-actions">
-                    <button className="btn-view-history" onClick={handleDeleteClick}>Delete Account</button>
-                    <button className="btn-add-funds">Export to CSV</button>
+                    <button className="btn-view-history" onClick={handleDeleteClick}>{t('users.deleteAccount')}</button>
+                    <button className="btn-add-funds">{t('common.export')} CSV</button>
                   </div>
                 </div>
               </div>
@@ -609,19 +611,19 @@ export default function UserProfileView() {
               {/* Ride History Card */}
               <div className="ride-history-card">
                 <div className="ride-history-header">
-                  <h3 className="ride-history-title">Ride History</h3>
-                  <div className="total-rides">Total Rides: {userData.totalRides}</div>
+                  <h3 className="ride-history-title">{t('users.rideHistory')}</h3>
+                  <div className="total-rides">{t('users.totalRides')}: {userData.totalRides}</div>
                 </div>
                 <div className="ride-history-table-container">
                   <table className="ride-history-table">
                     <thead>
                       <tr>
-                        <th>RIDE ID</th>
-                        <th>DATE</th>
-                        <th>ROUTE</th>
-                        <th>DRIVER</th>
-                        <th>FARE</th>
-                        <th>STATUS</th>
+                        <th>{t('users.rideId')}</th>
+                        <th>{t('users.date')}</th>
+                        <th>{t('users.route')}</th>
+                        <th>{t('users.driver')}</th>
+                        <th>{t('users.fare')}</th>
+                        <th>{t('users.status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -629,7 +631,7 @@ export default function UserProfileView() {
                         <tr>
                           <td colSpan="6" className="loading-cell">
                             <div className="loading-spinner"></div>
-                            Loading ride history...
+                            {t('users.loadingRideHistory')}
                           </td>
                         </tr>
                       ) : ridesError ? (
@@ -646,7 +648,7 @@ export default function UserProfileView() {
                           <td colSpan="6" className="empty-cell">
                             <div className="empty-message">
                               <span className="material-icons">directions_car</span>
-                              No ride history found
+                              {t('users.noRideHistory')}
                             </div>
                           </td>
                         </tr>

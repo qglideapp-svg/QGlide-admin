@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriverDetails, approveDriver, suspendDriver, updateDriver, deleteDriver } from '../../services/driverService';
+import { fetchDriverDetails, approveDriver, suspendDriver, unsuspendDriver, updateDriver } from '../../services/driverService';
 import Toast from '../../components/common/Toast';
 import SuspendDriverModal from '../../components/modals/SuspendDriverModal';
+import UnsuspendDriverModal from '../../components/modals/UnsuspendDriverModal';
 import EditDriverModal from '../../components/modals/EditDriverModal';
-import DeleteDriverModal from '../../components/modals/DeleteDriverModal';
 import DocumentViewModal from '../../components/modals/DocumentViewModal';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -37,6 +38,7 @@ const StatusBadge = ({ status }) => {
 export default function DriverProfileView() {
   const navigate = useNavigate();
   const { driverId } = useParams();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('personal');
 
   // API state
@@ -54,13 +56,13 @@ export default function DriverProfileView() {
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [isSuspending, setIsSuspending] = useState(false);
   
+  // Unsuspend modal and loading states
+  const [showUnsuspendModal, setShowUnsuspendModal] = useState(false);
+  const [isUnsuspending, setIsUnsuspending] = useState(false);
+  
   // Edit modal and loading states
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Delete modal and loading states
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   
   // Document viewer modal state
   const [showDocumentModal, setShowDocumentModal] = useState(false);
@@ -105,12 +107,35 @@ export default function DriverProfileView() {
             'Driver Profile Keys': apiDriver.driver_profile ? Object.keys(apiDriver.driver_profile) : 'No driver_profile'
           });
           
+          // Log status fields for debugging
+          console.log('🔍 DRIVER STATUS FIELDS:', {
+            'apiDriver.status': apiDriver.status,
+            'apiDriver.driver_profile?.status': apiDriver.driver_profile?.status,
+            'apiDriver.is_suspended': apiDriver.is_suspended,
+            'apiDriver.driver_profile?.is_suspended': apiDriver.driver_profile?.is_suspended,
+            'apiDriver.driver_profile?.is_online': apiDriver.driver_profile?.is_online,
+            'All API Keys': Object.keys(apiDriver)
+          });
+          
           // Transform API data to match existing UI structure
+          // Determine status: check for suspended first, then online/offline
+          let driverStatus = 'Offline';
+          if (apiDriver.status?.toLowerCase() === 'suspended' || 
+              apiDriver.driver_profile?.status?.toLowerCase() === 'suspended' ||
+              apiDriver.is_suspended === true ||
+              apiDriver.driver_profile?.is_suspended === true) {
+            driverStatus = 'Suspended';
+          } else if (apiDriver.driver_profile?.is_online) {
+            driverStatus = 'Active';
+          }
+          
+          console.log('✅ DETERMINED DRIVER STATUS:', driverStatus);
+          
           const transformedData = {
             id: apiDriver.id || driverId,
             name: apiDriver.full_name || 'Unknown Driver',
             avatar: apiDriver.avatar_url || `https://i.pravatar.cc/120?img=${driverId}`,
-            status: apiDriver.driver_profile?.is_online ? 'Active' : 'Offline',
+            status: driverStatus,
             rating: parseFloat(apiDriver.rating || 0),
             totalReviews: Math.floor(Math.random() * 1000) + 100, // Mock reviews count
             acceptanceRate: Math.floor(Math.random() * 20) + 80, // Mock acceptance rate
@@ -237,7 +262,7 @@ export default function DriverProfileView() {
       if (result.success) {
         setToast({
           type: 'success',
-          message: 'Driver approved successfully!'
+          message: t('toast.driverApproved')
         });
         
         // Reload driver data to reflect updated status
@@ -247,7 +272,7 @@ export default function DriverProfileView() {
       } else {
         setToast({
           type: 'error',
-          message: result.error || 'Failed to approve driver'
+          message: result.error || t('toast.failedToUpdate')
         });
       }
     } catch (error) {
@@ -296,7 +321,7 @@ export default function DriverProfileView() {
       if (result.success) {
         setToast({
           type: 'success',
-          message: 'Driver suspended successfully!'
+          message: t('toast.driverSuspended')
         });
         
         // Close modal and reload driver data
@@ -307,7 +332,7 @@ export default function DriverProfileView() {
       } else {
         setToast({
           type: 'error',
-          message: result.error || 'Failed to suspend driver'
+          message: result.error || t('toast.failedToUpdate')
         });
       }
     } catch (error) {
@@ -356,7 +381,7 @@ export default function DriverProfileView() {
       if (result.success) {
         setToast({
           type: 'success',
-          message: 'Driver profile updated successfully!'
+          message: t('toast.driverUpdated')
         });
         
         // Close modal and reload driver data
@@ -367,7 +392,7 @@ export default function DriverProfileView() {
       } else {
         setToast({
           type: 'error',
-          message: result.error || 'Failed to update driver profile'
+          message: result.error || t('toast.failedToUpdate')
         });
       }
     } catch (error) {
@@ -381,13 +406,13 @@ export default function DriverProfileView() {
     }
   };
 
-  // Handle delete driver click - opens modal
-  const handleDeleteClick = () => {
-    setShowDeleteModal(true);
+  // Handle unsuspend driver click - opens modal
+  const handleUnsuspendClick = () => {
+    setShowUnsuspendModal(true);
   };
 
-  // Handle delete driver confirmation - calls API
-  const handleDeleteConfirm = async (reason) => {
+  // Handle unsuspend driver confirmation - calls API
+  const handleUnsuspendConfirm = async (reason) => {
     if (!driverId) {
       setToast({
         type: 'error',
@@ -396,18 +421,18 @@ export default function DriverProfileView() {
       return;
     }
 
-    console.log('🔄 DELETING DRIVER:', {
+    console.log('🔄 UNSUSPENDING DRIVER:', {
       '🆔 Driver ID': driverId,
-      '📝 Reason': reason,
+      '📝 Reason': reason || 'Suspension lifted after review',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    setIsDeleting(true);
+    setIsUnsuspending(true);
 
     try {
-      const result = await deleteDriver(driverId, reason);
+      const result = await unsuspendDriver(driverId, reason || '');
 
-      console.log('📡 DELETE RESULT:', {
+      console.log('📡 UNSUSPEND RESULT:', {
         '✅ Success': result.success,
         '📝 Error': result.error,
         '📊 Data': result.data
@@ -416,28 +441,28 @@ export default function DriverProfileView() {
       if (result.success) {
         setToast({
           type: 'success',
-          message: 'Driver deleted successfully!'
+          message: t('toast.driverUnsuspended')
         });
         
-        // Close modal and navigate back to driver management
-        setShowDeleteModal(false);
+        // Close modal and reload driver data
+        setShowUnsuspendModal(false);
         setTimeout(() => {
-          navigate('/driver-management');
+          window.location.reload();
         }, 1500);
       } else {
         setToast({
           type: 'error',
-          message: result.error || 'Failed to delete driver'
+          message: result.error || t('toast.failedToUpdate')
         });
       }
     } catch (error) {
-      console.error('❌ Delete driver error:', error);
+      console.error('❌ Unsuspend driver error:', error);
       setToast({
         type: 'error',
         message: error.message || 'An unexpected error occurred'
       });
     } finally {
-      setIsDeleting(false);
+      setIsUnsuspending(false);
     }
   };
 
@@ -474,7 +499,7 @@ export default function DriverProfileView() {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+    if (window.confirm(t('common.confirmLogout'))) {
       try {
         await logoutUser();
         navigate('/login');
@@ -496,29 +521,29 @@ export default function DriverProfileView() {
           <img src={logo} alt="QGlide" className="slogo" />
         </div>
         <nav className="slist">
-          <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
-          <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
-          <NavItem icon="directions_car" label="Driver Management" active={true} onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
-          <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
-          <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
-          <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
-          <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
+          <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
+          <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
+          <NavItem icon="directions_car" label={t('navigation.driverManagement')} active={true} onClick={() => handleNavClick('driver-management')} />
+          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
+          <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
+          <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
+          <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
         </nav>
 
         <div className="sfoot">
           <button className="settings" type="button" onClick={() => navigate('/settings')}>
             <img src={settingsIcon} alt="settings" className="kimg" />
-            <span>Settings</span>
+            <span>{t('common.settings')}</span>
           </button>
           <div className="urow">
             <img src="https://i.pravatar.cc/80?img=5" alt="Amina" className="avatar" />
             <div className="meta">
-              <div className="name">Amina Al-Thani</div>
+              <div className="name">QGlide Admin</div>
               <div className="role">Super Admin</div>
             </div>
-            <button className="logout-btn-sidebar" aria-label="logout" onClick={handleLogout}>
+            <button className="logout-btn-sidebar" aria-label={t('common.logout')} onClick={handleLogout}>
               <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
@@ -528,28 +553,28 @@ export default function DriverProfileView() {
       <main className="main">
         <header className="top">
           <div className="titles">
-            <h1>Driver Profile</h1>
+            <h1>{t('drivers.driverProfile')}</h1>
             <div className="breadcrumbs">
-              <span className="breadcrumb-link" onClick={handleBackToDrivers}>Driver Management</span>
+              <span className="breadcrumb-link" onClick={handleBackToDrivers}>{t('drivers.driverManagement')}</span>
               <span className="breadcrumb-separator"> &gt; </span>
               <span className="breadcrumb-current">
-                {isLoading ? 'Loading...' : driverData ? driverData.name : 'Driver Details'}
+                {isLoading ? t('common.loading') : driverData ? driverData.name : t('drivers.driverProfile')}
               </span>
             </div>
           </div>
           <div className="acts">
             <div className="search">
               <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search..." />
+              <input placeholder={t('common.search')} />
             </div>
             <ThemeToggle />
-            <button className="ibtn" aria-label="notifications">
+            <button className="ibtn" aria-label={t('common.notifications')}>
               <img src={notificationsIcon} alt="notifications" className="kimg" />
               <i className="dot" />
             </button>
             <div className="user-info">
-              <span className="user-name">Amina Al-Thani</span>
-              <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
+              <span className="user-name">QGlide Admin</span>
+              <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
               </button>
             </div>
@@ -560,24 +585,24 @@ export default function DriverProfileView() {
           {isLoading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <div className="loading-text">Loading driver details...</div>
+              <div className="loading-text">{t('drivers.loadingDriverDetails')}</div>
             </div>
           ) : error ? (
             <div className="error-container">
               <div className="error-icon">⚠️</div>
-              <div className="error-title">Error Loading Driver</div>
+              <div className="error-title">{t('drivers.errorLoadingDriver')}</div>
               <div className="error-message">{error}</div>
               <button className="retry-btn" onClick={() => window.location.reload()}>
-                Try Again
+                {t('common.tryAgain')}
               </button>
             </div>
           ) : !driverData ? (
             <div className="error-container">
               <div className="error-icon">❌</div>
-              <div className="error-title">Driver Not Found</div>
-              <div className="error-message">The requested driver could not be found.</div>
+              <div className="error-title">{t('drivers.driverNotFound')}</div>
+              <div className="error-message">{t('drivers.requestedDriverNotFound')}</div>
               <button className="retry-btn" onClick={() => navigate('/driver-management')}>
-                Back to Drivers
+                {t('drivers.backToDrivers')}
               </button>
             </div>
           ) : (
@@ -594,14 +619,14 @@ export default function DriverProfileView() {
                 <div className="driver-rating">
                   <span className="star-icon-large">★</span>
                   <span className="rating-value">{driverData.rating.toFixed(2)}</span>
-                  <span className="rating-reviews">({driverData.totalReviews.toLocaleString()} reviews)</span>
+                  <span className="rating-reviews">({driverData.totalReviews.toLocaleString()} {t('drivers.reviews')})</span>
                 </div>
               </div>
             </div>
             <div className="driver-header-actions">
               <button className="btn-edit-profile" onClick={handleEditClick}>
                 <span className="material-symbols-outlined">edit</span>
-                Edit Profile
+                {t('drivers.editProfile')}
               </button>
               <button 
                 className="btn-approve" 
@@ -611,15 +636,24 @@ export default function DriverProfileView() {
                 <span className="material-symbols-outlined">
                   {isApproving ? 'hourglass_empty' : 'check_circle'}
                 </span>
-                {isApproving ? 'Approving...' : 'Approve'}
+                {isApproving ? t('drivers.approving') : t('drivers.approve')}
               </button>
-              <button className="btn-suspend" onClick={handleSuspendClick}>
-                <span className="material-symbols-outlined">block</span>
-                Suspend
-              </button>
-              <button className="btn-delete" onClick={handleDeleteClick}>
-                <span className="material-symbols-outlined">delete</span>
-                Delete
+              {driverData?.status?.toLowerCase() !== 'suspended' && (
+                <button className="btn-suspend" onClick={handleSuspendClick}>
+                  <span className="material-symbols-outlined">block</span>
+                  {t('drivers.suspend')}
+                </button>
+              )}
+              <button 
+                className="btn-unsuspend" 
+                onClick={handleUnsuspendClick}
+                disabled={isUnsuspending}
+                title={t('drivers.unsuspend')}
+              >
+                <span className="material-symbols-outlined">
+                  {isUnsuspending ? 'hourglass_empty' : 'check_circle'}
+                </span>
+                {isUnsuspending ? t('drivers.unsuspending') : t('drivers.unsuspend')}
               </button>
             </div>
           </div>
@@ -627,23 +661,23 @@ export default function DriverProfileView() {
           {/* KPI Cards */}
           <div className="kpi-grid">
             <div className="kpi-card">
-              <div className="kpi-label">Acceptance Rate</div>
+              <div className="kpi-label">{t('drivers.acceptanceRate')}</div>
               <div className="kpi-value">{driverData.acceptanceRate}%</div>
             </div>
             <div className="kpi-card">
-              <div className="kpi-label">Total Rides</div>
+              <div className="kpi-label">{t('drivers.totalRides')}</div>
               <div className="kpi-value">{driverData.totalRides.toLocaleString()}</div>
-              <div className="kpi-subtitle">This month: {driverData.ridesThisMonth}</div>
+              <div className="kpi-subtitle">{t('dashboard.ridesThisMonth')}: {driverData.ridesThisMonth}</div>
             </div>
             <div className="kpi-card">
-              <div className="kpi-label">Total Earnings</div>
+              <div className="kpi-label">{t('drivers.totalEarnings')}</div>
               <div className="kpi-value">QAR {driverData.totalEarnings.toLocaleString()}</div>
-              <div className="kpi-subtitle earnings">QAR {driverData.earningsThisMonth.toLocaleString()} this month</div>
+              <div className="kpi-subtitle earnings">QAR {driverData.earningsThisMonth.toLocaleString()} {t('drivers.earningsThisMonth')}</div>
             </div>
             <div className="kpi-card">
-              <div className="kpi-label">Cancellation Rate</div>
+              <div className="kpi-label">{t('drivers.cancellationRate')}</div>
               <div className="kpi-value cancellation">{driverData.cancellationRate}%</div>
-              <div className="kpi-subtitle">Below 5% target</div>
+              <div className="kpi-subtitle">{t('drivers.belowTarget')}</div>
             </div>
           </div>
 
@@ -656,19 +690,19 @@ export default function DriverProfileView() {
                   className={`tab ${activeTab === 'personal' ? 'active' : ''}`}
                   onClick={() => setActiveTab('personal')}
                 >
-                  Personal Details
+                  {t('drivers.personalDetails')}
                 </button>
                 <button 
                   className={`tab ${activeTab === 'vehicle' ? 'active' : ''}`}
                   onClick={() => setActiveTab('vehicle')}
                 >
-                  Vehicle Details
+                  {t('drivers.vehicleDetails')}
                 </button>
                 <button 
                   className={`tab ${activeTab === 'history' ? 'active' : ''}`}
                   onClick={() => setActiveTab('history')}
                 >
-                  Ride History
+                  {t('drivers.rideHistory')}
                 </button>
               </div>
 
@@ -676,23 +710,23 @@ export default function DriverProfileView() {
                 {activeTab === 'personal' && (
                   <div className="details-list">
                     <div className="detail-item">
-                      <span className="detail-label">Full Name</span>
+                      <span className="detail-label">{t('drivers.fullName')}</span>
                       <span className="detail-value">{driverData.personalDetails.fullName}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Email Address</span>
+                      <span className="detail-label">{t('drivers.emailAddress')}</span>
                       <span className="detail-value">{driverData.personalDetails.email}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Phone Number</span>
+                      <span className="detail-label">{t('drivers.phoneNumber')}</span>
                       <span className="detail-value">{driverData.personalDetails.phone}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Address</span>
+                      <span className="detail-label">{t('drivers.address')}</span>
                       <span className="detail-value">{driverData.personalDetails.address}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Date Joined</span>
+                      <span className="detail-label">{t('drivers.dateJoined')}</span>
                       <span className="detail-value">{driverData.personalDetails.dateJoined}</span>
                     </div>
                   </div>
@@ -701,23 +735,23 @@ export default function DriverProfileView() {
                 {activeTab === 'vehicle' && (
                   <div className="details-list">
                     <div className="detail-item">
-                      <span className="detail-label">Vehicle Model</span>
+                      <span className="detail-label">{t('drivers.vehicleModel')}</span>
                       <span className="detail-value">{driverData.vehicleDetails.model}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Year</span>
+                      <span className="detail-label">{t('drivers.year')}</span>
                       <span className="detail-value">{driverData.vehicleDetails.year}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">License Plate</span>
+                      <span className="detail-label">{t('drivers.licensePlate')}</span>
                       <span className="detail-value">{driverData.vehicleDetails.licensePlate}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Color</span>
+                      <span className="detail-label">{t('drivers.color')}</span>
                       <span className="detail-value">{driverData.vehicleDetails.color}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">VIN</span>
+                      <span className="detail-label">{t('drivers.vin')}</span>
                       <span className="detail-value">{driverData.vehicleDetails.vin}</span>
                     </div>
                   </div>
@@ -728,11 +762,11 @@ export default function DriverProfileView() {
                     <table>
                       <thead>
                         <tr>
-                          <th>Ride ID</th>
-                          <th>Rider</th>
-                          <th>Date</th>
-                          <th>Fare</th>
-                          <th>Status</th>
+                          <th>{t('drivers.rideId')}</th>
+                          <th>{t('drivers.rider')}</th>
+                          <th>{t('drivers.date')}</th>
+                          <th>{t('drivers.fare')}</th>
+                          <th>{t('common.status')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -754,7 +788,7 @@ export default function DriverProfileView() {
 
             {/* Right Panel - Uploaded Documents */}
             <div className="documents-panel">
-              <h3>Uploaded Documents</h3>
+              <h3>{t('drivers.uploadedDocuments')}</h3>
               <div className="documents-list">
                 {driverData.documents.map((doc, index) => (
                   <div key={index} className="document-item">
@@ -766,7 +800,7 @@ export default function DriverProfileView() {
                     </div>
                     <button 
                       className="btn-view-document" 
-                      aria-label="View document"
+                      aria-label={t('modals.viewDocument')}
                       onClick={() => handleViewDocument(doc)}
                     >
                       <span className="material-symbols-outlined">visibility</span>
@@ -799,13 +833,13 @@ export default function DriverProfileView() {
             isLoading={isSuspending}
           />
           
-          {/* Delete Driver Modal */}
-          <DeleteDriverModal
-            isOpen={showDeleteModal}
-            onClose={() => setShowDeleteModal(false)}
-            onConfirm={handleDeleteConfirm}
+          {/* Unsuspend Driver Modal */}
+          <UnsuspendDriverModal
+            isOpen={showUnsuspendModal}
+            onClose={() => setShowUnsuspendModal(false)}
+            onConfirm={handleUnsuspendConfirm}
             driverName={driverData?.name || 'Unknown Driver'}
-            isLoading={isDeleting}
+            isLoading={isUnsuspending}
           />
           
           {/* Document Viewer Modal */}

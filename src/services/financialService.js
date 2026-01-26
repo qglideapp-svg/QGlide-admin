@@ -1,5 +1,6 @@
 // Financial Service with Real APIs
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
 const mockTransactions = [
   {
@@ -80,33 +81,6 @@ const mockTransactions = [
     user: 'Hassan Ali (Driver)',
     type: 'Payout',
     amount: 1200.00,
-    status: 'Pending'
-  }
-];
-
-const mockPayoutRequests = [
-  {
-    id: 'PR001',
-    driverName: 'Hassan Ali',
-    amount: 1200.00,
-    avatar: 'https://i.pravatar.cc/150?img=12',
-    requestDate: 'Oct 07, 2025',
-    status: 'Pending'
-  },
-  {
-    id: 'PR002',
-    driverName: 'Ahmed Khan',
-    amount: 850.00,
-    avatar: 'https://i.pravatar.cc/150?img=33',
-    requestDate: 'Oct 06, 2025',
-    status: 'Pending'
-  },
-  {
-    id: 'PR003',
-    driverName: 'Youssef Ibrahim',
-    amount: 920.50,
-    avatar: 'https://i.pravatar.cc/150?img=51',
-    requestDate: 'Oct 06, 2025',
     status: 'Pending'
   }
 ];
@@ -256,27 +230,23 @@ export const fetchTransactions = async (filters = {}) => {
 export const fetchPayoutRequests = async (status = 'pending') => {
   try {
     const token = localStorage.getItem('authToken');
-    const anonKey = localStorage.getItem('anonKey') || ''; // Get anon key if stored, otherwise empty
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     
     const params = new URLSearchParams();
+    params.append('type', 'payouts'); // Add type parameter for unified endpoint
     if (status) {
       params.append('status', status);
     }
+    params.append('page', '1'); // Default to page 1
     
     const queryString = params.toString();
-    const url = queryString
-      ? `${API_BASE_URL}/admin-payout-requests-list?${queryString}`
-      : `${API_BASE_URL}/admin-payout-requests-list`;
+    const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
     
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
+      'apikey': anonKey,
     };
-    
-    // Add apikey header if available
-    if (anonKey) {
-      headers['apikey'] = anonKey;
-    }
     
     const response = await fetch(url, {
       method: 'GET',
@@ -288,27 +258,49 @@ export const fetchPayoutRequests = async (status = 'pending') => {
     }
     
     const data = await response.json();
+    console.log('Payout requests API response:', data);
     
     if (data.success) {
+      // Handle different possible response structures from unified endpoint
+      let payoutRequestsArray = [];
+      
+      if (Array.isArray(data.data)) {
+        payoutRequestsArray = data.data;
+      } else if (data.data?.drivers && Array.isArray(data.data.drivers)) {
+        // Unified endpoint might return payouts in drivers array
+        payoutRequestsArray = data.data.drivers;
+      } else if (data.data?.payout_requests && Array.isArray(data.data.payout_requests)) {
+        payoutRequestsArray = data.data.payout_requests;
+      } else if (data.data?.payouts && Array.isArray(data.data.payouts)) {
+        payoutRequestsArray = data.data.payouts;
+      } else if (data.data && typeof data.data === 'object') {
+        // Try to find any array in the data object
+        payoutRequestsArray = Object.values(data.data).find(val => Array.isArray(val)) || [];
+      } else if (Array.isArray(data)) {
+        payoutRequestsArray = data;
+      }
+      
       // Map the API response to match the expected structure
-      const payoutRequests = (data.data?.payout_requests || data.data || []).map((req, index) => ({
-        id: req.id || req.request_id || `PR${index}`,
-        user: req.driver_name || req.driverName || req.user || 'Unknown Driver',
+      const payoutRequests = payoutRequestsArray.map((req, index) => ({
+        id: req.id || req.request_id || req.withdrawal_id || `PR${index}`,
+        user: req.driver_name || req.driverName || req.user || 'N/A',
         amount: req.amount || 0,
         status: req.status || 'pending',
-        date: req.request_date || req.date || req.created_at || new Date().toLocaleDateString(),
-        avatar: req.driver_avatar || req.avatar || `https://i.pravatar.cc/80?img=${index + 1}`,
-        driverName: req.driver_name || req.driverName || req.user || 'Unknown Driver',
-        driver_avatar: req.driver_avatar || req.avatar || `https://i.pravatar.cc/80?img=${index + 1}`
+        date: req.request_date || req.requestDate || req.date || req.created_at || 'N/A',
+        avatar: req.driver_avatar || req.avatar || null,
+        driverName: req.driver_name || req.driverName || req.user || 'N/A',
+        driver_avatar: req.driver_avatar || req.avatar || null
       }));
       
+      console.log('Mapped payout requests:', payoutRequests);
       return {
         success: true,
         data: payoutRequests
       };
     }
     
-    return { success: false, error: 'Failed to fetch payout requests' };
+    console.error('API returned success: false', data);
+    return { success: false, error: data.error || data.message || 'Failed to fetch payout requests' };
   } catch (error) {
     console.error('Payout requests API error:', error);
     // Return empty array on error to not break the UI
@@ -391,9 +383,10 @@ export const searchTransactions = async (query, limit = 10) => {
 export const fetchWithdrawals = async (filters = {}) => {
   try {
     const token = localStorage.getItem('authToken');
-    const anonKey = localStorage.getItem('anonKey') || ''; // Get anon key if stored
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     
     const params = new URLSearchParams();
+    params.append('type', 'payouts'); // Add type parameter for unified endpoint
     
     if (filters.status && filters.status !== 'All') {
       params.append('status', filters.status.toLowerCase());
@@ -401,6 +394,8 @@ export const fetchWithdrawals = async (filters = {}) => {
     
     if (filters.page) {
       params.append('page', filters.page.toString());
+    } else {
+      params.append('page', '1'); // Default to page 1 if not specified
     }
     
     if (filters.pageSize) {
@@ -408,19 +403,13 @@ export const fetchWithdrawals = async (filters = {}) => {
     }
     
     const queryString = params.toString();
-    const url = queryString 
-      ? `${API_BASE_URL}/admin-payout-requests-list?${queryString}`
-      : `${API_BASE_URL}/admin-payout-requests-list`;
+    const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
     
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
+      'apikey': anonKey,
     };
-    
-    // Add apikey header if available
-    if (anonKey) {
-      headers['apikey'] = anonKey;
-    }
     
     const response = await fetch(url, {
       method: 'GET',
@@ -449,26 +438,33 @@ export const fetchWithdrawals = async (filters = {}) => {
       throw new Error('Invalid JSON response from server');
     }
     
-    // Handle different possible response structures
+    // Handle different possible response structures from unified endpoint
     let withdrawalsData = [];
     
-    // Check if response indicates success (could be data.success or just data being an array)
-    const isSuccess = data.success === true || data.success === undefined || Array.isArray(data);
-    
-    if (isSuccess) {
-      // Try different possible response structures
+    // Check if response indicates success
+    if (data.success === true) {
+      // Try different possible response structures (same as fetchDriversList pattern)
       if (Array.isArray(data.data)) {
         withdrawalsData = data.data;
+      } else if (data.data?.drivers && Array.isArray(data.data.drivers)) {
+        // Unified endpoint returns payouts in drivers array when type=payouts
+        withdrawalsData = data.data.drivers;
       } else if (data.data?.payout_requests && Array.isArray(data.data.payout_requests)) {
         withdrawalsData = data.data.payout_requests;
+      } else if (data.data?.payouts && Array.isArray(data.data.payouts)) {
+        withdrawalsData = data.data.payouts;
       } else if (data.data?.withdrawals && Array.isArray(data.data.withdrawals)) {
         withdrawalsData = data.data.withdrawals;
+      } else if (data.drivers && Array.isArray(data.drivers)) {
+        withdrawalsData = data.drivers;
       } else if (data.data && typeof data.data === 'object') {
         // If data.data is an object, try to extract an array from it
         withdrawalsData = Object.values(data.data).find(val => Array.isArray(val)) || [];
       } else if (Array.isArray(data)) {
         withdrawalsData = data;
       }
+      
+      console.log('Extracted withdrawals data:', withdrawalsData);
       
       // Map the API response to match the expected structure
       const withdrawals = withdrawalsData.map((req, index) => {
@@ -478,7 +474,7 @@ export const fetchWithdrawals = async (filters = {}) => {
         }
         
         // Helper function to extract string value from nested objects
-        const extractString = (value, fallback = '') => {
+        const extractString = (value, fallback = 'N/A') => {
           if (!value) return fallback;
           if (typeof value === 'string') return value;
           if (typeof value === 'object') {
@@ -492,13 +488,13 @@ export const fetchWithdrawals = async (filters = {}) => {
         const driverInfo = req.driver || req.driver_name || req.driverName || {};
         const driverName = typeof driverInfo === 'string' 
           ? driverInfo 
-          : (driverInfo.name || driverInfo.driver_name || 'Unknown Driver');
+          : (driverInfo.name || driverInfo.driver_name || 'N/A');
         const driverId = typeof driverInfo === 'string'
-          ? (req.driver_id || req.driverId || `driver_${index + 1}`)
-          : (driverInfo.id || driverInfo.driver_id || `driver_${index + 1}`);
+          ? (req.driver_id || req.driverId || 'N/A')
+          : (driverInfo.id || driverInfo.driver_id || 'N/A');
         const driverAvatar = typeof driverInfo === 'string'
-          ? (req.driver_avatar || req.avatar || `https://i.pravatar.cc/80?img=${index + 1}`)
-          : (driverInfo.avatar_url || driverInfo.avatar || driverInfo.profile_image || `https://i.pravatar.cc/80?img=${index + 1}`);
+          ? (req.driver_avatar || req.avatar || null)
+          : (driverInfo.avatar_url || driverInfo.avatar || driverInfo.profile_image || null);
         
         return {
           id: req.id || req.request_id || req.withdrawal_id || `PR${index}`,
@@ -507,9 +503,9 @@ export const fetchWithdrawals = async (filters = {}) => {
           driver_avatar: driverAvatar,
           amount: parseFloat(req.amount) || 0,
           status: (req.status || 'pending').toLowerCase(),
-          request_date: req.request_date || req.requestDate || req.created_at || req.date || new Date().toLocaleDateString(),
-          bank_account: extractString(req.bank_account || req.bankAccount || req.account_number || req.account, '****1234'),
-          bank_name: extractString(req.bank_name || req.bankName || req.bank, 'Qatar National Bank')
+          request_date: req.request_date || req.requestDate || req.created_at || req.date || 'N/A',
+          bank_account: extractString(req.bank_account || req.bankAccount || req.account_number || req.account, 'N/A'),
+          bank_name: extractString(req.bank_name || req.bankName || req.bank, 'N/A')
         };
       }).filter(item => item !== null); // Remove null entries
       
@@ -520,58 +516,24 @@ export const fetchWithdrawals = async (filters = {}) => {
         pagination: data.data?.pagination || data.pagination || {
           page: filters.page || 1,
           pageSize: filters.pageSize || 20,
-          total: withdrawals.length,
-          totalPages: Math.ceil(withdrawals.length / (filters.pageSize || 20))
+          total: data.data?.total_count || data.data?.total || withdrawals.length,
+          totalPages: data.data?.total_pages || data.data?.totalPages || Math.ceil((data.data?.total_count || data.data?.total || withdrawals.length) / (filters.pageSize || 20))
         }
       };
     }
     
-    // If data.success is false, log and fall back to mock data
-    console.warn('API returned success: false, using fallback mock data', data);
-    
-    // Fallback to mock data if API fails
+    // If data.success is false, return error instead of mock data
+    console.error('API returned success: false', data);
     return {
-      success: true,
-      data: mockPayoutRequests.map((req, index) => ({
-        id: req.id,
-        driver_id: `driver_${index + 1}`,
-        driver_name: req.driverName,
-        driver_avatar: req.avatar,
-        amount: req.amount,
-        status: req.status,
-        request_date: req.requestDate,
-        bank_account: '****1234',
-        bank_name: 'Qatar National Bank'
-      })),
-      pagination: {
-        page: 1,
-        pageSize: 20,
-        total: mockPayoutRequests.length,
-        totalPages: 1
-      }
+      success: false,
+      error: data.error || data.message || 'Failed to fetch withdrawals'
     };
   } catch (error) {
     console.error('Withdrawals API error:', error);
-    // Return mock data on error
+    // Return error instead of mock data
     return {
-      success: true,
-      data: mockPayoutRequests.map((req, index) => ({
-        id: req.id,
-        driver_id: `driver_${index + 1}`,
-        driver_name: req.driverName,
-        driver_avatar: req.avatar,
-        amount: req.amount,
-        status: req.status,
-        request_date: req.requestDate,
-        bank_account: '****1234',
-        bank_name: 'Qatar National Bank'
-      })),
-      pagination: {
-        page: 1,
-        pageSize: 20,
-        total: mockPayoutRequests.length,
-        totalPages: 1
-      }
+      success: false,
+      error: error.message || 'Failed to fetch withdrawals'
     };
   }
 };
