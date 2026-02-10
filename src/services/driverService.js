@@ -187,29 +187,52 @@ export const fetchDriverDetails = async (driverId) => {
     
     console.log('📡 RAW DRIVER DETAILS RESPONSE:', JSON.stringify(data, null, 2));
     
-    // Extract driver from data.data.driver
+    // Try multiple possible response structures
+    let driverData = null;
+    
+    // Structure 1: data.data.driver (most common)
     if (data.success && data.data && data.data.driver) {
+      driverData = data.data.driver;
+    }
+    // Structure 2: data.data (driver at top level of data)
+    else if (data.success && data.data && data.data.id) {
+      driverData = data.data;
+    }
+    // Structure 3: data.driver (driver directly in response)
+    else if (data.success && data.driver && data.driver.id) {
+      driverData = data.driver;
+    }
+    // Structure 4: data is the driver object itself
+    else if (data.id && (data.full_name || data.name)) {
+      driverData = data;
+    }
+    
+    if (driverData) {
       console.log('✅ DRIVER DETAILS EXTRACTED SUCCESSFULLY:', {
-        '📊 Driver Data': data.data.driver,
-        '🔍 Driver ID': data.data.driver.id,
-        '👤 Driver Name': data.data.driver.full_name,
-        '📱 Phone': data.data.driver.phone,
-        '🚗 Vehicle Info': data.data.driver.driver_profile,
-        '💰 Earnings': data.data.driver.earnings,
-        '🚕 Recent Rides': data.data.driver.recent_rides
+        '📊 Driver Data': driverData,
+        '🔍 Driver ID': driverData.id,
+        '👤 Driver Name': driverData.full_name || driverData.name,
+        '📱 Phone': driverData.phone || driverData.phone_number,
+        '🚗 Vehicle Info': driverData.driver_profile,
+        '📄 Has Driver Profile': !!driverData.driver_profile,
+        '✅ Is Verified': driverData.is_verified,
+        '💰 Earnings': driverData.earnings,
+        '🚕 Recent Rides': driverData.recent_rides
       });
       
-      return { success: true, data: data.data.driver };
+      return { success: true, data: driverData };
     }
     
     console.log('❌ INVALID DRIVER DETAILS RESPONSE STRUCTURE:', {
       '📊 Raw Data': data,
       '🔍 Success': data.success,
       '🔍 Has Data': !!data.data,
-      '🔍 Has Driver': !!data.data?.driver
+      '🔍 Has Driver': !!data.data?.driver,
+      '🔍 Data Keys': data.data ? Object.keys(data.data) : 'No data',
+      '🔍 Top Level Keys': Object.keys(data)
     });
     
-    return { success: false, error: 'Invalid response structure' };
+    return { success: false, error: 'Invalid response structure - driver data not found' };
   } catch (error) {
     console.error('❌ FETCH DRIVER DETAILS ERROR:', {
       '🚨 Error Message': error.message,
@@ -547,8 +570,12 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    let url = `${API_BASE_URL}/admin-drivers-export-csv`;
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
+    // Build URL with required parameters
     const params = [];
+    params.push('type=drivers'); // Required parameter
+    params.push('format=csv'); // Required for CSV export
     
     if (status && status !== 'All Statuses' && status.toLowerCase() !== 'all') {
       params.push(`status=${encodeURIComponent(status.toLowerCase())}`);
@@ -560,15 +587,15 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
       params.push(`min_rating=${encodeURIComponent(ratingValue)}`);
     }
     
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
-    }
+    const queryString = params.join('&');
+    const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
 
     console.log('🚀 EXPORT DRIVERS CSV REQUEST:', {
       '🔗 URL': url,
       '📊 Status Filter': status,
       '⭐ Min Rating': minRating,
       '🔑 Has Token': !!token,
+      '🔑 Has Anon Key': !!anonKey,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
@@ -577,6 +604,7 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
         'Content-Type': 'application/json',
       },
     });

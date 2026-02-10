@@ -10,7 +10,7 @@ import checkIcon from '../../assets/icons/check.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
 import { fetchDashboardData, fetchRidesAnalytics } from '../../services/dashboardService';
 import { logoutUser } from '../../services/authService';
-import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV } from '../../services/financialService';
+import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV, fetchCashRides } from '../../services/financialService';
 import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved, markAsPending } from '../../services/supportService';
 import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
 import Toast from '../../components/common/Toast';
@@ -43,9 +43,11 @@ export default function DashboardView() {
   // Financial Management states
   const [financialOverview, setFinancialOverview] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [allTransactions, setAllTransactions] = useState([]); // Store all transactions for filtering
   const [payoutRequests, setPayoutRequests] = useState([]);
   const [isFinancialLoading, setIsFinancialLoading] = useState(false);
   const [transactionFilter, setTransactionFilter] = useState('All Types');
+  const [activeTransactionTab, setActiveTransactionTab] = useState('all'); // 'all' or 'cash'
   const [showAdminWithdrawModal, setShowAdminWithdrawModal] = useState(false);
   const [isProcessingWithdraw, setIsProcessingWithdraw] = useState(false);
   
@@ -54,6 +56,8 @@ export default function DashboardView() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [ticketFilter, setTicketFilter] = useState('all');
   const [isSupportLoading, setIsSupportLoading] = useState(false);
+  const [isLoadingTicketDetails, setIsLoadingTicketDetails] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
   
@@ -118,7 +122,8 @@ export default function DashboardView() {
     if (activeSection !== 'support') {
       stopTicketPolling();
     }
-  }, [activeSection, ticketFilter]);
+  }, [activeSection, ticketFilter, transactionFilter, activeTransactionTab]);
+
 
   // Cleanup polling interval on component unmount
   useEffect(() => {
@@ -206,9 +211,14 @@ export default function DashboardView() {
     setIsFinancialLoading(true);
     
     try {
+      // Fetch transactions or cash rides based on active tab
+      const transactionsPromise = activeTransactionTab === 'cash' 
+        ? fetchCashRides()
+        : fetchTransactions({ type: transactionFilter });
+      
       const [overviewResult, transactionsResult, payoutRequestsResult] = await Promise.all([
         fetchFinancialOverview(),
-        fetchTransactions({ type: transactionFilter }),
+        transactionsPromise,
         fetchPayoutRequests('pending') // Fetch pending payout requests from the dedicated API
       ]);
       
@@ -217,7 +227,9 @@ export default function DashboardView() {
       }
       
       if (transactionsResult.success) {
-        setTransactions(transactionsResult.data);
+        const transactionsData = transactionsResult.data || [];
+        setAllTransactions(transactionsData);
+        setTransactions(transactionsData);
       }
       
       if (payoutRequestsResult.success) {
@@ -533,6 +545,8 @@ export default function DashboardView() {
       navigate('/reports');
     } else if (navItem === 'withdrawals') {
       navigate('/withdrawals');
+    } else if (navItem === 'notifications') {
+      navigate('/notifications');
     }
     // Add other navigation handlers as needed
   }, [navigate]);
@@ -542,6 +556,12 @@ export default function DashboardView() {
   };
   
   const handleTicketSelect = async (ticket) => {
+    // Don't reload if the same ticket is clicked
+    if (selectedTicket?.id === ticket.id) return;
+    
+    setIsLoadingTicketDetails(true);
+    setSelectedTicket(null); // Clear previous ticket to show loading state
+    
     try {
       const details = await fetchTicketDetails(ticket.id);
       setSelectedTicket(details);
@@ -550,6 +570,8 @@ export default function DashboardView() {
       startTicketPolling(ticket.id);
     } catch (err) {
       console.error('Error fetching ticket details:', err);
+    } finally {
+      setIsLoadingTicketDetails(false);
     }
   };
 
@@ -618,10 +640,13 @@ export default function DashboardView() {
   };
   
   const handleSendMessage = async () => {
-    if (!replyMessage.trim() || !selectedTicket) return;
+    if (!replyMessage.trim() || !selectedTicket || isSendingMessage) return;
+    
+    setIsSendingMessage(true);
+    const messageToSend = replyMessage.trim();
     
     try {
-      await sendMessage(selectedTicket.id, replyMessage);
+      await sendMessage(selectedTicket.id, messageToSend);
       setReplyMessage('');
       
       // Refresh the ticket details to show the new message immediately
@@ -632,6 +657,9 @@ export default function DashboardView() {
       startTicketPolling(selectedTicket.id);
     } catch (err) {
       console.error('Error sending message:', err);
+      // Optionally show error toast here
+    } finally {
+      setIsSendingMessage(false);
     }
   };
   
@@ -792,6 +820,7 @@ export default function DashboardView() {
           <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
           <NavItem icon="support_agent" label={t('navigation.support')} active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} active={activeSection === 'analytics'} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -1092,7 +1121,23 @@ export default function DashboardView() {
                   <section className="financial-grid">
                     <div className="transactions-panel">
                       <div className="panel-header">
-                        <h3>{t('financial.allTransactions')}</h3>
+                        <div className="panel-header-left">
+                          <h3>{t('financial.allTransactions')}</h3>
+                          <div className="transaction-tabs">
+                            <button
+                              className={`tab-btn ${activeTransactionTab === 'all' ? 'active' : ''}`}
+                              onClick={() => setActiveTransactionTab('all')}
+                            >
+                              All Transactions
+                            </button>
+                            <button
+                              className={`tab-btn ${activeTransactionTab === 'cash' ? 'active' : ''}`}
+                              onClick={() => setActiveTransactionTab('cash')}
+                            >
+                              Cash Rides
+                            </button>
+                          </div>
+                        </div>
                         <div className="panel-controls">
                           <div className="date-picker-wrapper">
                             <input type="text" placeholder="mm/dd/yyyy" className="date-picker" />
@@ -1127,27 +1172,38 @@ export default function DashboardView() {
                             </tr>
                           </thead>
                           <tbody>
-                            {transactions.map((transaction) => (
-                              <tr key={transaction.id}>
-                                <td className="transaction-id">{transaction.id}</td>
-                                <td>{transaction.date}</td>
-                                <td>{transaction.user}</td>
-                                <td>
-                                  <span className={`type-pill ${transaction.type.toLowerCase()}`}>
-                                    {transaction.type}
-                                  </span>
-                                </td>
-                                <td className="amount">{formatCurrency(transaction.amount)}</td>
-                                <td>
-                                  <span className={`status-badge ${transaction.status.toLowerCase()}`}>
-                                    <span className="material-symbols-outlined">
-                                      {transaction.status === 'Completed' ? 'check_circle' : 'schedule'}
-                                    </span>
-                                    {transaction.status}
-                                  </span>
+                            {transactions.length === 0 ? (
+                              <tr>
+                                <td colSpan="6" className="no-transactions">
+                                  <div className="no-transactions-content">
+                                    <span className="material-symbols-outlined">receipt_long</span>
+                                    <p>{activeTransactionTab === 'cash' ? 'No cash rides found' : 'No transactions found'}</p>
+                                  </div>
                                 </td>
                               </tr>
-                            ))}
+                            ) : (
+                              transactions.map((transaction) => (
+                                <tr key={transaction.id}>
+                                  <td className="transaction-id">{transaction.id}</td>
+                                  <td>{transaction.date}</td>
+                                  <td>{transaction.user}</td>
+                                  <td>
+                                    <span className={`type-pill ${transaction.type.toLowerCase()}`}>
+                                      {transaction.type}
+                                    </span>
+                                  </td>
+                                  <td className="amount">{formatCurrency(transaction.amount)}</td>
+                                  <td>
+                                    <span className={`status-badge ${transaction.status.toLowerCase()}`}>
+                                      <span className="material-symbols-outlined">
+                                        {transaction.status === 'Completed' ? 'check_circle' : 'schedule'}
+                                      </span>
+                                      {transaction.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
                           </tbody>
                         </table>
                       </div>
@@ -1319,7 +1375,12 @@ export default function DashboardView() {
 
                   {/* Right Panel - Ticket Details & Conversation */}
                   <div className="ticket-details">
-                    {selectedTicket ? (
+                    {isLoadingTicketDetails ? (
+                      <div className="ticket-loading-container">
+                        <div className="loading-spinner"></div>
+                        <p>{t('support.loadingTicketDetails') || 'Loading ticket details...'}</p>
+                      </div>
+                    ) : selectedTicket ? (
                       <>
                         <div className="ticket-details-header">
                           <div className="ticket-title-section">
@@ -1412,10 +1473,21 @@ export default function DashboardView() {
                               <button 
                                 className="send-btn" 
                                 onClick={handleSendMessage}
-                                disabled={!replyMessage.trim()}
+                                disabled={!replyMessage.trim() || isSendingMessage}
                               >
-                                <span className="material-symbols-outlined">send</span>
-                                {t('support.send')}
+                                {isSendingMessage ? (
+                                  <>
+                                    <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite' }}>
+                                      hourglass_empty
+                                    </span>
+                                    {t('support.sending') || 'Sending...'}
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="material-symbols-outlined">send</span>
+                                    {t('support.send')}
+                                  </>
+                                )}
                               </button>
                             </div>
                           )}

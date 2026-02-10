@@ -252,6 +252,8 @@ export default function RentalManagementView() {
       navigate('/dashboard?section=financial');
     } else if (navItem === 'withdrawals') {
       navigate('/withdrawals');
+    } else if (navItem === 'notifications') {
+      navigate('/notifications');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -304,6 +306,7 @@ export default function RentalManagementView() {
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />

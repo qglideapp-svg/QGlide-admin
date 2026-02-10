@@ -1,0 +1,319 @@
+/* Import Poppins font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import '../../components/layout/CollapsibleSidebar.css';
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Notification Management Layout */
+.notification-management { 
+  display: flex; 
+  font-family: 'Poppins', sans-serif; 
+}
+
+.side { 
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 240px;
+  overflow-y: auto;
+  background: #fff; 
+  border-right: 1px solid #e5e7eb; 
+  padding: 14px 10px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
+}
+
+.main { 
+  display: block; 
+  flex: 1; 
+  margin-left: 240px; 
+}
+
+.notification-management .container {
+  padding: 24px;
+}
+
+.notification-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.header-left h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Form Styles */
+.notification-form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  font-family: 'Poppins', sans-serif;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  padding: 12px 14px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #111827;
+  outline: none;
+  transition: all 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: #FCD34D;
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.1);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #9CA3AF;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.5;
+}
+
+.form-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #6B7280;
+  margin-top: -4px;
+}
+
+.char-count {
+  position: absolute;
+  bottom: 8px;
+  right: 14px;
+  font-size: 12px;
+  color: #9CA3AF;
+  font-weight: 400;
+}
+
+.form-group:has(.form-textarea) .char-count {
+  bottom: 12px;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid #E5E7EB;
+  margin-top: 8px;
+}
+
+.btn-cancel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-submit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #FDE68A;
+  border: 1px solid #FCD34D;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400E;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #FCD34D;
+  border-color: #FBBF24;
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #F3F4F6;
+  border-color: #E5E7EB;
+  color: #9CA3AF;
+}
+
+.btn-submit .material-symbols-outlined,
+.btn-cancel .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Dark Mode Support */
+.notification-management.dark-mode .notification-card {
+  background: #1F2937;
+  color: #F9FAFB;
+}
+
+.notification-management.dark-mode .header-left h2 {
+  color: #F9FAFB;
+}
+
+.notification-management.dark-mode .subtitle {
+  color: #9CA3AF;
+}
+
+.notification-management.dark-mode .form-input,
+.notification-management.dark-mode .form-select,
+.notification-management.dark-mode .form-textarea {
+  background: #374151;
+  border-color: #4B5563;
+  color: #F9FAFB;
+}
+
+.notification-management.dark-mode .form-input:focus,
+.notification-management.dark-mode .form-select:focus,
+.notification-management.dark-mode .form-textarea:focus {
+  border-color: #FCD34D;
+}
+
+.notification-management.dark-mode .form-group label {
+  color: #D1D5DB;
+}
+
+.notification-management.dark-mode .form-hint {
+  color: #9CA3AF;
+}
+
+.notification-management.dark-mode .char-count {
+  color: #9CA3AF;
+}
+
+.notification-management.dark-mode .card-header {
+  border-bottom-color: #4B5563;
+}
+
+.notification-management.dark-mode .form-actions {
+  border-top-color: #4B5563;
+}
+
+.notification-management.dark-mode .btn-cancel {
+  background: #374151;
+  border-color: #4B5563;
+  color: #D1D5DB;
+}
+
+.notification-management.dark-mode .btn-cancel:hover:not(:disabled) {
+  background: #4B5563;
+  border-color: #6B7280;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .notification-management .container {
+    padding: 16px;
+  }
+
+  .notification-card {
+    max-width: 100%;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .notification-form {
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .btn-cancel,
+  .btn-submit {
+    width: 100%;
+    justify-content: center;
+  }
+}

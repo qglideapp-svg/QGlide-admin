@@ -3,6 +3,7 @@
 import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
 // Helper function to add default colors to data arrays
 const addColorsToData = (data, colorPalette) => {
@@ -26,6 +27,8 @@ export const fetchAnalyticsReports = async (startDate, endDate) => {
       '⏰ Timestamp': new Date().toISOString()
     });
 
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
     const params = new URLSearchParams({
       start_date: startDate,
       end_date: endDate
@@ -35,6 +38,7 @@ export const fetchAnalyticsReports = async (startDate, endDate) => {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
         'Content-Type': 'application/json'
       }
     });
@@ -286,15 +290,19 @@ export const exportAnalyticsReport = async (startDate, endDate) => {
       '⏰ Timestamp': new Date().toISOString()
     });
 
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
     const params = new URLSearchParams({
       start_date: startDate,
-      end_date: endDate
+      end_date: endDate,
+      format: 'csv'
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-export?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
         'Content-Type': 'application/json'
       }
     });
@@ -347,16 +355,18 @@ export const exportAnalyticsAsJSON = async (startDate, endDate) => {
       '⏰ Timestamp': new Date().toISOString()
     });
 
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
     const params = new URLSearchParams({
       start_date: startDate,
-      end_date: endDate,
-      format: 'json'
+      end_date: endDate
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-export?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
         'Content-Type': 'application/json'
       }
     });
@@ -410,17 +420,20 @@ export const exportRevenueData = async (startDate, endDate) => {
       '⏰ Timestamp': new Date().toISOString()
     });
 
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
     const params = new URLSearchParams({
       start_date: startDate,
       end_date: endDate,
-      sections: 'revenue_by_payment_type',
-      format: 'csv'
+      format: 'csv',
+      sections: 'revenue_by_payment_type'
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-export?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
         'Content-Type': 'application/json'
       }
     });
@@ -503,17 +516,20 @@ export const exportSpecificSections = async (startDate, endDate, sections) => {
       '⏰ Timestamp': new Date().toISOString()
     });
 
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
     const params = new URLSearchParams({
       start_date: startDate,
       end_date: endDate,
-      sections: sectionsParam,
-      format: 'csv'
+      format: 'csv',
+      sections: sectionsParam
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-export?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
         'Content-Type': 'application/json'
       }
     });

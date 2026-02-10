@@ -151,6 +151,63 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+.document-iframe {
+  width: 100%;
+  min-height: 500px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.document-file-viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.file-icon-wrapper {
+  margin-bottom: 20px;
+}
+
+.file-icon {
+  font-size: 80px;
+  color: #9ca3af;
+}
+
+.file-type-text {
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0 0 20px 0;
+}
+
+.btn-open-document {
+  padding: 12px 24px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.btn-open-document:hover {
+  background: #1d4ed8;
+}
+
+.btn-open-document .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .document-placeholder {
   display: flex;
   align-items: center;

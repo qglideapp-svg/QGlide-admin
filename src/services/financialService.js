@@ -183,27 +183,61 @@ export const fetchTransactions = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
     
-    // Add filter parameters if provided (only what the UI currently supports)
+    // Add pagination if provided
+    if (filters.page) {
+      params.append('page', filters.page.toString());
+    } else {
+      params.append('page', '1'); // Default to page 1
+    }
+    
+    if (filters.limit) {
+      params.append('limit', filters.limit.toString());
+    } else {
+      params.append('limit', '20'); // Default limit
+    }
+    
+    // Add filter parameters if provided
     if (filters.type && filters.type !== 'All Types') {
       // Map UI values to API values
       const typeMapping = {
         'Fare': 'fare',
         'Top-up': 'topup',
         'Payout': 'payout', 
-        'Refund': 'refund'
+        'Refund': 'refund',
+        'Cash Payment': 'cash_payment'
       };
       const apiType = typeMapping[filters.type] || filters.type.toLowerCase();
       params.append('type', apiType);
     }
     
-    const queryString = params.toString();
-    const url = queryString 
-      ? `${API_BASE_URL}/admin-transactions-list?${queryString}`
-      : `${API_BASE_URL}/admin-transactions-list`;
+    if (filters.status) {
+      params.append('status', filters.status);
+    }
+    
+    if (filters.start_date) {
+      params.append('start_date', filters.start_date);
+    }
+    
+    if (filters.end_date) {
+      params.append('end_date', filters.end_date);
+    }
+    
+    const token = localStorage.getItem('authToken');
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+    
+    const url = `${API_BASE_URL}/admin-transactions-list?${params.toString()}`;
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
+        'Content-Type': 'application/json',
+      },
     });
     
     if (!response.ok) {
@@ -215,14 +249,113 @@ export const fetchTransactions = async (filters = {}) => {
     if (data.success) {
       return {
         success: true,
-        data: data.data.transactions,
-        pagination: data.data.pagination
+        data: data.data?.transactions || data.data || [],
+        pagination: data.data?.pagination || data.pagination
       };
     }
     
     return { success: false, error: 'Failed to fetch transactions' };
   } catch (error) {
     console.error('Transactions API error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Fetch cash rides using dedicated cash-ride-transactions endpoint
+export const fetchCashRides = async (filters = {}) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+    
+    const params = new URLSearchParams();
+    
+    // Add pagination if provided
+    if (filters.page) {
+      params.append('page', filters.page.toString());
+    } else {
+      params.append('page', '1'); // Default to page 1
+    }
+    
+    if (filters.limit) {
+      params.append('limit', filters.limit.toString());
+    } else {
+      params.append('limit', '20'); // Default limit
+    }
+    
+    // Add optional filters
+    if (filters.status) {
+      params.append('status', filters.status);
+    }
+    
+    if (filters.start_date) {
+      params.append('start_date', filters.start_date);
+    }
+    
+    if (filters.end_date) {
+      params.append('end_date', filters.end_date);
+    }
+    
+    // Use dedicated cash-ride-transactions endpoint
+    const url = `${API_BASE_URL}/cash-ride-transactions?${params.toString()}`;
+    
+    console.log('🚀 FETCH CASH RIDES REQUEST:', {
+      '🔗 URL': url,
+      '📊 Filters': filters,
+      '🔑 Has Token': !!token,
+      '🔑 Has Anon Key': !!anonKey,
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': anonKey,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      // Try to get error details from response
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+        console.error('❌ Cash rides API error response:', errorData);
+      } catch (e) {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    
+    console.log('📡 CASH RIDES API RESPONSE:', {
+      '✅ Success': data.success,
+      '📊 Has Data': !!data.data,
+      '📋 Response Structure': Object.keys(data),
+      '⏰ Timestamp': new Date().toISOString()
+    });
+    
+    if (data.success) {
+      // Extract transactions from the response
+      // The API returns transactions in data.data.transactions or data.data
+      const cashRides = data.data?.transactions || data.data || [];
+      
+      return {
+        success: true,
+        data: Array.isArray(cashRides) ? cashRides : [],
+        pagination: data.data?.pagination || data.pagination
+      };
+    }
+    
+    return { success: false, error: data.error || 'Failed to fetch cash rides' };
+  } catch (error) {
+    console.error('❌ Cash rides API error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -553,13 +686,20 @@ export const approveWithdrawal = async (payoutRequestId, adminNotes = '') => {
       headers['apikey'] = anonKey;
     }
     
-    const response = await fetch(`${API_BASE_URL}/admin-payout-approve`, {
+    const requestBody = {
+      payout_request_id: payoutRequestId,
+      action: 'approve'
+    };
+    
+    // Include admin_notes only if provided (it's optional)
+    if (adminNotes && adminNotes.trim()) {
+      requestBody.admin_notes = adminNotes.trim();
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/admin-payout-action`, {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({
-        payout_request_id: payoutRequestId,
-        admin_notes: adminNotes || 'Approved and processed'
-      })
+      body: JSON.stringify(requestBody)
     });
     
     if (!response.ok) {
@@ -608,11 +748,12 @@ export const rejectWithdrawal = async (payoutRequestId, reason = '') => {
       headers['apikey'] = anonKey;
     }
     
-    const response = await fetch(`${API_BASE_URL}/admin-payout-decline`, {
+    const response = await fetch(`${API_BASE_URL}/admin-payout-action`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         payout_request_id: payoutRequestId,
+        action: 'decline',
         reason: reason || 'Withdrawal request declined'
       })
     });

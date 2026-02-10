@@ -109,6 +109,11 @@
   color: #DC2626;
 }
 
+.driver-profile-status-badge.driver-profile-status-pending {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
 .driver-rating {
   display: flex;
   align-items: center;
@@ -462,6 +467,19 @@
   font-weight: 600;
   color: #111827;
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.document-has-url-indicator {
+  display: inline-flex;
+  align-items: center;
+  color: #16A34A;
+}
+
+.document-has-url-indicator .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .document-status {
@@ -492,6 +510,30 @@
 
 .btn-view-document .material-symbols-outlined {
   font-size: 20px;
+}
+
+/* Removed disabled state - button is always clickable to show modal even if URL is missing */
+
+.no-documents {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #6B7280;
+}
+
+.no-documents .material-symbols-outlined {
+  font-size: 48px;
+  color: #D1D5DB;
+  margin-bottom: 12px;
+}
+
+.no-documents p {
+  font-size: 14px;
+  margin: 0;
+  color: #9CA3AF;
 }
 
 /* Responsive */

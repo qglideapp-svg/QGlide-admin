@@ -40,17 +40,54 @@ const DocumentViewModal = ({ isOpen, onClose, document }) => {
           </div>
 
           <div className="document-viewer">
-            {document.url ? (
-              <img 
-                src={document.url} 
-                alt={document.name}
-                className="document-image"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
+            {document.url ? (() => {
+              const url = document.url;
+              const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url);
+              const isPdf = /\.(pdf)$/i.test(url);
+              
+              if (isPdf) {
+                return (
+                  <iframe
+                    src={url}
+                    className="document-iframe"
+                    title={document.name}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                );
+              } else if (isImage) {
+                return (
+                  <img 
+                    src={url} 
+                    alt={document.name}
+                    className="document-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                );
+              } else {
+                // For other file types, show a link to open/download
+                return (
+                  <div className="document-file-viewer">
+                    <div className="file-icon-wrapper">
+                      <span className="material-symbols-outlined file-icon">description</span>
+                    </div>
+                    <p className="file-type-text">This document cannot be previewed</p>
+                    <button 
+                      className="btn-open-document"
+                      onClick={() => window.open(url, '_blank')}
+                    >
+                      <span className="material-symbols-outlined">open_in_new</span>
+                      Open Document
+                    </button>
+                  </div>
+                );
+              }
+            })() : null}
             
             <div className="document-placeholder" style={{ display: document.url ? 'none' : 'flex' }}>
               <div className="placeholder-content">

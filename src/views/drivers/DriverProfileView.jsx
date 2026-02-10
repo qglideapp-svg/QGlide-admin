@@ -24,10 +24,15 @@ const NavItem = ({ icon, label, active, onClick }) => (
 const StatusBadge = ({ status }) => {
   const getStatusClass = (status) => {
     if (!status) return 'driver-profile-status-offline';
-    switch (status.toLowerCase()) {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
       case 'active': return 'driver-profile-status-active';
       case 'offline': return 'driver-profile-status-offline';
       case 'suspended': return 'driver-profile-status-suspended';
+      case 'pending verification':
+      case 'pending':
+      case 'awaiting verification':
+        return 'driver-profile-status-pending';
       default: return 'driver-profile-status-offline';
     }
   };
@@ -103,8 +108,12 @@ export default function DriverProfileView() {
             'Raw Documents': apiDriver.documents,
             'Driver Profile Documents': apiDriver.driver_profile?.documents,
             'Uploaded Documents': apiDriver.uploaded_documents,
+            'Driver Documents': apiDriver.driver_documents,
             'All API Keys': Object.keys(apiDriver),
-            'Driver Profile Keys': apiDriver.driver_profile ? Object.keys(apiDriver.driver_profile) : 'No driver_profile'
+            'Driver Profile Keys': apiDriver.driver_profile ? Object.keys(apiDriver.driver_profile) : 'No driver_profile',
+            'Driver Profile Full': apiDriver.driver_profile,
+            'Is Verified': apiDriver.is_verified,
+            'Full API Driver': apiDriver
           });
           
           // Log status fields for debugging
@@ -118,37 +127,47 @@ export default function DriverProfileView() {
           });
           
           // Transform API data to match existing UI structure
-          // Determine status: check for suspended first, then online/offline
+          // Determine status: check for suspended first, then pending/awaiting verification, then online/offline
           let driverStatus = 'Offline';
           if (apiDriver.status?.toLowerCase() === 'suspended' || 
               apiDriver.driver_profile?.status?.toLowerCase() === 'suspended' ||
               apiDriver.is_suspended === true ||
               apiDriver.driver_profile?.is_suspended === true) {
             driverStatus = 'Suspended';
+          } else if (apiDriver.status?.toLowerCase() === 'pending' || 
+                     apiDriver.status?.toLowerCase() === 'awaiting verification' ||
+                     apiDriver.driver_profile?.status?.toLowerCase() === 'pending' ||
+                     apiDriver.driver_profile?.status?.toLowerCase() === 'awaiting verification' ||
+                     apiDriver.is_verified === false ||
+                     (apiDriver.driver_profile && apiDriver.driver_profile.is_verified === false)) {
+            driverStatus = 'Pending Verification';
           } else if (apiDriver.driver_profile?.is_online) {
             driverStatus = 'Active';
           }
           
           console.log('✅ DETERMINED DRIVER STATUS:', driverStatus);
           
+          // Handle driver_profile - it might be null for unverified drivers
+          const driverProfile = apiDriver.driver_profile || {};
+          
           const transformedData = {
             id: apiDriver.id || driverId,
-            name: apiDriver.full_name || 'Unknown Driver',
-            avatar: apiDriver.avatar_url || `https://i.pravatar.cc/120?img=${driverId}`,
+            name: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
+            avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || `https://i.pravatar.cc/120?img=${driverId}`,
             status: driverStatus,
-            rating: parseFloat(apiDriver.rating || 0),
+            rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
             totalReviews: Math.floor(Math.random() * 1000) + 100, // Mock reviews count
             acceptanceRate: Math.floor(Math.random() * 20) + 80, // Mock acceptance rate
-            totalRides: parseInt(apiDriver.total_rides || 0),
+            totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0),
             ridesThisMonth: Math.floor(Math.random() * 100) + 20, // Mock monthly rides
-            totalEarnings: parseFloat(apiDriver.earnings?.total || 0),
-            earningsThisMonth: parseFloat(apiDriver.earnings?.this_month || 0),
+            totalEarnings: parseFloat(apiDriver.earnings?.total || apiDriver.total_earnings || 0),
+            earningsThisMonth: parseFloat(apiDriver.earnings?.this_month || apiDriver.earnings_this_month || 0),
             cancellationRate: Math.floor(Math.random() * 5) + 1, // Mock cancellation rate
     personalDetails: {
-              fullName: apiDriver.full_name || 'Unknown Driver',
+              fullName: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
               email: apiDriver.email || 'No email provided',
-              phone: apiDriver.phone || 'No phone provided',
-              address: 'Address not available', // Not in API response
+              phone: apiDriver.phone || apiDriver.phone_number || 'No phone provided',
+              address: apiDriver.address || driverProfile.address || 'Address not available',
               dateJoined: apiDriver.created_at ? new Date(apiDriver.created_at).toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: 'short', 
@@ -156,43 +175,162 @@ export default function DriverProfileView() {
               }) : 'Unknown'
     },
     vehicleDetails: {
-              model: apiDriver.driver_profile?.vehicle_model || 'Unknown Vehicle',
-              year: apiDriver.driver_profile?.vehicle_year || new Date().getFullYear(),
-              licensePlate: apiDriver.driver_profile?.vehicle_plate || 'Not provided',
-              color: apiDriver.driver_profile?.vehicle_color || 'Unknown',
-              vin: 'Not available' // Not in API response
+              model: driverProfile.vehicle_model || apiDriver.vehicle_model || 'Not provided yet',
+              year: driverProfile.vehicle_year || apiDriver.vehicle_year || new Date().getFullYear(),
+              licensePlate: driverProfile.vehicle_plate || apiDriver.vehicle_plate || apiDriver.license_plate || 'Not provided yet',
+              color: driverProfile.vehicle_color || apiDriver.vehicle_color || 'Not provided yet',
+              vin: driverProfile.vin || apiDriver.vin || 'Not available' // Not in API response
     },
     documents: (() => {
-              // Try to get documents from API first
-              const apiDocuments = apiDriver.documents || apiDriver.driver_profile?.documents || apiDriver.uploaded_documents || [];
+              // Try to get documents from API first - check multiple possible locations
+              let apiDocuments = null;
               
-              if (apiDocuments && apiDocuments.length > 0) {
-                // Use actual API document data
-                return apiDocuments.map(doc => ({
-                  name: doc.document_name || doc.name || doc.type || doc.title || 'Unknown Document',
-                  status: doc.status || doc.verification_status || doc.approval_status || 'Pending',
-                  uploadDate: doc.upload_date || doc.uploaded_at || doc.created_at || null,
-                  url: doc.document_url || doc.url || doc.file_url || null
+              // Check various possible locations for documents
+              if (apiDriver.documents && Array.isArray(apiDriver.documents) && apiDriver.documents.length > 0) {
+                apiDocuments = apiDriver.documents;
+              } else if (driverProfile.documents && Array.isArray(driverProfile.documents) && driverProfile.documents.length > 0) {
+                apiDocuments = driverProfile.documents;
+              } else if (apiDriver.uploaded_documents && Array.isArray(apiDriver.uploaded_documents) && apiDriver.uploaded_documents.length > 0) {
+                apiDocuments = apiDriver.uploaded_documents;
+              } else if (apiDriver.driver_documents && Array.isArray(apiDriver.driver_documents) && apiDriver.driver_documents.length > 0) {
+                apiDocuments = apiDriver.driver_documents;
+              } else if (apiDriver.document_urls && typeof apiDriver.document_urls === 'object') {
+                // Handle case where documents are stored as an object with keys
+                apiDocuments = Object.entries(apiDriver.document_urls).map(([key, url]) => ({
+                  document_type: key,
+                  document_url: url,
+                  status: 'Verified'
                 }));
+              } else if (driverProfile.document_urls && typeof driverProfile.document_urls === 'object') {
+                // Handle case where documents are in driver_profile as object
+                apiDocuments = Object.entries(driverProfile.document_urls).map(([key, url]) => ({
+                  document_type: key,
+                  document_url: url,
+                  status: 'Verified'
+                }));
+              }
+              
+              console.log('📄 DOCUMENT EXTRACTION:', {
+                'Found Documents': !!apiDocuments,
+                'Documents Count': apiDocuments ? apiDocuments.length : 0,
+                'Documents': apiDocuments
+              });
+              
+              if (apiDocuments && Array.isArray(apiDocuments) && apiDocuments.length > 0) {
+                // Use actual API document data
+                const mappedDocuments = apiDocuments.map(doc => {
+                  const docName = doc.document_name || doc.name || doc.type || doc.title || doc.document_type || 'Unknown Document';
+                  const docStatus = doc.status || doc.verification_status || doc.approval_status || 'Pending';
+                  // Try multiple possible URL field names
+                  const docUrl = doc.document_url || 
+                                doc.url || 
+                                doc.file_url || 
+                                doc.file_path || 
+                                doc.image_url || 
+                                doc.file ||
+                                doc.document_file_url ||
+                                doc.upload_url ||
+                                doc.preview_url ||
+                                doc.download_url ||
+                                (typeof doc === 'string' ? doc : null) || // In case the doc itself is a URL
+                                null;
+                  
+                  // Also check if URL might be in a nested object
+                  let nestedUrl = null;
+                  if (doc.file && typeof doc.file === 'object') {
+                    nestedUrl = doc.file.url || doc.file.path || doc.file.file_url || null;
+                  }
+                  if (doc.document && typeof doc.document === 'object') {
+                    nestedUrl = nestedUrl || doc.document.url || doc.document.path || doc.document.file_url || null;
+                  }
+                  
+                  const finalUrl = docUrl || nestedUrl;
+                  
+                  console.log('📄 Mapping Document:', {
+                    'Name': docName,
+                    'Status': docStatus,
+                    'Doc URL (direct)': docUrl,
+                    'Nested URL': nestedUrl,
+                    'Final URL': finalUrl,
+                    'Raw Doc': doc
+                  });
+                  
+                  return {
+                    name: docName,
+                    status: docStatus,
+                    uploadDate: doc.upload_date || doc.uploaded_at || doc.created_at || null,
+                    url: finalUrl
+                  };
+                });
+                
+                console.log('✅ MAPPED DOCUMENTS:', mappedDocuments);
+                return mappedDocuments;
               } else {
-                // Fallback to hardcoded data if API doesn't provide documents
-                console.log('📄 Using fallback document data - API did not provide documents');
+                // For verified drivers, try to extract document URLs from individual fields
+                console.log('📄 Using fallback document data - checking individual document URL fields');
+                const isVerified = apiDriver.is_verified === true || driverProfile.is_verified === true;
+                const hasLicense = !!(driverProfile.license_number || apiDriver.license_number);
+                const hasVehiclePlate = !!(driverProfile.vehicle_plate || apiDriver.vehicle_plate);
+                const backgroundCheckStatus = driverProfile.background_check_status || apiDriver.background_check_status;
+                
+                // Check for document URLs in various possible field names
+                const idDocUrl = apiDriver.id_document_url || 
+                                driverProfile.id_document_url || 
+                                apiDriver.id_document || 
+                                driverProfile.id_document ||
+                                apiDriver.qatari_id_url ||
+                                driverProfile.qatari_id_url ||
+                                null;
+                
+                const licenseDocUrl = apiDriver.license_document_url || 
+                                     driverProfile.license_document_url || 
+                                     apiDriver.license_document || 
+                                     driverProfile.license_document ||
+                                     apiDriver.driver_license_url ||
+                                     driverProfile.driver_license_url ||
+                                     null;
+                
+                const vehicleDocUrl = apiDriver.vehicle_registration_url || 
+                                    driverProfile.vehicle_registration_url || 
+                                    apiDriver.vehicle_registration || 
+                                    driverProfile.vehicle_registration ||
+                                    apiDriver.vehicle_registration_document ||
+                                    driverProfile.vehicle_registration_document ||
+                                    null;
+                
+                const bgCheckUrl = apiDriver.background_check_url || 
+                                  driverProfile.background_check_url || 
+                                  apiDriver.background_check_document || 
+                                  driverProfile.background_check_document ||
+                                  null;
+                
+                console.log('📄 Document URLs Found:', {
+                  'ID Document': idDocUrl,
+                  'License Document': licenseDocUrl,
+                  'Vehicle Registration': vehicleDocUrl,
+                  'Background Check': bgCheckUrl
+                });
+                
                 return [
                   { 
                     name: 'Qatari ID', 
-                    status: apiDriver.is_verified ? 'Verified' : 'Pending' 
+                    status: isVerified ? 'Verified' : 'Pending',
+                    url: idDocUrl
                   },
                   { 
                     name: "Driver's License", 
-                    status: apiDriver.driver_profile?.license_number ? 'Verified' : 'Pending' 
+                    status: hasLicense ? 'Verified' : 'Pending',
+                    url: licenseDocUrl
                   },
                   { 
                     name: 'Vehicle Registration', 
-                    status: apiDriver.driver_profile?.vehicle_plate ? 'Verified' : 'Pending' 
+                    status: hasVehiclePlate ? 'Verified' : 'Pending',
+                    url: vehicleDocUrl
                   },
                   { 
                     name: 'Background Check', 
-                    status: apiDriver.driver_profile?.background_check_status === 'approved' ? 'Verified' : 'Pending' 
+                    status: backgroundCheckStatus === 'approved' ? 'Verified' : 'Pending',
+                    url: bgCheckUrl
                   }
                 ];
               }
@@ -468,6 +606,16 @@ export default function DriverProfileView() {
 
   // Handle document view click - opens modal
   const handleViewDocument = (document) => {
+    console.log('👁️ VIEWING DOCUMENT:', {
+      'Document': document,
+      'Has URL': !!document.url,
+      'URL': document.url,
+      'Name': document.name,
+      'Status': document.status,
+      'Full Document Object': document
+    });
+    
+    // If no URL, still show modal but it will display "not available" message
     setSelectedDocument(document);
     setShowDocumentModal(true);
   };
@@ -489,6 +637,8 @@ export default function DriverProfileView() {
       navigate('/dashboard?section=financial');
     } else if (navItem === 'withdrawals') {
       navigate('/withdrawals');
+    } else if (navItem === 'notifications') {
+      navigate('/notifications');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -527,6 +677,7 @@ export default function DriverProfileView() {
           <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
+          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -789,25 +940,40 @@ export default function DriverProfileView() {
             {/* Right Panel - Uploaded Documents */}
             <div className="documents-panel">
               <h3>{t('drivers.uploadedDocuments')}</h3>
-              <div className="documents-list">
-                {driverData.documents.map((doc, index) => (
-                  <div key={index} className="document-item">
-                    <div className="document-info">
-                      <div className="document-name">{doc.name}</div>
-                      <div className={`document-status ${doc.status.toLowerCase()}`}>
-                        {doc.status}
+              {driverData.documents && driverData.documents.length > 0 ? (
+                <div className="documents-list">
+                  {driverData.documents.map((doc, index) => (
+                    <div key={index} className="document-item">
+                      <div className="document-info">
+                        <div className="document-name">
+                          {doc.name}
+                          {doc.url && (
+                            <span className="document-has-url-indicator" title="Document available">
+                              <span className="material-symbols-outlined">check_circle</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className={`document-status ${doc.status.toLowerCase()}`}>
+                          {doc.status}
+                        </div>
                       </div>
+                      <button 
+                        className="btn-view-document"
+                        aria-label={t('modals.viewDocument')}
+                        onClick={() => handleViewDocument(doc)}
+                        title={doc.url ? 'View document' : 'Document URL not available - check console for details'}
+                      >
+                        <span className="material-symbols-outlined">visibility</span>
+                      </button>
                     </div>
-                    <button 
-                      className="btn-view-document" 
-                      aria-label={t('modals.viewDocument')}
-                      onClick={() => handleViewDocument(doc)}
-                    >
-                      <span className="material-symbols-outlined">visibility</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-documents">
+                  <span className="material-symbols-outlined">description</span>
+                  <p>No documents available</p>
+                </div>
+              )}
             </div>
           </div>
             </>
