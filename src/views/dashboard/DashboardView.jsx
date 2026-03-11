@@ -254,7 +254,15 @@ export default function DashboardView() {
     if (!silent) setIsSupportLoading(true);
     
     try {
-      const tickets = await fetchSupportTickets(ticketFilter);
+      // Fetch all and resolved in parallel; backend "all" often excludes resolved
+      const [allTickets, resolvedTickets] = await Promise.all([
+        fetchSupportTickets('all'),
+        fetchSupportTickets('closed')
+      ]);
+      const byId = new Map();
+      allTickets.forEach(t => byId.set(t.id, t));
+      resolvedTickets.forEach(t => byId.set(t.id, t));
+      const tickets = Array.from(byId.values());
       setSupportTickets(tickets);
       
       // If a ticket was already selected, refresh its data
