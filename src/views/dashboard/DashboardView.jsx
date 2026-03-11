@@ -60,6 +60,7 @@ export default function DashboardView() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [supportListPollingInterval, setSupportListPollingInterval] = useState(null);
   
   // Analytics states
   const [analyticsMetrics, setAnalyticsMetrics] = useState(null);
@@ -121,14 +122,18 @@ export default function DashboardView() {
     // Stop polling when leaving support section
     if (activeSection !== 'support') {
       stopTicketPolling();
+      stopSupportListPolling();
+    } else if (activeSection === 'support') {
+      startSupportListPolling();
     }
   }, [activeSection, ticketFilter, transactionFilter, activeTransactionTab]);
 
 
-  // Cleanup polling interval on component unmount
+  // Cleanup polling intervals on component unmount
   useEffect(() => {
     return () => {
       stopTicketPolling();
+      stopSupportListPolling();
     };
   }, []);
 
@@ -244,9 +249,9 @@ export default function DashboardView() {
     }
   };
   
-  const loadSupportData = async () => {
-    if (isSupportLoading) return; // Prevent multiple simultaneous calls
-    setIsSupportLoading(true);
+  const loadSupportData = async (silent = false) => {
+    if (isSupportLoading && !silent) return; // Prevent multiple simultaneous calls
+    if (!silent) setIsSupportLoading(true);
     
     try {
       const tickets = await fetchSupportTickets(ticketFilter);
@@ -258,9 +263,9 @@ export default function DashboardView() {
         setSelectedTicket(updatedTicket);
       }
     } catch (err) {
-      console.error('Support data error:', err);
+      if (!silent) console.error('Support data error:', err);
     } finally {
-      setIsSupportLoading(false);
+      if (!silent) setIsSupportLoading(false);
     }
   };
   
@@ -636,6 +641,22 @@ export default function DashboardView() {
       setPollingInterval(null);
     } else {
       console.log('ℹ️ No polling interval to stop');
+    }
+  };
+
+  // Poll support tickets list every 5 seconds when on support section
+  const startSupportListPolling = () => {
+    stopSupportListPolling();
+    const interval = setInterval(() => {
+      loadSupportData(true);
+    }, 5000);
+    setSupportListPollingInterval(interval);
+  };
+
+  const stopSupportListPolling = () => {
+    if (supportListPollingInterval) {
+      clearInterval(supportListPollingInterval);
+      setSupportListPollingInterval(null);
     }
   };
   
