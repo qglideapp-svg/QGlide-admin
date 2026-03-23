@@ -127,6 +127,8 @@ export default function WithdrawalManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'ads') {
+      navigate('/ads');
     }
   };
 
@@ -261,6 +263,7 @@ export default function WithdrawalManagementView() {
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" active={true} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="campaign" label="Mobile ads" onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />

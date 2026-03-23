@@ -428,6 +428,8 @@ export default function UserProfileView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'ads') {
+      navigate('/ads');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -467,6 +469,7 @@ export default function UserProfileView() {
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="campaign" label={t('navigation.ads')} onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />

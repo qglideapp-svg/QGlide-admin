@@ -147,6 +147,8 @@ export default function CourierManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'ads') {
+      navigate('/ads');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -199,6 +201,7 @@ export default function CourierManagementView() {
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="campaign" label="Mobile ads" onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />

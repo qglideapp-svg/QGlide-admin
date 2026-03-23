@@ -64,6 +64,8 @@ export default function NotificationManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       // Already on notifications page
+    } else if (navItem === 'ads') {
+      navigate('/ads');
     }
   };
 
@@ -157,6 +159,7 @@ export default function NotificationManagementView() {
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="notifications" label="Notifications" active={true} />
+          <NavItem icon="campaign" label={t('navigation.ads')} onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />

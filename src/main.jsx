@@ -21,6 +21,7 @@ import CourierManagementView from './views/courier/CourierManagementView.jsx';
 import RentalManagementView from './views/rentals/RentalManagementView.jsx';
 import WithdrawalManagementView from './views/withdrawals/WithdrawalManagementView.jsx';
 import NotificationManagementView from './views/notifications/NotificationManagementView.jsx';
+import AdsManagementView from './views/ads/AdsManagementView.jsx';
 import AuthGuard from './components/layout/AuthGuard.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -94,6 +95,11 @@ createRoot(document.getElementById('root')).render(
         <Route path="/notifications" element={
           <AuthGuard>
             <NotificationManagementView />
+          </AuthGuard>
+        } />
+        <Route path="/ads" element={
+          <AuthGuard>
+            <AdsManagementView />
           </AuthGuard>
         } />
         </Routes>
