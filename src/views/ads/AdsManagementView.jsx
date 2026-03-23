@@ -307,7 +307,7 @@ export default function AdsManagementView() {
               <h2>Ad studio for the rider app</h2>
               <p>
                 Pick a screen moment, drop in creative and a deep link, then publish. Each slot maps to a native
-                placement your mobile team can read from config — riders always get a consistent, on-brand experience.
+                placement your mobile app and is visible to all users — riders always get a consistent, on-brand experience.
               </p>
             </div>
           </div>
