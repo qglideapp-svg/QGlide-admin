@@ -145,6 +145,78 @@
   align-items: start;
 }
 
+.ads-audience-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--card, #fff);
+  box-shadow: var(--shadow, 0 4px 16px rgba(2, 8, 23, 0.05));
+}
+
+.ads-audience-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-light, #6b7280);
+}
+
+.ads-audience-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f3f4f6);
+  gap: 4px;
+}
+
+.ads-audience-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-light, #6b7280);
+  background: transparent;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.ads-audience-toggle button .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.ads-audience-toggle button.on {
+  background: var(--card, #fff);
+  color: var(--text-dark, #111827);
+  box-shadow: 0 2px 8px rgba(2, 8, 23, 0.08);
+}
+
+.ads-audience-toggle button:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
+
+.ads-hero-band--driver {
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 45%, #134e4a 100%);
+  box-shadow: 0 20px 50px rgba(15, 118, 110, 0.28);
+}
+
+.ads-hero-band--driver::before {
+  background:
+    radial-gradient(circle at 15% 100%, rgba(52, 211, 153, 0.4), transparent 48%),
+    radial-gradient(circle at 92% 0%, rgba(45, 212, 191, 0.35), transparent 42%);
+}
+
 @media (max-width: 1200px) {
   .ads-studio {
     grid-template-columns: 1fr;
@@ -650,7 +722,85 @@
   background: #e2e8f0;
 }
 
+.preview-wallet .ads-mock-body {
+  gap: 10px;
+}
+
+.ads-wallet-mock {
+  flex-shrink: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.ads-wallet-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.ads-wallet-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ads-wallet-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.ads-wallet-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ads-wallet-chip {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e0f2fe, #bae6fd);
+  color: #0369a1;
+}
+
+.ads-wallet-chip.muted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.preview-wallet .ads-creative {
+  margin-top: 0;
+}
+
+.preview-wallet .ads-creative-img,
+.preview-wallet .ads-creative-img.placeholder {
+  height: 72px;
+}
+
 /* Dark mode */
+.ads-management.dark-mode .ads-audience-bar {
+  background: var(--card, #1f2937);
+  border-color: var(--border, #374151);
+}
+
+.ads-management.dark-mode .ads-audience-toggle {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.ads-management.dark-mode .ads-audience-toggle button.on {
+  background: #374151;
+  color: #f9fafb;
+}
+
 .ads-management.dark-mode .ads-hero-band {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
@@ -707,6 +857,29 @@
 
 .ads-management.dark-mode .preview-profile .name-line {
   background: #475569;
+}
+
+.ads-management.dark-mode .ads-wallet-mock {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.ads-management.dark-mode .ads-wallet-label {
+  color: #9ca3af;
+}
+
+.ads-management.dark-mode .ads-wallet-amount {
+  color: #f9fafb;
+}
+
+.ads-management.dark-mode .ads-wallet-chip {
+  background: linear-gradient(90deg, #164e63, #155e75);
+  color: #a5f3fc;
+}
+
+.ads-management.dark-mode .ads-wallet-chip.muted {
+  background: #374151;
+  color: #9ca3af;
 }
 
 @media (max-width: 768px) {

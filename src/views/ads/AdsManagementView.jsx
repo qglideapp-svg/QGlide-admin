@@ -4,8 +4,11 @@ import './AdsManagementView.css';
 import { logoutUser } from '../../services/authService';
 import {
   PLACEMENT_SLOTS,
+  DRIVER_PLACEMENT_SLOTS,
   loadAdConfig,
-  saveAdConfig,
+  persistAdConfigLocal,
+  publishAdPlacement,
+  saveAdPlacementDraft,
 } from '../../services/adService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -22,9 +25,12 @@ const NavItem = ({ icon, label, active, onClick }) => (
   </button>
 );
 
-function PhonePreview({ slotDef, placement }) {
+function PhonePreview({ slotDef, placement, audience }) {
+  const isDriver = audience === 'driver';
   const headline = placement.headline?.trim() || 'Your headline';
-  const body = placement.body?.trim() || 'Short supporting copy for riders.';
+  const body =
+    placement.body?.trim() ||
+    (isDriver ? 'Short supporting copy drivers see under the headline.' : 'Short supporting copy for riders.');
   const cta = placement.ctaText?.trim() || 'Learn more';
   const hasImg = Boolean(placement.imageUrl?.trim());
 
@@ -58,7 +64,9 @@ function PhonePreview({ slotDef, placement }) {
           <span>●●●</span>
         </div>
         <div className={previewClass}>
-          <div className="success-chip">Trip complete · Thanks for riding</div>
+          <div className="success-chip">
+            {isDriver ? 'Trip complete · Nice work' : 'Trip complete · Thanks for riding'}
+          </div>
           {creative}
         </div>
       </div>
@@ -70,7 +78,7 @@ function PhonePreview({ slotDef, placement }) {
       <div className="ads-phone-screen">
         <div className="ads-mock-header">
           <span>9:41</span>
-          <span>Account</span>
+          <span>{isDriver ? 'Driver' : 'Account'}</span>
           <span>●●●</span>
         </div>
         <div className={previewClass}>
@@ -87,12 +95,37 @@ function PhonePreview({ slotDef, placement }) {
     );
   }
 
+  if (slotDef.preview === 'wallet') {
+    return (
+      <div className="ads-phone-screen">
+        <div className="ads-mock-header">
+          <span>9:41</span>
+          <span>Wallet</span>
+          <span>●●●</span>
+        </div>
+        <div className={previewClass}>
+          <div className="ads-wallet-mock">
+            <div className="ads-wallet-balance">
+              <span className="ads-wallet-label">{isDriver ? 'Available' : 'Balance'}</span>
+              <span className="ads-wallet-amount">{isDriver ? '$182.40' : '$24.50'}</span>
+            </div>
+            <div className="ads-wallet-actions">
+              <span className="ads-wallet-chip">{isDriver ? 'Cash out' : 'Add funds'}</span>
+              <span className="ads-wallet-chip muted">History</span>
+            </div>
+          </div>
+          {creative}
+        </div>
+      </div>
+    );
+  }
+
   if (slotDef.preview === 'strip') {
     return (
       <div className="ads-phone-screen">
         <div className="ads-mock-header">
           <span>9:41</span>
-          <span>Book a ride</span>
+          <span>{isDriver ? 'Requests' : 'Book a ride'}</span>
           <span>●●●</span>
         </div>
         <div className={previewClass}>
@@ -100,7 +133,7 @@ function PhonePreview({ slotDef, placement }) {
             <div className="ads-mock-pin" />
           </div>
           {creative}
-          <div className="ads-mock-cta">Request ride</div>
+          <div className="ads-mock-cta">{isDriver ? 'Go online' : 'Request ride'}</div>
         </div>
       </div>
     );
@@ -111,7 +144,7 @@ function PhonePreview({ slotDef, placement }) {
     <div className="ads-phone-screen">
       <div className="ads-mock-header">
         <span>9:41</span>
-        <span>Home</span>
+        <span>{isDriver ? 'Map' : 'Home'}</span>
         <span>●●●</span>
       </div>
       <div className={previewClass}>
@@ -119,7 +152,7 @@ function PhonePreview({ slotDef, placement }) {
         <div className="ads-mock-map">
           <div className="ads-mock-pin" />
         </div>
-        <div className="ads-mock-cta">Where to?</div>
+        <div className="ads-mock-cta">{isDriver ? 'Start driving' : 'Where to?'}</div>
       </div>
     </div>
   );
@@ -131,9 +164,14 @@ export default function AdsManagementView() {
   const { theme } = useTheme();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [audience, setAudience] = useState('rider');
   const [selectedId, setSelectedId] = useState(PLACEMENT_SLOTS[0].id);
   const [config, setConfig] = useState(() => loadAdConfig().data);
+
+  const slots = audience === 'rider' ? PLACEMENT_SLOTS : DRIVER_PLACEMENT_SLOTS;
+  const placementsKey = audience === 'rider' ? 'placements' : 'driverPlacements';
 
   useEffect(() => {
     const r = loadAdConfig();
@@ -141,29 +179,43 @@ export default function AdsManagementView() {
   }, []);
 
   const slotDef = useMemo(
-    () => PLACEMENT_SLOTS.find((s) => s.id === selectedId) || PLACEMENT_SLOTS[0],
-    [selectedId],
+    () => slots.find((s) => s.id === selectedId) || slots[0],
+    [selectedId, slots],
   );
 
-  const placement = config.placements[selectedId] || {};
+  const placementMap =
+    audience === 'rider' ? config.placements ?? {} : config.driverPlacements ?? {};
+  const placement = placementMap[selectedId] || {};
 
-  const activeCount = useMemo(
-    () => Object.values(config.placements).filter((p) => p.active).length,
-    [config.placements],
+  const publishedCount = useMemo(
+    () => Object.values(placementMap).filter((p) => p.publishedAt).length,
+    [placementMap],
   );
 
-  const updateField = useCallback((field, value) => {
-    setConfig((prev) => ({
-      ...prev,
-      placements: {
-        ...prev.placements,
-        [selectedId]: {
-          ...prev.placements[selectedId],
-          [field]: value,
+  const lastPublishedForAudience =
+    audience === 'rider' ? config.lastPublishedAt : config.lastDriverPublishedAt;
+
+  const switchAudience = (next) => {
+    setAudience(next);
+    setSelectedId(next === 'rider' ? PLACEMENT_SLOTS[0].id : DRIVER_PLACEMENT_SLOTS[0].id);
+  };
+
+  const updateField = useCallback(
+    (field, value) => {
+      const key = audience === 'rider' ? 'placements' : 'driverPlacements';
+      setConfig((prev) => ({
+        ...prev,
+        [key]: {
+          ...prev[key],
+          [selectedId]: {
+            ...prev[key][selectedId],
+            [field]: value,
+          },
         },
-      },
-    }));
-  }, [selectedId]);
+      }));
+    },
+    [selectedId, audience],
+  );
 
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') navigate('/dashboard');
@@ -195,30 +247,70 @@ export default function AdsManagementView() {
 
   const handleSavePlacement = async () => {
     if (!placement.headline?.trim()) {
+      setToast({ type: 'error', message: 'Add a headline before saving this placement.' });
+      return;
+    }
+    setSavingDraft(true);
+    const result = await saveAdPlacementDraft(selectedId, placement);
+    setSavingDraft(false);
+    if (result.success) {
+      const next = {
+        ...config,
+        [placementsKey]: {
+          ...config[placementsKey],
+          [selectedId]: {
+            ...placement,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+      setConfig(next);
+      persistAdConfigLocal(next);
+      setToast({ type: 'success', message: 'Placement saved (draft on server).' });
+    } else {
+      setToast({ type: 'error', message: result.error || 'Could not save.' });
+    }
+  };
+
+  const handlePublishPlacement = async () => {
+    if (!placement.headline?.trim()) {
       setToast({ type: 'error', message: 'Add a headline before publishing this placement.' });
       return;
     }
-    setSaving(true);
-    const next = {
-      ...config,
-      placements: {
-        ...config.placements,
-        [selectedId]: {
-          ...placement,
-          updatedAt: new Date().toISOString(),
+    setPublishing(true);
+    const saveResult = await saveAdPlacementDraft(selectedId, placement);
+    if (!saveResult.success) {
+      setPublishing(false);
+      setToast({ type: 'error', message: saveResult.error || 'Save failed before publish.' });
+      return;
+    }
+    const pubResult = await publishAdPlacement(selectedId);
+    setPublishing(false);
+    if (pubResult.success) {
+      const now = new Date().toISOString();
+      const next = {
+        ...config,
+        ...(audience === 'rider' ? { lastPublishedAt: now } : { lastDriverPublishedAt: now }),
+        [placementsKey]: {
+          ...config[placementsKey],
+          [selectedId]: {
+            ...placement,
+            publishedAt: now,
+            updatedAt: now,
+          },
         },
-      },
-    };
-    const result = await saveAdConfig(next);
-    setSaving(false);
-    if (result.success) {
+      };
       setConfig(next);
+      persistAdConfigLocal(next);
       setToast({
         type: 'success',
-        message: 'Placement saved. The mobile app can sync this on the next config fetch.',
+        message:
+          audience === 'driver'
+            ? 'Published. The driver app can load this placement now.'
+            : 'Published. The rider app can load this placement now.',
       });
     } else {
-      setToast({ type: 'error', message: result.error || 'Could not save.' });
+      setToast({ type: 'error', message: pubResult.error || 'Could not publish.' });
     }
   };
 
@@ -270,7 +362,11 @@ export default function AdsManagementView() {
             </button>
             <div>
               <h1>{t('navigation.ads')}</h1>
-              <p className="sub">Design placements that every rider sees inside the mobile app</p>
+              <p className="sub">
+                {audience === 'driver'
+                  ? 'Design placements for the driver app — same workflow as rider ads'
+                  : 'Design placements that riders see inside the mobile app'}
+              </p>
             </div>
           </div>
           <div className="acts">
@@ -297,17 +393,21 @@ export default function AdsManagementView() {
           </div>
         </header>
 
-        <section className="ads-hero-band" aria-label="Overview">
+        <section
+          className={`ads-hero-band ${audience === 'driver' ? 'ads-hero-band--driver' : ''}`}
+          aria-label="Overview"
+        >
           <div className="ads-hero-inner">
             <div>
               <div className="ads-hero-badge">
-                <span className="material-symbols-outlined">hub</span>
-                Broadcast to all app users
+                <span className="material-symbols-outlined">{audience === 'driver' ? 'badge' : 'hub'}</span>
+                {audience === 'driver' ? 'Driver partner app' : 'Rider app'}
               </div>
-              <h2>Ad studio for the rider app</h2>
+              <h2>{audience === 'driver' ? 'Driver ad studio' : 'Rider ad studio'}</h2>
               <p>
-                Pick a screen moment, drop in creative and a deep link, then publish. Each slot maps to a native
-                placement your mobile app and is visible to all users — riders always get a consistent, on-brand experience.
+                {audience === 'driver'
+                  ? 'Reach drivers in-context: home map, requests strip, post-trip, and account. Save a draft, then publish so the driver build picks it up from the same ad-placement API using driver placement keys.'
+                  : 'Pick a screen moment, drop in creative and a deep link, then publish. Each slot maps to a native placement in the rider app for a consistent, on-brand experience.'}
               </p>
             </div>
           </div>
@@ -316,29 +416,57 @@ export default function AdsManagementView() {
         <div className="ads-stats">
           <div className="ads-stat-card">
             <div className="k">Live placements</div>
-            <div className="v">{activeCount}</div>
-            <div className="hint">Turned on across the four mobile slots</div>
+            <div className="v">{publishedCount}</div>
+            <div className="hint">Published to the app via Ad placement API</div>
           </div>
           <div className="ads-stat-card">
             <div className="k">Audience</div>
-            <div className="v">All riders</div>
-            <div className="hint">Same payload for every signed-in user</div>
+            <div className="v">{audience === 'driver' ? 'Drivers' : 'Riders'}</div>
+            <div className="hint">
+              {audience === 'driver'
+                ? 'Placements use driver_* keys on the same API'
+                : 'Same payload for every signed-in rider (per slot rules)'}
+            </div>
           </div>
           <div className="ads-stat-card">
             <div className="k">Last publish</div>
             <div className="v" style={{ fontSize: '0.95rem' }}>
-              {config.lastPublishedAt
-                ? new Date(config.lastPublishedAt).toLocaleString()
-                : '—'}
+              {lastPublishedForAudience ? new Date(lastPublishedForAudience).toLocaleString() : '—'}
             </div>
-            <div className="hint">Stored locally until API is connected</div>
+            <div className="hint">From your last successful publish action</div>
           </div>
         </div>
 
         <div className="ads-studio">
+          <div className="ads-audience-bar" role="tablist" aria-label="Ad target app">
+            <span className="ads-audience-label">Target</span>
+            <div className="ads-audience-toggle">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={audience === 'rider'}
+                className={audience === 'rider' ? 'on' : ''}
+                onClick={() => switchAudience('rider')}
+              >
+                <span className="material-symbols-outlined">person</span>
+                Rider app
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={audience === 'driver'}
+                className={audience === 'driver' ? 'on' : ''}
+                onClick={() => switchAudience('driver')}
+              >
+                <span className="material-symbols-outlined">local_taxi</span>
+                Driver app
+              </button>
+            </div>
+          </div>
+
           <div className="ads-slot-list">
-            {PLACEMENT_SLOTS.map((slot) => {
-              const p = config.placements[slot.id];
+            {slots.map((slot) => {
+              const p = placementMap[slot.id];
               return (
                 <button
                   key={slot.id}
@@ -353,7 +481,9 @@ export default function AdsManagementView() {
                     <div className="slot-title">{slot.label}</div>
                     <div className="slot-desc">{slot.description}</div>
                     <div className="ads-slot-meta">
-                      <span className={`ads-pill ${p?.active ? '' : 'off'}`}>{p?.active ? 'Live' : 'Draft'}</span>
+                      <span className={`ads-pill ${p?.publishedAt ? '' : 'off'}`}>
+                        {p?.publishedAt ? 'Live' : 'Draft'}
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -367,7 +497,7 @@ export default function AdsManagementView() {
 
             <div className="ads-form-grid">
               <div className="ads-toggle-row">
-                <span>Show to all users on this screen</span>
+                <span>{audience === 'driver' ? 'Show to all drivers on this screen' : 'Show to all users on this screen'}</span>
                 <button
                   type="button"
                   className={`ads-switch ${placement.active ? 'on' : ''}`}
@@ -393,7 +523,11 @@ export default function AdsManagementView() {
                   id="ad-body"
                   value={placement.body || ''}
                   onChange={(e) => updateField('body', e.target.value)}
-                  placeholder="One or two lines riders see under the headline"
+                  placeholder={
+                    audience === 'driver'
+                      ? 'One or two lines drivers see under the headline'
+                      : 'One or two lines riders see under the headline'
+                  }
                   maxLength={220}
                 />
               </div>
@@ -426,7 +560,13 @@ export default function AdsManagementView() {
                     id="ad-deeplink"
                     value={placement.deepLink || ''}
                     onChange={(e) => updateField('deepLink', e.target.value)}
-                    placeholder="qglide://promo/summer"
+                    placeholder={
+                      audience === 'driver'
+                        ? 'qglide://driver/promo/summer'
+                        : selectedId === 'rider_wallet'
+                          ? 'qglide://wallet/promo'
+                          : 'qglide://promo/summer'
+                    }
                   />
                 </div>
               </div>
@@ -439,8 +579,8 @@ export default function AdsManagementView() {
                 onClick={() => {
                   setConfig((prev) => ({
                     ...prev,
-                    placements: {
-                      ...prev.placements,
+                    [placementsKey]: {
+                      ...prev[placementsKey],
                       [selectedId]: {
                         slotId: selectedId,
                         headline: '',
@@ -450,33 +590,47 @@ export default function AdsManagementView() {
                         deepLink: '',
                         active: false,
                         updatedAt: null,
+                        publishedAt: null,
                       },
                     },
                   }));
                 }}
-                disabled={saving}
+                disabled={savingDraft || publishing}
               >
                 Reset slot
               </button>
               <button
                 type="button"
-                className="ads-btn ads-btn-primary"
+                className="ads-btn ads-btn-secondary"
                 onClick={handleSavePlacement}
-                disabled={saving}
+                disabled={savingDraft || publishing}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                  {saving ? 'hourglass_empty' : 'rocket_launch'}
+                  {savingDraft ? 'hourglass_empty' : 'save'}
                 </span>
-                {saving ? 'Publishing…' : 'Publish placement'}
+                {savingDraft ? 'Saving…' : 'Save placement'}
+              </button>
+              <button
+                type="button"
+                className="ads-btn ads-btn-primary"
+                onClick={handlePublishPlacement}
+                disabled={savingDraft || publishing}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  {publishing ? 'hourglass_empty' : 'rocket_launch'}
+                </span>
+                {publishing ? 'Publishing…' : 'Publish to app'}
               </button>
             </div>
           </div>
 
           <div className="ads-device-wrap">
-            <div className="ads-device-label">Live preview</div>
+            <div className="ads-device-label">
+              Live preview · {audience === 'driver' ? 'Driver' : 'Rider'}
+            </div>
             <div className="ads-phone">
               <div className="ads-phone-notch" />
-              <PhonePreview slotDef={slotDef} placement={placement} />
+              <PhonePreview slotDef={slotDef} placement={placement} audience={audience} />
             </div>
           </div>
         </div>
