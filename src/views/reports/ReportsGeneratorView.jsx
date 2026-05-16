@@ -205,6 +205,8 @@ export default function ReportsGeneratorView() {
       navigate('/rental-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
+    } else if (navItem === 'marketers') {
+      navigate('/marketers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
@@ -213,8 +215,6 @@ export default function ReportsGeneratorView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
-    } else if (navItem === 'ads') {
-      navigate('/ads');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -248,10 +248,10 @@ export default function ReportsGeneratorView() {
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
-          <NavItem icon="campaign" label="Mobile ads" onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" active={true} />

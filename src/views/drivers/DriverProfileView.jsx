@@ -631,6 +631,8 @@ export default function DriverProfileView() {
       navigate('/rental-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
+    } else if (navItem === 'marketers') {
+      navigate('/marketers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
@@ -639,8 +641,6 @@ export default function DriverProfileView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
-    } else if (navItem === 'ads') {
-      navigate('/ads');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -677,10 +677,10 @@ export default function DriverProfileView() {
           <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} active={true} onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
-          <NavItem icon="campaign" label={t('navigation.ads')} onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />

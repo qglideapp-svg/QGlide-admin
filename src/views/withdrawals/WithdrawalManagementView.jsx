@@ -115,6 +115,8 @@ export default function WithdrawalManagementView() {
       navigate('/driver-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
+    } else if (navItem === 'marketers') {
+      navigate('/marketers');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
     } else if (navItem === 'support') {
@@ -127,8 +129,6 @@ export default function WithdrawalManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
-    } else if (navItem === 'ads') {
-      navigate('/ads');
     }
   };
 
@@ -260,10 +260,10 @@ export default function WithdrawalManagementView() {
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" active={true} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
-          <NavItem icon="campaign" label="Mobile ads" onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />

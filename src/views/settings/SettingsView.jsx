@@ -35,15 +35,16 @@ export default function SettingsView() {
     }
   });
   const [fareCosts, setFareCosts] = useState({
-    baseFare: 5.00,
-    costPerKilometer: 1.50,
-    costPerMinute: 0.30,
-    airportSurcharge: 25.00,
-    minimumFare: 10.00,
-    surgeMultiplier: 1.0,
-    nightSurcharge: 5.00,
-    peakHourSurcharge: 3.00
+    baseFare: 0,
+    costPerKilometer: 0,
+    costPerMinute: 0,
+    airportSurcharge: 0,
+    minimumFare: 0,
+    surgeMultiplier: 1,
+    nightSurcharge: 0,
+    peakHourSurcharge: 0
   });
+  const [fareDescriptions, setFareDescriptions] = useState({});
   const [isSavingFareCosts, setIsSavingFareCosts] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -77,18 +78,20 @@ export default function SettingsView() {
         setNotificationTemplates(templatesResult.data);
       }
       if (settingsResult.success) {
-        setSystemSettings(settingsResult.data);
-        // Sync theme from settings to context
-        if (settingsResult.data.theme) {
-          setThemeMode(settingsResult.data.theme);
-        }
-        // Sync language from settings to context
-        if (settingsResult.data.language) {
-          setLanguage(settingsResult.data.language);
-        }
+        // Mock "system settings" must not override real user prefs from localStorage
+        const persistedTheme = localStorage.getItem('appTheme') || 'light';
+        const persistedLanguage = localStorage.getItem('appLanguage') || 'english';
+        setSystemSettings({
+          ...settingsResult.data,
+          theme: persistedTheme === 'dark' ? 'dark' : 'light',
+          language: persistedLanguage === 'arabic' ? 'arabic' : 'english',
+        });
       }
       if (fareCostsResult.success) {
         setFareCosts(fareCostsResult.data);
+        setFareDescriptions(fareCostsResult.descriptions || {});
+      } else if (fareCostsResult.error) {
+        showToastMessage(fareCostsResult.error, 'error');
       }
     } catch (error) {
       console.error('Error loading settings data:', error);
@@ -209,10 +212,14 @@ export default function SettingsView() {
   };
 
   const handleFareCostChange = (field, value) => {
-    const numValue = parseFloat(value) || 0;
-    setFareCosts(prev => ({
+    const parsed = parseFloat(value);
+    setFareCosts((prev) => ({
       ...prev,
-      [field]: numValue
+      [field]: Number.isFinite(parsed)
+        ? parsed
+        : field === 'surgeMultiplier'
+          ? prev.surgeMultiplier
+          : 0,
     }));
   };
 
@@ -221,7 +228,18 @@ export default function SettingsView() {
     try {
       const result = await updateFareCosts(fareCosts);
       if (result.success) {
-        showToastMessage(result.message || t('settings.fareCostsUpdated'), 'success');
+        if (result.data) {
+          setFareCosts(result.data);
+        }
+        if (result.descriptions) {
+          setFareDescriptions(result.descriptions);
+        }
+        showToastMessage(
+          result.error
+            ? `${result.message || t('settings.fareCostsUpdated')} — ${result.error}`
+            : result.message || t('settings.fareCostsUpdated'),
+          result.error ? 'info' : 'success'
+        );
       } else {
         showToastMessage(result.error || t('settings.failedToUpdate'), 'error');
       }
@@ -244,6 +262,8 @@ export default function SettingsView() {
       navigate('/rental-management');
     } else if (navItem === 'user-management') {
       navigate('/user-management');
+    } else if (navItem === 'marketers') {
+      navigate('/marketers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
@@ -252,8 +272,6 @@ export default function SettingsView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
-    } else if (navItem === 'ads') {
-      navigate('/ads');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -291,10 +309,10 @@ export default function SettingsView() {
           <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
+          <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
-          <NavItem icon="campaign" label={t('navigation.ads')} onClick={() => handleNavClick('ads')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -484,7 +502,7 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">{t('settings.startingFare')}</p>
+                        <p className="fare-description">{fareDescriptions.baseFare || t('settings.startingFare')}</p>
                       </div>
                       <div className="fare-cost-group">
                         <label htmlFor="minimumFare">{t('settings.minimumFare')}</label>
@@ -501,7 +519,7 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">{t('settings.minimumAmount')}</p>
+                        <p className="fare-description">{fareDescriptions.minimumFare || t('settings.minimumAmount')}</p>
                       </div>
                     </div>
 
@@ -522,7 +540,7 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">{t('settings.chargedPerKm')}</p>
+                        <p className="fare-description">{fareDescriptions.costPerKilometer || t('settings.chargedPerKm')}</p>
                       </div>
                       <div className="fare-cost-group">
                         <label htmlFor="costPerMinute">{t('settings.costPerMinute')}</label>
@@ -539,7 +557,7 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">{t('settings.chargedPerMinute')}</p>
+                        <p className="fare-description">{fareDescriptions.costPerMinute || t('settings.chargedPerMinute')}</p>
                       </div>
                     </div>
 
@@ -560,7 +578,7 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">{t('settings.airportFee')}</p>
+                        <p className="fare-description">{fareDescriptions.airportSurcharge || t('settings.airportFee')}</p>
                       </div>
                       <div className="fare-cost-group">
                         <label htmlFor="nightSurcharge">{t('settings.nightSurcharge')}</label>
@@ -577,7 +595,7 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">{t('settings.nightFee')}</p>
+                        <p className="fare-description">{fareDescriptions.nightSurcharge || t('settings.nightFee')}</p>
                       </div>
                       <div className="fare-cost-group">
                         <label htmlFor="peakHourSurcharge">{t('settings.peakHourSurcharge')}</label>
@@ -594,7 +612,7 @@ export default function SettingsView() {
                             placeholder="0.00"
                           />
                         </div>
-                        <p className="fare-description">{t('settings.peakHourFee')}</p>
+                        <p className="fare-description">{fareDescriptions.peakHourSurcharge || t('settings.peakHourFee')}</p>
                       </div>
                     </div>
 
@@ -615,7 +633,7 @@ export default function SettingsView() {
                           />
                           <span className="multiplier-symbol">x</span>
                         </div>
-                        <p className="fare-description">{t('settings.multiplierDescription')}</p>
+                        <p className="fare-description">{fareDescriptions.surgeMultiplier || t('settings.multiplierDescription')}</p>
                       </div>
                     </div>
                   </div>

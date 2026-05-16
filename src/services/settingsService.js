@@ -1,19 +1,181 @@
-import { getAuthToken } from './authService';
+import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
-const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
-// Mapping from UI field names to API config keys
+const getAnonApiKey = () => localStorage.getItem('anonKey') || SUPABASE_ANON_KEY;
+
+// Mapping from UI field names to API config keys (must match edge function / migration)
 const FARE_CONFIG_KEY_MAP = {
   baseFare: 'base_fare',
-  costPerKilometer: 'cost_per_kilometer',
+  costPerKilometer: 'cost_per_km',
   costPerMinute: 'cost_per_minute',
   airportSurcharge: 'airport_surcharge',
   minimumFare: 'minimum_fare',
   surgeMultiplier: 'surge_multiplier',
   nightSurcharge: 'night_surcharge',
-  peakHourSurcharge: 'peak_hour_surcharge'
+  peakHourSurcharge: 'peak_hour_surcharge',
 };
+
+/** Fallback descriptions sent on POST when creating/updating a row */
+const FARE_CONFIG_DESCRIPTIONS = {
+  base_fare: 'Base fare applied when a trip starts',
+  minimum_fare: 'Minimum total fare charged for a trip',
+  cost_per_km: 'Charged per kilometer traveled',
+  cost_per_minute: 'Charged per minute of trip time',
+  airport_surcharge: 'Flat surcharge for airport-related trips',
+  night_surcharge: 'Additional surcharge during night hours',
+  peak_hour_surcharge: 'Additional surcharge during peak traffic hours',
+  surge_multiplier: 'Demand-based multiplier applied to fare components',
+};
+
+const EMPTY_FARE_COSTS = {
+  baseFare: 0,
+  minimumFare: 0,
+  costPerKilometer: 0,
+  costPerMinute: 0,
+  airportSurcharge: 0,
+  nightSurcharge: 0,
+  peakHourSurcharge: 0,
+  surgeMultiplier: 1,
+};
+
+const CONFIG_KEY_TO_UI_FIELD = Object.fromEntries(
+  Object.entries(FARE_CONFIG_KEY_MAP).map(([uiField, apiKey]) => [apiKey, uiField])
+);
+
+const ARRAY_WRAPPER_KEYS = [
+  'configs',
+  'config',
+  'data',
+  'fare_configs',
+  'fare_config',
+  'items',
+  'results',
+  'records',
+  'rows',
+  'settings',
+  'list',
+];
+
+function firstArrayOfObjects(payload) {
+  if (payload == null || typeof payload !== 'object') return null;
+  for (const k of ARRAY_WRAPPER_KEYS) {
+    const v = payload[k];
+    if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object') return v;
+  }
+  const d = payload.data;
+  if (d && typeof d === 'object' && !Array.isArray(d)) {
+    for (const k of ARRAY_WRAPPER_KEYS) {
+      const v = d[k];
+      if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object') return v;
+    }
+  }
+  return null;
+}
+
+function extractFareConfigRows(payload) {
+  if (payload == null) return [];
+  if (Array.isArray(payload)) return payload;
+  const nested = firstArrayOfObjects(payload);
+  if (nested) return nested;
+  if (Array.isArray(payload.configs)) return payload.configs;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.fare_configs)) return payload.fare_configs;
+  if (Array.isArray(payload.items)) return payload.items;
+  if (payload.config_key != null || payload.configKey != null) return [payload];
+  if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    const d = payload.data;
+    if (d.config_key != null || d.configKey != null) return [d];
+  }
+  return [];
+}
+
+/** API may return a flat map of snake_case keys → numbers (no rows array). */
+function mapFlatFareKeysObject(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  const values = { ...EMPTY_FARE_COSTS };
+  const descriptions = {};
+  let matched = 0;
+
+  for (const apiKey of Object.keys(CONFIG_KEY_TO_UI_FIELD)) {
+    if (!Object.prototype.hasOwnProperty.call(obj, apiKey)) continue;
+    const field = CONFIG_KEY_TO_UI_FIELD[apiKey];
+    const cell = obj[apiKey];
+    const raw =
+      cell !== null && typeof cell === 'object' && !Array.isArray(cell)
+        ? cell.value ?? cell.config_value ?? cell.val
+        : cell;
+    const num = raw === '' || raw == null ? NaN : parseFloat(raw);
+    if (Number.isFinite(num)) {
+      values[field] = num;
+      matched += 1;
+    }
+    const desc =
+      cell !== null && typeof cell === 'object' && !Array.isArray(cell)
+        ? cell.description ?? cell.config_description
+        : undefined;
+    if (desc != null && String(desc).trim() !== '') {
+      descriptions[field] = String(desc).trim();
+    }
+  }
+
+  if (matched === 0) return null;
+  return { values, descriptions };
+}
+
+function mapFareRowsToState(rows) {
+  const values = { ...EMPTY_FARE_COSTS };
+  const descriptions = {};
+  let matchedKeys = 0;
+
+  for (const row of rows) {
+    const apiKey =
+      row.config_key ?? row.configKey ?? row.key ?? row.name ?? row.id;
+    const field = apiKey != null ? CONFIG_KEY_TO_UI_FIELD[String(apiKey)] : undefined;
+    if (!field) continue;
+
+    const raw =
+      row.config_value ??
+      row.configValue ??
+      row.value ??
+      (typeof row.config_value === 'object' && row.config_value !== null
+        ? row.config_value.value
+        : undefined);
+    const num = raw === '' || raw == null ? NaN : parseFloat(raw);
+    if (Number.isFinite(num)) {
+      values[field] = num;
+      matchedKeys += 1;
+    }
+
+    const desc = row.description ?? row.config_description;
+    if (desc != null && String(desc).trim() !== '') {
+      descriptions[field] = String(desc).trim();
+    }
+  }
+
+  return { values, descriptions, matchedKeys };
+}
+
+function mapFareApiResponseToState(json) {
+  const rows = extractFareConfigRows(json);
+  if (rows.length > 0) {
+    const fromRows = mapFareRowsToState(rows);
+    if (fromRows.matchedKeys > 0) {
+      const { matchedKeys, ...rest } = fromRows;
+      void matchedKeys;
+      return { ...rest, fareSource: 'rows' };
+    }
+  }
+
+  const flat = mapFlatFareKeysObject(json) || mapFlatFareKeysObject(json?.data);
+  if (flat) return { ...flat, fareSource: 'flat' };
+
+  return {
+    values: { ...EMPTY_FARE_COSTS },
+    descriptions: {},
+    fareSource: 'empty',
+  };
+}
 
 // Mock data for admin roles
 const mockRoles = [
@@ -78,24 +240,11 @@ const mockApiKeys = {
   qpay: 'qpay_sk_live_1234567890abcdefghijklmnopqrstuvwxyz'
 };
 
-// Mock fare cost settings
-const mockFareCosts = {
-  baseFare: 5.00,
-  costPerKilometer: 1.50,
-  costPerMinute: 0.30,
-  airportSurcharge: 25.00,
-  minimumFare: 10.00,
-  surgeMultiplier: 1.0,
-  nightSurcharge: 5.00,
-  peakHourSurcharge: 3.00
-};
-
 // Mock system settings
 const mockSystemSettings = {
   language: 'english', // 'english' or 'arabic'
-  theme: 'dark', // 'light' or 'dark'
+  theme: 'light', // display only when merging; real theme comes from localStorage on load
   apiKeys: mockApiKeys,
-  fareCosts: mockFareCosts
 };
 
 // Simulate API delay
@@ -305,103 +454,132 @@ export const searchSettings = async (searchTerm) => {
   };
 };
 
-// Fetch fare cost settings
+// Fetch fare cost settings (GET /admin-fare-config)
 export const fetchFareCosts = async () => {
-  await delay(300);
-  return {
-    success: true,
-    data: mockFareCosts
-  };
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'No authentication token found. Please login first.' };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin-fare-config`, {
+      method: 'GET',
+      headers: {
+        apikey: getAnonApiKey(),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const bodyText = await response.text();
+    let json;
+    try {
+      json = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      return {
+        success: false,
+        error: 'Invalid response from fare config service',
+      };
+    }
+
+    if (!response.ok) {
+      const msg = json.error || json.message || `HTTP ${response.status}: ${response.statusText}`;
+      return { success: false, error: msg };
+    }
+
+    const { values, descriptions, fareSource } = mapFareApiResponseToState(json);
+    return {
+      success: true,
+      data: values,
+      descriptions,
+      fareSource,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to load fare costs',
+    };
+  }
 };
 
-// Update fare cost settings
+// Update fare cost settings (POST /admin-fare-config per key)
 export const updateFareCosts = async (fareCostData) => {
   try {
     const token = getAuthToken();
-    
     if (!token) {
-      throw new Error('No authentication token found. Please login first.');
+      return { success: false, error: 'No authentication token found. Please login first.' };
     }
 
-    console.log('🚀 UPDATING FARE COSTS:', {
-      '📊 Fare Cost Data': fareCostData,
-      '🔑 Has Token': !!token,
-      '⏰ Timestamp': new Date().toISOString()
-    });
+    const apiKey = getAnonApiKey();
+    const updatePromises = Object.entries(FARE_CONFIG_KEY_MAP).map(
+      async ([fieldName, configKey]) => {
+        const raw = fareCostData[fieldName];
+        const configValue =
+          raw === '' || raw == null ? 0 : parseFloat(raw);
+        const num = Number.isFinite(configValue) ? configValue : 0;
 
-    // Update each fare config field via API
-    const updatePromises = Object.keys(fareCostData).map(async (fieldName) => {
-      const configKey = FARE_CONFIG_KEY_MAP[fieldName];
-      if (!configKey) {
-        console.warn(`⚠️ No config key mapping found for field: ${fieldName}`);
-        return null;
-      }
-
-      const configValue = fareCostData[fieldName];
-      
-      console.log(`🔄 Updating ${fieldName} (${configKey}):`, configValue);
-
-      try {
         const response = await fetch(`${API_BASE_URL}/admin-fare-config`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': SUPABASE_API_KEY,
-            'Authorization': `Bearer ${token}`,
+            apikey: apiKey,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             config_key: configKey,
-            config_value: parseFloat(configValue) || 0
+            config_value: num,
+            description: FARE_CONFIG_DESCRIPTIONS[configKey] || '',
           }),
-        });
-
-        console.log(`📡 API Response for ${configKey}:`, {
-          '✅ Status': response.status,
-          '📝 Status Text': response.statusText,
-          '✅ OK': response.ok
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+          const msg = errorData.error || errorData.message || `${response.status} ${response.statusText}`;
+          return { configKey, success: false, error: msg };
         }
 
-        const data = await response.json();
-        console.log(`✅ Successfully updated ${configKey}:`, data);
-        
-        return { fieldName, configKey, success: true, data };
-      } catch (error) {
-        console.error(`❌ Error updating ${configKey}:`, error);
-        return { fieldName, configKey, success: false, error: error.message };
+        return { configKey, success: true };
       }
-    });
+    );
 
-    // Wait for all updates to complete
     const results = await Promise.all(updatePromises);
-    
-    // Check if any updates failed
-    const failedUpdates = results.filter(r => r && !r.success);
-    if (failedUpdates.length > 0) {
-      const errorMessages = failedUpdates.map(r => `${r.configKey}: ${r.error}`).join(', ');
-      throw new Error(`Failed to update some fare costs: ${errorMessages}`);
+    const failed = results.filter((r) => !r.success);
+    if (failed.length > 0) {
+      const errorMessages = failed.map((r) => `${r.configKey}: ${r.error}`).join(', ');
+      return {
+        success: false,
+        error: `Failed to update some fare costs: ${errorMessages}`,
+      };
     }
 
-    // Update local mock data for consistency
-    Object.assign(mockFareCosts, fareCostData);
-    mockSystemSettings.fareCosts = mockFareCosts;
-
-    console.log('✅ All fare costs updated successfully');
+    const refreshed = await fetchFareCosts();
+    if (refreshed.success) {
+      const dataToUse =
+        refreshed.fareSource === 'empty'
+          ? fareCostData
+          : refreshed.data;
+      return {
+        success: true,
+        data: dataToUse,
+        descriptions: refreshed.descriptions || {},
+        message: 'Fare costs updated successfully',
+        ...(refreshed.fareSource === 'empty' && {
+          error:
+            'Values were saved, but the list response was empty or in an unexpected format. Showing what you entered until reload.',
+        }),
+      };
+    }
 
     return {
       success: true,
       data: fareCostData,
-      message: 'Fare costs updated successfully'
+      descriptions: {},
+      message: 'Fare costs updated successfully',
+      error: refreshed.error,
     };
   } catch (error) {
-    console.error('❌ Error updating fare costs:', error);
     return {
       success: false,
-      error: error.message || 'Failed to update fare costs'
+      error: error.message || 'Failed to update fare costs',
     };
   }
 };

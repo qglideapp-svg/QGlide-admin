@@ -1,0 +1,27 @@
+.add-marketer-modal-content.modal-content {
+  max-width: 720px;
+  width: 92%;
+  border-left: 4px solid #d4a62c;
+}
+
+.add-marketer-modal-content .modal-header h2 {
+  color: #92400e;
+}
+
+.marketer-modal-banner {
+  background: linear-gradient(90deg, rgba(254, 243, 199, 0.6), rgba(254, 252, 232, 0.9));
+  border: 1px solid rgba(212, 166, 44, 0.45);
+}
+
+.marketer-modal-banner p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #78350f;
+}
+
+.optional {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 12px;
+}
