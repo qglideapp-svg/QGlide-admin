@@ -405,6 +405,66 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
   margin-bottom: 4px;
 }
 
+/* Rider Points Program */
+.points-config-card {
+  margin-bottom: 24px;
+}
+
+.save-points-config-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--success-green);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-points-config-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.save-points-config-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-points-config-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.points-program-intro {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
+.points-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  max-width: 720px;
+}
+
+.points-symbol {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+  color: var(--gold);
+  z-index: 1;
+}
+
+.points-config-grid .fare-input {
+  padding-left: 44px;
+}
+
 .fare-input-wrapper {
   position: relative;
   display: flex;

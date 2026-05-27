@@ -454,6 +454,177 @@ export const searchSettings = async (searchTerm) => {
   };
 };
 
+// Points / loyalty program config (GET/PUT /admin-points-config)
+const EMPTY_POINTS_CONFIG = {
+  pointsPerCompletedRide: 0,
+  pointsForFreeRide: 0,
+};
+
+function parsePointsValue(raw) {
+  const num = raw === '' || raw == null ? NaN : parseInt(raw, 10);
+  return Number.isFinite(num) ? num : null;
+}
+
+function mapPointsApiResponseToState(json) {
+  const payload = json?.data ?? json;
+  const program = payload?.rider_program ?? {};
+
+  const pointsPerCompletedRide =
+    parsePointsValue(payload?.points_per_completed_ride) ??
+    parsePointsValue(program.points_per_completed_ride);
+  const pointsForFreeRide =
+    parsePointsValue(payload?.points_for_free_ride) ??
+    parsePointsValue(program.points_for_free_ride);
+
+  const values = {
+    pointsPerCompletedRide: pointsPerCompletedRide ?? EMPTY_POINTS_CONFIG.pointsPerCompletedRide,
+    pointsForFreeRide: pointsForFreeRide ?? EMPTY_POINTS_CONFIG.pointsForFreeRide,
+  };
+
+  const descriptions = {};
+  if (program.points_per_ride_text) {
+    descriptions.pointsPerCompletedRide = String(program.points_per_ride_text);
+  }
+  if (program.free_ride_text) {
+    descriptions.pointsForFreeRide = String(program.free_ride_text);
+  }
+
+  const hasData = pointsPerCompletedRide != null || pointsForFreeRide != null;
+
+  return {
+    values,
+    descriptions,
+    pointsSource: hasData ? 'data' : 'empty',
+  };
+}
+
+export const fetchPointsConfig = async () => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'No authentication token found. Please login first.' };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin-points-config`, {
+      method: 'GET',
+      headers: {
+        apikey: getAnonApiKey(),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const bodyText = await response.text();
+    let json;
+    try {
+      json = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      return {
+        success: false,
+        error: 'Invalid response from points config service',
+      };
+    }
+
+    if (!response.ok) {
+      const msg = json.error || json.message || `HTTP ${response.status}: ${response.statusText}`;
+      return { success: false, error: msg };
+    }
+
+    const { values, descriptions, pointsSource } = mapPointsApiResponseToState(json);
+    return {
+      success: true,
+      data: values,
+      descriptions,
+      pointsSource,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to load points config',
+    };
+  }
+};
+
+export const updatePointsConfig = async (pointsData) => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'No authentication token found. Please login first.' };
+    }
+
+    const pointsPerCompletedRide = parsePointsValue(pointsData.pointsPerCompletedRide) ?? 0;
+    const pointsForFreeRide = parsePointsValue(pointsData.pointsForFreeRide) ?? 0;
+
+    const response = await fetch(`${API_BASE_URL}/admin-points-config`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: getAnonApiKey(),
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        points_per_completed_ride: pointsPerCompletedRide,
+        points_for_free_ride: pointsForFreeRide,
+      }),
+    });
+
+    const bodyText = await response.text();
+    let json;
+    try {
+      json = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+      json = {};
+    }
+
+    if (!response.ok) {
+      const msg = json.error || json.message || `HTTP ${response.status}: ${response.statusText}`;
+      return { success: false, error: msg };
+    }
+
+    const refreshed = mapPointsApiResponseToState(json);
+    const hasRefreshedData = refreshed.pointsSource !== 'empty';
+
+    if (hasRefreshedData) {
+      return {
+        success: true,
+        data: refreshed.values,
+        descriptions: refreshed.descriptions,
+        message: 'Points config updated successfully',
+      };
+    }
+
+    const refetch = await fetchPointsConfig();
+    if (refetch.success && refetch.pointsSource !== 'empty') {
+      return {
+        success: true,
+        data: refetch.data,
+        descriptions: refetch.descriptions || {},
+        message: 'Points config updated successfully',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        pointsPerCompletedRide,
+        pointsForFreeRide,
+      },
+      descriptions: {},
+      message: 'Points config updated successfully',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to update points config',
+    };
+  }
+};
+
 // Fetch fare cost settings (GET /admin-fare-config)
 export const fetchFareCosts = async () => {
   try {

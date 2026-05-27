@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './DeleteUserModal.css';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function DeleteMarketerModal({ isOpen, onClose, onConfirm, email, displayName, isLoading }) {
   const { t } = useLanguage();
+  const [reason, setReason] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLoading) return;
+    if (isLoading || !reason.trim()) return;
     try {
-      await onConfirm();
+      await onConfirm(reason.trim());
+      setReason('');
       onClose();
     } catch {
       /* Parent shows error; keep open */
@@ -18,6 +20,7 @@ export default function DeleteMarketerModal({ isOpen, onClose, onConfirm, email,
 
   const handleClose = () => {
     if (isLoading) return;
+    setReason('');
     onClose();
   };
 
@@ -45,12 +48,24 @@ export default function DeleteMarketerModal({ isOpen, onClose, onConfirm, email,
             <p>
               {t('marketers.deleteModalBody')} <strong>{label}</strong>
             </p>
+            <div className="form-group">
+              <label htmlFor="deleteMarketerReason">{t('modals.reasonForDeletion')}</label>
+              <textarea
+                id="deleteMarketerReason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={t('marketers.deleteReasonPlaceholder')}
+                required
+                rows={4}
+                disabled={isLoading}
+              />
+            </div>
           </div>
           <div className="modal-footer">
             <button type="button" className="btn-cancel" onClick={handleClose} disabled={isLoading}>
               {t('common.cancel')}
             </button>
-            <button type="submit" className="btn-delete" disabled={isLoading}>
+            <button type="submit" className="btn-delete" disabled={isLoading || !reason.trim()}>
               {isLoading ? t('marketers.deleting') : t('marketers.delete')}
             </button>
           </div>

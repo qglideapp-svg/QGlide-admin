@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SettingsView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings, fetchFareCosts, updateFareCosts } from '../../services/settingsService';
+import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings, fetchFareCosts, updateFareCosts, fetchPointsConfig, updatePointsConfig } from '../../services/settingsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -46,6 +46,12 @@ export default function SettingsView() {
   });
   const [fareDescriptions, setFareDescriptions] = useState({});
   const [isSavingFareCosts, setIsSavingFareCosts] = useState(false);
+  const [pointsConfig, setPointsConfig] = useState({
+    pointsPerCompletedRide: 0,
+    pointsForFreeRide: 0,
+  });
+  const [pointsDescriptions, setPointsDescriptions] = useState({});
+  const [isSavingPointsConfig, setIsSavingPointsConfig] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
@@ -64,11 +70,12 @@ export default function SettingsView() {
   const loadSettingsData = async () => {
     setIsLoading(true);
     try {
-      const [rolesResult, templatesResult, settingsResult, fareCostsResult] = await Promise.all([
+      const [rolesResult, templatesResult, settingsResult, fareCostsResult, pointsConfigResult] = await Promise.all([
         fetchRoles(),
         fetchNotificationTemplates(),
         fetchSystemSettings(),
-        fetchFareCosts()
+        fetchFareCosts(),
+        fetchPointsConfig(),
       ]);
 
       if (rolesResult.success) {
@@ -92,6 +99,12 @@ export default function SettingsView() {
         setFareDescriptions(fareCostsResult.descriptions || {});
       } else if (fareCostsResult.error) {
         showToastMessage(fareCostsResult.error, 'error');
+      }
+      if (pointsConfigResult.success) {
+        setPointsConfig(pointsConfigResult.data);
+        setPointsDescriptions(pointsConfigResult.descriptions || {});
+      } else if (pointsConfigResult.error) {
+        showToastMessage(pointsConfigResult.error, 'error');
       }
     } catch (error) {
       console.error('Error loading settings data:', error);
@@ -221,6 +234,42 @@ export default function SettingsView() {
           ? prev.surgeMultiplier
           : 0,
     }));
+  };
+
+  const handlePointsConfigChange = (field, value) => {
+    const parsed = parseInt(value, 10);
+    setPointsConfig((prev) => ({
+      ...prev,
+      [field]: Number.isFinite(parsed) ? parsed : 0,
+    }));
+  };
+
+  const handleSavePointsConfig = async () => {
+    setIsSavingPointsConfig(true);
+    try {
+      const result = await updatePointsConfig(pointsConfig);
+      if (result.success) {
+        if (result.data) {
+          setPointsConfig(result.data);
+        }
+        if (result.descriptions) {
+          setPointsDescriptions(result.descriptions);
+        }
+        showToastMessage(
+          result.error
+            ? `${result.message || t('settings.pointsConfigUpdated')} — ${result.error}`
+            : result.message || t('settings.pointsConfigUpdated'),
+          result.error ? 'info' : 'success'
+        );
+      } else {
+        showToastMessage(result.error || t('settings.failedToUpdate'), 'error');
+      }
+    } catch (error) {
+      console.error('Error updating points config:', error);
+      showToastMessage(t('settings.failedToUpdate'), 'error');
+    } finally {
+      setIsSavingPointsConfig(false);
+    }
   };
 
   const handleSaveFareCosts = async () => {
@@ -635,6 +684,66 @@ export default function SettingsView() {
                         </div>
                         <p className="fare-description">{fareDescriptions.surgeMultiplier || t('settings.multiplierDescription')}</p>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rider Points Program Section */}
+              <div className="settings-card points-config-card">
+                <div className="card-header">
+                  <h2>{t('settings.pointsProgram')}</h2>
+                  <button
+                    className="save-points-config-btn"
+                    onClick={handleSavePointsConfig}
+                    disabled={isSavingPointsConfig}
+                  >
+                    <span className="material-symbols-outlined">
+                      {isSavingPointsConfig ? 'hourglass_empty' : 'save'}
+                    </span>
+                    {isSavingPointsConfig ? t('settings.saving') : t('settings.saveChanges')}
+                  </button>
+                </div>
+                <div className="card-content">
+                  <p className="points-program-intro">{t('settings.pointsProgramIntro')}</p>
+                  <div className="points-config-grid">
+                    <div className="fare-cost-group">
+                      <label htmlFor="pointsPerCompletedRide">{t('settings.pointsPerCompletedRide')}</label>
+                      <div className="fare-input-wrapper">
+                        <span className="points-symbol material-symbols-outlined">loyalty</span>
+                        <input
+                          id="pointsPerCompletedRide"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={pointsConfig.pointsPerCompletedRide}
+                          onChange={(e) => handlePointsConfigChange('pointsPerCompletedRide', e.target.value)}
+                          className="fare-input"
+                          placeholder="0"
+                        />
+                      </div>
+                      <p className="fare-description">
+                        {pointsDescriptions.pointsPerCompletedRide || t('settings.pointsPerCompletedRideDesc')}
+                      </p>
+                    </div>
+                    <div className="fare-cost-group">
+                      <label htmlFor="pointsForFreeRide">{t('settings.pointsForFreeRide')}</label>
+                      <div className="fare-input-wrapper">
+                        <span className="points-symbol material-symbols-outlined">redeem</span>
+                        <input
+                          id="pointsForFreeRide"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={pointsConfig.pointsForFreeRide}
+                          onChange={(e) => handlePointsConfigChange('pointsForFreeRide', e.target.value)}
+                          className="fare-input"
+                          placeholder="0"
+                        />
+                      </div>
+                      <p className="fare-description">
+                        {pointsDescriptions.pointsForFreeRide || t('settings.pointsForFreeRideDesc')}
+                      </p>
                     </div>
                   </div>
                 </div>

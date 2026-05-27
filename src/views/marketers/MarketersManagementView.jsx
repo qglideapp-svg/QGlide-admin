@@ -140,11 +140,11 @@ export default function MarketersManagementView() {
     [t, loadMarketers]
   );
 
-  const handleConfirmDelete = useCallback(async () => {
+  const handleConfirmDelete = useCallback(async (reason) => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      const result = await deleteMarketer(deleteTarget.id);
+      const result = await deleteMarketer(deleteTarget.id, reason);
       if (!result.success) {
         setToast({ type: 'error', message: result.error || t('marketers.errorDelete') });
         throw new Error(result.error || 'delete failed');

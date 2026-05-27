@@ -231,9 +231,11 @@ export async function updateMarketer(marketerId, { displayName, email, password,
 }
 
 /**
- * Delete marketer (edge function `admin-delete-marketer`).
+ * Delete marketer (POST `admin-delete-marketer`).
+ * @param {string} marketerId
+ * @param {string} reason
  */
-export async function deleteMarketer(marketerId) {
+export async function deleteMarketer(marketerId, reason) {
   try {
     const token = getAuthToken();
     if (!token) {
@@ -248,7 +250,10 @@ export async function deleteMarketer(marketerId) {
         apikey: SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ marketer_id: marketerId }),
+      body: JSON.stringify({
+        marketer_id: marketerId,
+        reason: (reason || '').trim(),
+      }),
     });
 
     if (!response.ok) {
