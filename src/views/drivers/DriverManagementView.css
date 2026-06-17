@@ -211,6 +211,17 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
+}
+
+.driver-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .driver-name-text {

@@ -672,13 +672,267 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
   }
 };
 
+const DRIVER_PREVIEW_ARRAY_KEYS = [
+  'recipients_preview',
+  'preview',
+  'preview_drivers',
+  'drivers_preview',
+  'driver_previews',
+  'drivers',
+  'recipients',
+  'preview_recipients',
+  'drivers_without_docs',
+  'missing_vehicle_docs',
+  'missing_vehicle_doc_drivers',
+  'items',
+  'rows',
+  'results',
+];
+
+const extractDriversArray = (data) => {
+  const payload = data?.data ?? data;
+
+  if (Array.isArray(payload?.recipients_preview)) {
+    return payload.recipients_preview;
+  }
+
+  return findDriverPreviewArray(data);
+};
+
+const isDriverLikeObject = (value) => (
+  value
+  && typeof value === 'object'
+  && !Array.isArray(value)
+  && (
+    value.driver_id
+    || value.id
+    || value.full_name
+    || value.name
+    || value.email
+    || value.driver
+    || value.missing_documents
+    || value.missing_docs
+    || value.missing_vehicle_docs
+    || value.missing_vehicle_document_types
+  )
+);
+
+const objectValuesIfDriverLike = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  const values = Object.values(value);
+  return values.length > 0 && values.every(isDriverLikeObject) ? values : [];
+};
+
+const findDriverPreviewArray = (value, depth = 0) => {
+  if (value == null || depth > 3) return [];
+
+  if (Array.isArray(value)) {
+    return value.length > 0 && value.every((item) => typeof item === 'object') ? value : [];
+  }
+
+  if (typeof value !== 'object') return [];
+
+  for (const key of DRIVER_PREVIEW_ARRAY_KEYS) {
+    const candidate = value[key];
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      return candidate;
+    }
+    const objectValues = objectValuesIfDriverLike(candidate);
+    if (objectValues.length > 0) {
+      return objectValues;
+    }
+  }
+
+  const directObjectValues = objectValuesIfDriverLike(value);
+  if (directObjectValues.length > 0) {
+    return directObjectValues;
+  }
+
+  if (value.data) {
+    const nested = findDriverPreviewArray(value.data, depth + 1);
+    if (nested.length > 0) return nested;
+  }
+
+  if (value.preview && typeof value.preview === 'object') {
+    const nested = findDriverPreviewArray(value.preview, depth + 1);
+    if (nested.length > 0) return nested;
+  }
+
+  return [];
+};
+
+const extractEligibleCount = (data, driversLength = 0) => {
+  const payload = data?.data ?? data;
+
+  const count = payload?.eligible_count
+    ?? payload?.recipient_count
+    ?? payload?.total_count
+    ?? payload?.total
+    ?? payload?.count
+    ?? payload?.missing_vehicle_docs_count
+    ?? data?.eligible_count
+    ?? data?.recipient_count
+    ?? data?.total_count;
+
+  return typeof count === 'number' ? count : driversLength;
+};
+
+export const getDriverInitials = (name = '') => {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+};
+
+export const transformDriverWithoutDocsData = (apiDriver) => {
+  const nestedDriver = apiDriver?.driver || apiDriver?.driver_profile || apiDriver?.profile || null;
+  const source = nestedDriver ? { ...nestedDriver, ...apiDriver } : apiDriver;
+
+  const missingDocs = source.missing_documents
+    || source.missing_docs
+    || source.missing_vehicle_docs
+    || source.documents_missing
+    || source.incomplete_documents
+    || source.missing_vehicle_document_types
+    || source.missing_document_types
+    || [];
+
+  const normalizedMissingDocs = Array.isArray(missingDocs)
+    ? missingDocs.map((doc) => {
+        if (typeof doc === 'string') {
+          return doc
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+        }
+        return doc?.name || doc?.document_name || doc?.document_type || doc?.type || 'Document';
+      })
+    : [];
+
+  return {
+    id: source.driver_id || source.id || source.user_id || '',
+    name: source.full_name || source.name || source.driver_name || 'Unknown Driver',
+    email: source.email || source.email_address || '',
+    phone: source.phone_number || source.phone || source.contact_number || '',
+    avatar: source.avatar_url || source.profile_picture || source.avatar || source.profile_image || '',
+    missingDocs: normalizedMissingDocs,
+    registeredAt: source.created_at || source.registered_at || null,
+  };
+};
+
+export const fetchDriversWithoutDocs = async (previewLimit = 50) => {
+  try {
+    const token = getAuthToken();
+
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const params = new URLSearchParams({
+      preview_limit: String(previewLimit),
+    });
+    const url = `${API_BASE_URL}/admin-bulk-email-missing-vehicle-docs?${params.toString()}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const payload = data?.data ?? data;
+    const driversArray = extractDriversArray(data);
+    const drivers = driversArray.map(transformDriverWithoutDocsData);
+    const totalCount = extractEligibleCount(data, drivers.length);
+
+    return {
+      success: true,
+      data: {
+        drivers,
+        totalCount,
+        previewLimit,
+        summaryMessage: payload?.message || null,
+        requiredDocuments: payload?.required_vehicle_documents || [],
+      },
+    };
+  } catch (error) {
+    console.error('❌ FETCH DRIVERS WITHOUT DOCS ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch drivers without documents',
+    };
+  }
+};
+
+export const sendDocumentReminderEmails = async ({ subject = '', bodyText = '' } = {}) => {
+  try {
+    const token = getAuthToken();
+
+    if (!token) {
+      throw new Error('No authentication token found. Please login first.');
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const url = `${API_BASE_URL}/admin-bulk-email-missing-vehicle-docs`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+      },
+      body: JSON.stringify({
+        confirmed: true,
+        subject: subject.trim(),
+        body_text: bodyText.trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const payload = data?.data ?? data;
+
+    return {
+      success: true,
+      data: {
+        sentCount: payload?.sent_count
+          ?? payload?.emails_sent
+          ?? payload?.recipient_count
+          ?? payload?.sent
+          ?? 0,
+        failedCount: payload?.failed_count ?? payload?.failed ?? 0,
+        message: payload?.message || data?.message || 'Reminder emails sent successfully',
+      },
+    };
+  } catch (error) {
+    console.error('❌ SEND DOCUMENT REMINDER EMAILS ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send document reminder emails',
+    };
+  }
+};
+
 // Helper function to transform driver data from API to UI format
 export const transformDriverData = (apiDriver) => {
   return {
     id: apiDriver.id || apiDriver.driver_id || '',
     name: apiDriver.full_name || apiDriver.name || apiDriver.driver_name || 'Unknown Driver',
     phone: apiDriver.phone_number || apiDriver.phone || apiDriver.contact_number || '',
-    avatar: apiDriver.profile_picture || apiDriver.avatar || apiDriver.profile_image || 'https://i.pravatar.cc/40',
+    avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || apiDriver.profile_image || '',
     vehicle: {
       model: apiDriver.vehicle_model || apiDriver.vehicle?.model || apiDriver.car_model || 'Unknown Vehicle',
       year: apiDriver.vehicle_year || apiDriver.vehicle?.year || apiDriver.car_year || new Date().getFullYear()

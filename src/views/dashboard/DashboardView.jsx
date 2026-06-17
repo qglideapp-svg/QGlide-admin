@@ -16,6 +16,8 @@ import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetch
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import AdminWithdrawModal from '../../components/modals/AdminWithdrawModal';
+import DriversWithoutDocsModal from '../../components/modals/DriversWithoutDocsModal';
+import { fetchDriversWithoutDocs, sendDocumentReminderEmails } from '../../services/driverService';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -38,7 +40,17 @@ export default function DashboardView() {
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('error');
   const [selectedTimeframe, setSelectedTimeframe] = useState('month');
+
+  const [showDriversWithoutDocsModal, setShowDriversWithoutDocsModal] = useState(false);
+  const [driversWithoutDocs, setDriversWithoutDocs] = useState([]);
+  const [driversWithoutDocsTotalCount, setDriversWithoutDocsTotalCount] = useState(0);
+  const [driversWithoutDocsSummary, setDriversWithoutDocsSummary] = useState('');
+  const [isLoadingDriversWithoutDocs, setIsLoadingDriversWithoutDocs] = useState(false);
+  const [isSendingDocumentReminders, setIsSendingDocumentReminders] = useState(false);
+  const [documentReminderResult, setDocumentReminderResult] = useState(null);
 
   // Financial Management states
   const [financialOverview, setFinancialOverview] = useState(null);
@@ -104,6 +116,7 @@ export default function DashboardView() {
     
     loadDashboardData();
     loadAnalyticsData();
+    loadDriversWithoutDocs();
   }, [searchParams]);
 
   useEffect(() => {
@@ -734,12 +747,78 @@ export default function DashboardView() {
 
   const closeToast = () => {
     setShowToast(false);
+    setToastMessage('');
     setError(null);
   };
 
   const showToastMessage = (message, type = 'error') => {
-    setError(message);
+    setToastMessage(message);
+    setToastType(type);
+    if (type === 'error') {
+      setError(message);
+    }
     setShowToast(true);
+  };
+
+  const loadDriversWithoutDocs = async () => {
+    setIsLoadingDriversWithoutDocs(true);
+
+    try {
+      const result = await fetchDriversWithoutDocs();
+
+      if (result.success) {
+        const drivers = result.data?.drivers || [];
+        const totalCount = result.data?.totalCount ?? drivers.length;
+        setDriversWithoutDocs(drivers);
+        setDriversWithoutDocsTotalCount(totalCount);
+        setDriversWithoutDocsSummary(result.data?.summaryMessage || '');
+        setDocumentReminderResult(null);
+        setShowDriversWithoutDocsModal(totalCount > 0);
+      } else {
+        console.error('Drivers without docs error:', result.error);
+        showToastMessage(result.error || t('dashboard.documentReminderFailed'), 'error');
+      }
+    } catch (err) {
+      console.error('Drivers without docs fetch error:', err);
+    } finally {
+      setIsLoadingDriversWithoutDocs(false);
+    }
+  };
+
+  const handleCloseDriversWithoutDocsModal = () => {
+    setShowDriversWithoutDocsModal(false);
+    setDocumentReminderResult(null);
+  };
+
+  const handleSendDocumentReminders = async ({ subject, bodyText }) => {
+    setIsSendingDocumentReminders(true);
+
+    try {
+      const result = await sendDocumentReminderEmails({
+        subject,
+        bodyText,
+      });
+
+      if (result.success) {
+        setDocumentReminderResult({
+          success: true,
+          sentCount: result.data?.sentCount ?? driversWithoutDocsTotalCount,
+        });
+        showToastMessage(
+          result.data?.message || t('dashboard.documentReminderSentToast', {
+            count: result.data?.sentCount ?? driversWithoutDocsTotalCount,
+          }),
+          'success'
+        );
+      } else {
+        showToastMessage(result.error || t('dashboard.documentReminderFailed'), 'error');
+      }
+    } catch (err) {
+      console.error('Send document reminders error:', err);
+      showToastMessage(t('dashboard.documentReminderFailed'), 'error');
+    } finally {
+      setIsSendingDocumentReminders(false);
+    }
   };
 
   const handleAdminWithdraw = async (withdrawData) => {
@@ -1930,11 +2009,23 @@ export default function DashboardView() {
       
       {showToast && (
         <Toast 
-          message={error || 'Failed to load dashboard data'} 
-          type="error" 
+          message={toastMessage || error || 'Failed to load dashboard data'} 
+          type={toastType} 
           onClose={closeToast}
         />
       )}
+
+      <DriversWithoutDocsModal
+        isOpen={showDriversWithoutDocsModal}
+        onClose={handleCloseDriversWithoutDocsModal}
+        drivers={driversWithoutDocs}
+        totalCount={driversWithoutDocsTotalCount}
+        summaryMessage={driversWithoutDocsSummary}
+        isLoading={isLoadingDriversWithoutDocs}
+        isSending={isSendingDocumentReminders}
+        onSendReminders={handleSendDocumentReminders}
+        sendResult={documentReminderResult}
+      />
       
       <AdminWithdrawModal
         isOpen={showAdminWithdrawModal}

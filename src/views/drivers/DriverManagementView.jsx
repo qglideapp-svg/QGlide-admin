@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriversList, transformDriverData, exportDriversToCSV } from '../../services/driverService';
+import { fetchDriversList, transformDriverData, exportDriversToCSV, getDriverInitials } from '../../services/driverService';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import { useLanguage } from '../../contexts/LanguageContext';
+import AddDriverModal from '../../components/modals/AddDriverModal';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -52,6 +53,8 @@ export default function DriverManagementView() {
   
   // Export state
   const [isExporting, setIsExporting] = useState(false);
+  const [isAddDriverModalOpen, setIsAddDriverModalOpen] = useState(false);
+  const [isAddingDriver, setIsAddingDriver] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -274,6 +277,41 @@ export default function DriverManagementView() {
     navigate(`/driver-profile/${driverId}`);
   };
 
+  const handleAddDriver = () => {
+    setIsAddDriverModalOpen(true);
+  };
+
+  const handleCloseAddDriverModal = () => {
+    setIsAddDriverModalOpen(false);
+  };
+
+  const handleAddDriverSubmit = async (driverData) => {
+    setIsAddingDriver(true);
+
+    try {
+      const newDriver = {
+        id: `new-${Date.now()}`,
+        name: driverData.full_name.trim(),
+        phone: driverData.phone?.trim() || '-',
+        avatar: 'https://i.pravatar.cc/40',
+        vehicle: {
+          model: driverData.vehicle_model?.trim() || '-',
+          year: driverData.vehicle_year || new Date().getFullYear()
+        },
+        status: 'Offline',
+        rating: 0,
+        totalRides: 0,
+        earnings: 0
+      };
+
+      setDrivers((prev) => [newDriver, ...prev]);
+      setTotalCount((prev) => prev + 1);
+      setIsAddDriverModalOpen(false);
+    } finally {
+      setIsAddingDriver(false);
+    }
+  };
+
   // Apply client-side rating filter (since API doesn't support rating filtering)
   const filteredDrivers = drivers.filter(driver => {
     const matchesRating = ratingFilter === 'Any Rating' || 
@@ -402,7 +440,7 @@ export default function DriverManagementView() {
                   </span>
                   {isExporting ? t('drivers.exporting') : t('drivers.exportCSV')}
                 </button>
-                <button className="btn-add-driver">
+                <button className="btn-add-driver" onClick={handleAddDriver}>
                   <span className="material-symbols-outlined">add</span>
                   {t('drivers.addDriver')}
                 </button>
@@ -497,7 +535,13 @@ export default function DriverManagementView() {
                       </td>
                       <td className="driver-cell">
                         <div className="driver-info-cell">
-                          <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
+                          {driver.avatar ? (
+                            <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
+                          ) : (
+                            <div className="driver-avatar driver-avatar-fallback" aria-hidden="true">
+                              {getDriverInitials(driver.name)}
+                            </div>
+                          )}
                           <div>
                             <div className="driver-name-text">{driver.name}</div>
                             <div className="driver-phone">{driver.phone}</div>
@@ -610,6 +654,12 @@ export default function DriverManagementView() {
           </div>
         </div>
       </main>
+      <AddDriverModal
+        isOpen={isAddDriverModalOpen}
+        onClose={handleCloseAddDriverModal}
+        onConfirm={handleAddDriverSubmit}
+        isLoading={isAddingDriver}
+      />
     </div>
   );
 }

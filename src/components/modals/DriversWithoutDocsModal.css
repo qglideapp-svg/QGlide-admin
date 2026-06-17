@@ -1,0 +1,333 @@
+@import './EditDriverModal.css';
+
+.modal-content.drivers-without-docs-modal {
+  width: min(96vw, 1200px) !important;
+  max-width: 1200px !important;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drivers-without-docs-header {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.drivers-without-docs-title-wrap {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.drivers-without-docs-icon {
+  font-size: 28px;
+  color: #d97706;
+  background: #fef3c7;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.drivers-without-docs-title-wrap h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  color: #111827;
+}
+
+.drivers-without-docs-title-wrap p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.drivers-without-docs-body {
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.drivers-without-docs-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 14px;
+}
+
+.drivers-without-docs-summary .summary-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ea580c;
+  color: #fff;
+  font-weight: 700;
+}
+
+.drivers-without-docs-table-wrap {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 420px;
+  background: #fff;
+}
+
+.drivers-without-docs-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.drivers-without-docs-table th,
+.drivers-without-docs-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.drivers-without-docs-table th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  z-index: 1;
+}
+
+.drivers-without-docs-table th:nth-child(1),
+.drivers-without-docs-table td:nth-child(1) {
+  min-width: 220px;
+}
+
+.drivers-without-docs-table th:nth-child(2),
+.drivers-without-docs-table td:nth-child(2) {
+  min-width: 240px;
+}
+
+.drivers-without-docs-table th:nth-child(3),
+.drivers-without-docs-table td:nth-child(3) {
+  min-width: 280px;
+}
+
+.driver-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.driver-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.driver-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.driver-name-text {
+  font-weight: 600;
+  color: #111827;
+}
+
+.driver-meta {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.contact-cell {
+  display: grid;
+  gap: 6px;
+}
+
+.contact-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.contact-line .material-symbols-outlined {
+  font-size: 16px;
+  color: #94a3b8;
+}
+
+.missing-docs-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.missing-doc-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.drivers-without-docs-message label,
+.drivers-without-docs-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.drivers-without-docs-email-form {
+  display: grid;
+  gap: 16px;
+}
+
+.drivers-without-docs-field input,
+.drivers-without-docs-message textarea,
+.drivers-without-docs-field textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.drivers-without-docs-field input:focus,
+.drivers-without-docs-message textarea:focus,
+.drivers-without-docs-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.drivers-without-docs-message textarea,
+.drivers-without-docs-field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.message-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.drivers-without-docs-loading,
+.drivers-without-docs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 180px;
+  color: #64748b;
+}
+
+.drivers-without-docs-empty .material-symbols-outlined {
+  font-size: 40px;
+  color: #22c55e;
+}
+
+.drivers-without-docs-success {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.drivers-without-docs-success .material-symbols-outlined {
+  font-size: 28px;
+}
+
+.drivers-without-docs-success p {
+  margin: 6px 0 0;
+}
+
+.drivers-without-docs-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.drivers-without-docs-footer .btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+:root.dark-mode .drivers-without-docs-modal,
+.dark-mode .drivers-without-docs-modal {
+  background: #111827;
+}
+
+:root.dark-mode .drivers-without-docs-title-wrap h2,
+.dark-mode .drivers-without-docs-title-wrap h2,
+:root.dark-mode .driver-name-text,
+.dark-mode .driver-name-text {
+  color: #f9fafb;
+}
+
+:root.dark-mode .drivers-without-docs-table-wrap,
+.dark-mode .drivers-without-docs-table-wrap {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+:root.dark-mode .drivers-without-docs-table th,
+.dark-mode .drivers-without-docs-table th {
+  background: #1e293b;
+}
+
+:root.dark-mode .drivers-without-docs-message textarea,
+.dark-mode .drivers-without-docs-message textarea,
+:root.dark-mode .drivers-without-docs-field textarea,
+.dark-mode .drivers-without-docs-field textarea,
+:root.dark-mode .drivers-without-docs-field input,
+.dark-mode .drivers-without-docs-field input {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
