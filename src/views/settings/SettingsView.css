@@ -391,6 +391,35 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
   border-bottom: 2px solid var(--gold);
 }
 
+.fare-cost-section-full {
+  grid-column: 1 / -1;
+}
+
+.ride-type-fares-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.ride-type-fare-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.ride-type-fare-card h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
 .fare-cost-group {
   display: flex;
   flex-direction: column;

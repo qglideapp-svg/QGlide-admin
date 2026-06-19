@@ -35,15 +35,16 @@ export default function SettingsView() {
     }
   });
   const [fareCosts, setFareCosts] = useState({
-    baseFare: 0,
     costPerKilometer: 0,
     costPerMinute: 0,
     airportSurcharge: 0,
-    minimumFare: 0,
     surgeMultiplier: 1,
     nightSurcharge: 0,
     peakHourSurcharge: 0
   });
+  const [rideTypeFares, setRideTypeFares] = useState({});
+  const [rideTypeFarePlaceholders, setRideTypeFarePlaceholders] = useState({});
+  const [rideTypeOptions, setRideTypeOptions] = useState([]);
   const [fareDescriptions, setFareDescriptions] = useState({});
   const [isSavingFareCosts, setIsSavingFareCosts] = useState(false);
   const [pointsConfig, setPointsConfig] = useState({
@@ -99,6 +100,9 @@ export default function SettingsView() {
       }
       if (fareCostsResult.success) {
         setFareCosts(fareCostsResult.data);
+        setRideTypeFares(fareCostsResult.rideTypeFares || {});
+        setRideTypeFarePlaceholders(fareCostsResult.rideTypeFarePlaceholders || {});
+        setRideTypeOptions(fareCostsResult.rideTypeOptions || []);
         setFareDescriptions(fareCostsResult.descriptions || {});
       } else if (fareCostsResult.error) {
         showToastMessage(fareCostsResult.error, 'error');
@@ -232,6 +236,19 @@ export default function SettingsView() {
     }
   };
 
+  const handleRideTypeFareChange = (rideType, field, value) => {
+    const parsed = parseFloat(value);
+    setRideTypeFares((prev) => ({
+      ...prev,
+      [rideType]: {
+        baseFare: '',
+        minimumFare: '',
+        ...prev[rideType],
+        [field]: value === '' ? '' : (Number.isFinite(parsed) ? parsed : ''),
+      },
+    }));
+  };
+
   const handleFareCostChange = (field, value) => {
     const parsed = parseFloat(value);
     setFareCosts((prev) => ({
@@ -305,10 +322,19 @@ export default function SettingsView() {
   const handleSaveFareCosts = async () => {
     setIsSavingFareCosts(true);
     try {
-      const result = await updateFareCosts(fareCosts);
+      const result = await updateFareCosts(fareCosts, rideTypeFares);
       if (result.success) {
         if (result.data) {
           setFareCosts(result.data);
+        }
+        if (result.rideTypeFares) {
+          setRideTypeFares(result.rideTypeFares);
+        }
+        if (result.rideTypeFarePlaceholders) {
+          setRideTypeFarePlaceholders(result.rideTypeFarePlaceholders);
+        }
+        if (result.rideTypeOptions) {
+          setRideTypeOptions(result.rideTypeOptions);
         }
         if (result.descriptions) {
           setFareDescriptions(result.descriptions);
@@ -564,41 +590,50 @@ export default function SettingsView() {
                 </div>
                 <div className="card-content">
                   <div className="fare-costs-grid">
-                    <div className="fare-cost-section">
-                      <h3>{t('settings.basePricing')}</h3>
-                      <div className="fare-cost-group">
-                        <label htmlFor="baseFare">{t('settings.baseFare')}</label>
-                        <div className="fare-input-wrapper">
-                          <span className="currency-symbol">QAR</span>
-                          <input
-                            id="baseFare"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={fareCosts.baseFare}
-                            onChange={(e) => handleFareCostChange('baseFare', e.target.value)}
-                            className="fare-input"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <p className="fare-description">{fareDescriptions.baseFare || t('settings.startingFare')}</p>
-                      </div>
-                      <div className="fare-cost-group">
-                        <label htmlFor="minimumFare">{t('settings.minimumFare')}</label>
-                        <div className="fare-input-wrapper">
-                          <span className="currency-symbol">QAR</span>
-                          <input
-                            id="minimumFare"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={fareCosts.minimumFare}
-                            onChange={(e) => handleFareCostChange('minimumFare', e.target.value)}
-                            className="fare-input"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <p className="fare-description">{fareDescriptions.minimumFare || t('settings.minimumAmount')}</p>
+                    <div className="fare-cost-section fare-cost-section-full">
+                      <h3>{t('settings.rideTypePricing')}</h3>
+                      <div className="ride-type-fares-grid">
+                        {rideTypeOptions.length === 0 ? (
+                          <p className="fare-description">{t('settings.noRideTypeFares')}</p>
+                        ) : (
+                          rideTypeOptions.map(({ id, label }) => (
+                          <div key={id} className="ride-type-fare-card">
+                            <h4>{label}</h4>
+                            <div className="fare-cost-group">
+                              <label htmlFor={`${id}-baseFare`}>{t('settings.baseFare')}</label>
+                              <div className="fare-input-wrapper">
+                                <span className="currency-symbol">QAR</span>
+                                <input
+                                  id={`${id}-baseFare`}
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={rideTypeFares[id]?.baseFare ?? ''}
+                                  onChange={(e) => handleRideTypeFareChange(id, 'baseFare', e.target.value)}
+                                  className="fare-input"
+                                  placeholder={rideTypeFarePlaceholders[id]?.baseFare || undefined}
+                                />
+                              </div>
+                            </div>
+                            <div className="fare-cost-group">
+                              <label htmlFor={`${id}-minimumFare`}>{t('settings.minimumFare')}</label>
+                              <div className="fare-input-wrapper">
+                                <span className="currency-symbol">QAR</span>
+                                <input
+                                  id={`${id}-minimumFare`}
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={rideTypeFares[id]?.minimumFare ?? ''}
+                                  onChange={(e) => handleRideTypeFareChange(id, 'minimumFare', e.target.value)}
+                                  className="fare-input"
+                                  placeholder={rideTypeFarePlaceholders[id]?.minimumFare || undefined}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          ))
+                        )}
                       </div>
                     </div>
 

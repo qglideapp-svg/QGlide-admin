@@ -4,22 +4,109 @@ const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
 const getAnonApiKey = () => localStorage.getItem('anonKey') || SUPABASE_ANON_KEY;
 
-// Mapping from UI field names to API config keys (must match edge function / migration)
+// Mapping from UI field names to API config keys (global fare settings)
 const FARE_CONFIG_KEY_MAP = {
-  baseFare: 'base_fare',
   costPerKilometer: 'cost_per_km',
   costPerMinute: 'cost_per_minute',
   airportSurcharge: 'airport_surcharge',
-  minimumFare: 'minimum_fare',
   surgeMultiplier: 'surge_multiplier',
   nightSurcharge: 'night_surcharge',
   peakHourSurcharge: 'peak_hour_surcharge',
 };
 
+function formatFareNumberForPlaceholder(value) {
+  if (value == null || value === '') return '';
+  const num = parseFloat(value);
+  return Number.isFinite(num) ? String(num) : String(value).trim();
+}
+
+function readRideTypeLabel(rideTypeId, config) {
+  const candidates = [
+    config.label,
+    config.name,
+    config.display_name,
+    config.displayName,
+    config.title,
+    config.ride_type_name,
+    config.ride_type_label,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate != null && String(candidate).trim() !== '') {
+      return String(candidate).trim();
+    }
+  }
+
+  return String(rideTypeId);
+}
+
+function readFarePlaceholder(config, placeholderKeys, valueKeys) {
+  for (const key of placeholderKeys) {
+    if (config[key] != null && String(config[key]).trim() !== '') {
+      return String(config[key]).trim();
+    }
+  }
+
+  for (const key of valueKeys) {
+    const formatted = formatFareNumberForPlaceholder(config[key]);
+    if (formatted !== '') return formatted;
+  }
+
+  return '';
+}
+
+function extractRideTypeFaresPayload(json) {
+  return json?.ride_type_fares ?? json?.data?.ride_type_fares ?? null;
+}
+
+function mapRideTypeFaresFromApi(raw) {
+  const rideTypeFares = {};
+  const rideTypeFarePlaceholders = {};
+  const rideTypeOptions = [];
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { rideTypeFares, rideTypeFarePlaceholders, rideTypeOptions };
+  }
+
+  for (const [rideTypeId, config] of Object.entries(raw)) {
+    if (!config || typeof config !== 'object') continue;
+
+    const baseFare = parseFloat(config.base_fare ?? config.baseFare);
+    const minimumFare = parseFloat(config.minimum_fare ?? config.minimumFare);
+
+    rideTypeFares[rideTypeId] = {
+      baseFare: Number.isFinite(baseFare) ? baseFare : '',
+      minimumFare: Number.isFinite(minimumFare) ? minimumFare : '',
+    };
+
+    rideTypeFarePlaceholders[rideTypeId] = {
+      baseFare: readFarePlaceholder(
+        config,
+        ['base_fare_placeholder', 'base_fare_description', 'base_fare_hint'],
+        ['base_fare', 'baseFare']
+      ),
+      minimumFare: readFarePlaceholder(
+        config,
+        ['minimum_fare_placeholder', 'minimum_fare_description', 'minimum_fare_hint'],
+        ['minimum_fare', 'minimumFare']
+      ),
+    };
+
+    rideTypeOptions.push({
+      id: rideTypeId,
+      label: readRideTypeLabel(rideTypeId, config),
+    });
+  }
+
+  return { rideTypeFares, rideTypeFarePlaceholders, rideTypeOptions };
+}
+
+function extractRideTypeFares(json) {
+  return mapRideTypeFaresFromApi(extractRideTypeFaresPayload(json));
+}
+
 /** Fallback descriptions sent on POST when creating/updating a row */
 const FARE_CONFIG_DESCRIPTIONS = {
-  base_fare: 'Base fare applied when a trip starts',
-  minimum_fare: 'Minimum total fare charged for a trip',
   cost_per_km: 'Charged per kilometer traveled',
   cost_per_minute: 'Charged per minute of trip time',
   airport_surcharge: 'Flat surcharge for airport-related trips',
@@ -29,8 +116,6 @@ const FARE_CONFIG_DESCRIPTIONS = {
 };
 
 const EMPTY_FARE_COSTS = {
-  baseFare: 0,
-  minimumFare: 0,
   costPerKilometer: 0,
   costPerMinute: 0,
   airportSurcharge: 0,
@@ -157,22 +242,24 @@ function mapFareRowsToState(rows) {
 }
 
 function mapFareApiResponseToState(json) {
+  const rideTypeData = extractRideTypeFares(json);
   const rows = extractFareConfigRows(json);
   if (rows.length > 0) {
     const fromRows = mapFareRowsToState(rows);
     if (fromRows.matchedKeys > 0) {
       const { matchedKeys, ...rest } = fromRows;
       void matchedKeys;
-      return { ...rest, fareSource: 'rows' };
+      return { ...rest, ...rideTypeData, fareSource: 'rows' };
     }
   }
 
   const flat = mapFlatFareKeysObject(json) || mapFlatFareKeysObject(json?.data);
-  if (flat) return { ...flat, fareSource: 'flat' };
+  if (flat) return { ...flat, ...rideTypeData, fareSource: 'flat' };
 
   return {
     values: { ...EMPTY_FARE_COSTS },
     descriptions: {},
+    ...rideTypeData,
     fareSource: 'empty',
   };
 }
@@ -636,6 +723,7 @@ export const fetchFareCosts = async () => {
     const response = await fetch(`${API_BASE_URL}/admin-fare-config`, {
       method: 'GET',
       headers: {
+        'Content-Type': 'application/json',
         apikey: getAnonApiKey(),
         Authorization: `Bearer ${token}`,
       },
@@ -657,10 +745,13 @@ export const fetchFareCosts = async () => {
       return { success: false, error: msg };
     }
 
-    const { values, descriptions, fareSource } = mapFareApiResponseToState(json);
+    const { values, descriptions, rideTypeFares, rideTypeFarePlaceholders, rideTypeOptions, fareSource } = mapFareApiResponseToState(json);
     return {
       success: true,
       data: values,
+      rideTypeFares,
+      rideTypeFarePlaceholders,
+      rideTypeOptions,
       descriptions,
       fareSource,
     };
@@ -672,8 +763,8 @@ export const fetchFareCosts = async () => {
   }
 };
 
-// Update fare cost settings (POST /admin-fare-config per key)
-export const updateFareCosts = async (fareCostData) => {
+// Update fare cost settings (POST /admin-fare-config)
+export const updateFareCosts = async (fareCostData, rideTypeFares = {}) => {
   try {
     const token = getAuthToken();
     if (!token) {
@@ -681,6 +772,34 @@ export const updateFareCosts = async (fareCostData) => {
     }
 
     const apiKey = getAnonApiKey();
+    const ride_type_fares = {};
+
+    for (const [rideType, fares] of Object.entries(rideTypeFares)) {
+      ride_type_fares[rideType] = {
+        base_fare: parseFloat(fares.baseFare) || 0,
+        minimum_fare: parseFloat(fares.minimumFare) || 0,
+      };
+    }
+
+    const rideTypeResponse = await fetch(`${API_BASE_URL}/admin-fare-config`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: apiKey,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ride_type_fares }),
+    });
+
+    if (!rideTypeResponse.ok) {
+      const errorData = await rideTypeResponse.json().catch(() => ({}));
+      const msg = errorData.error || errorData.message || `${rideTypeResponse.status} ${rideTypeResponse.statusText}`;
+      return {
+        success: false,
+        error: `Failed to update ride type fares: ${msg}`,
+      };
+    }
+
     const updatePromises = Object.entries(FARE_CONFIG_KEY_MAP).map(
       async ([fieldName, configKey]) => {
         const raw = fareCostData[fieldName];
@@ -728,9 +847,24 @@ export const updateFareCosts = async (fareCostData) => {
         refreshed.fareSource === 'empty'
           ? fareCostData
           : refreshed.data;
+      const rideTypeFaresToUse =
+        refreshed.fareSource === 'empty'
+          ? rideTypeFares
+          : refreshed.rideTypeFares;
+      const rideTypeFarePlaceholdersToUse =
+        refreshed.fareSource === 'empty'
+          ? {}
+          : refreshed.rideTypeFarePlaceholders;
+      const rideTypeOptionsToUse =
+        refreshed.fareSource === 'empty'
+          ? []
+          : refreshed.rideTypeOptions;
       return {
         success: true,
         data: dataToUse,
+        rideTypeFares: rideTypeFaresToUse,
+        rideTypeFarePlaceholders: rideTypeFarePlaceholdersToUse,
+        rideTypeOptions: rideTypeOptionsToUse,
         descriptions: refreshed.descriptions || {},
         message: 'Fare costs updated successfully',
         ...(refreshed.fareSource === 'empty' && {
@@ -743,6 +877,9 @@ export const updateFareCosts = async (fareCostData) => {
     return {
       success: true,
       data: fareCostData,
+      rideTypeFares,
+      rideTypeFarePlaceholders: {},
+      rideTypeOptions: [],
       descriptions: {},
       message: 'Fare costs updated successfully',
       error: refreshed.error,
