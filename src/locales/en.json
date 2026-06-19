@@ -413,6 +413,13 @@
     "pointsForFreeRide": "Points for One Free Ride",
     "pointsForFreeRideDesc": "Total points a rider must accumulate to redeem one free ride",
     "pointsConfigUpdated": "Points program settings updated successfully",
+    "governmentImposition": "Government Imposition (5 QAR)",
+    "governmentImpositionIntro": "Control whether riders see the government imposition notice and 5 QAR charge on rides.",
+    "governmentImpositionToggle": "Show government imposition on rides",
+    "governmentImpositionDesc": "When enabled, riders are shown the government imposition modal and a 5 QAR fee is applied to rides.",
+    "governmentImpositionUpdated": "Government imposition setting updated successfully",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
     "failedToUpdate": "Failed to update",
     "failedToLoad": "Failed to load settings data"
   },

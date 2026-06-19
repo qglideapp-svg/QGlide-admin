@@ -709,6 +709,16 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
   transform: translateY(-1px); 
 }
 
+.government-imposition-toggle {
+  margin-bottom: 0;
+  max-width: 480px;
+}
+
+.government-imposition-toggle .toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .settings-grid { grid-template-columns: 1fr; gap: 24px; }

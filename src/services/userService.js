@@ -1,9 +1,10 @@
 import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
 // Fetch users list with filters
-export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingFilter = '', page = 1, limit = 20) => {
+export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingFilter = '', page = 1, limit = 20, startDate = '', endDate = '') => {
   try {
     const token = getAuthToken();
     
@@ -11,41 +12,45 @@ export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingF
       throw new Error('No authentication token found. Please login first.');
     }
 
-    // Build URL with query parameters
-    let url = `${API_BASE_URL}/admin-users-list`;
-    const params = [];
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const params = new URLSearchParams();
     
     if (searchTerm && searchTerm.trim()) {
-      params.push(`search=${encodeURIComponent(searchTerm.trim())}`);
+      params.set('search', searchTerm.trim());
     }
     
     if (statusFilter && statusFilter !== 'All' && statusFilter.toLowerCase() !== 'all') {
-      params.push(`status=${encodeURIComponent(statusFilter.toLowerCase())}`);
+      params.set('status', statusFilter.toLowerCase());
     }
     
     if (ratingFilter && ratingFilter !== 'Any' && ratingFilter !== 'Any Rating') {
-      // Extract numeric value from rating filter (e.g., "4.5+" -> "4.5")
-      const ratingValue = ratingFilter.replace('+', '');
-      params.push(`min_rating=${encodeURIComponent(ratingValue)}`);
+      params.set('min_rating', ratingFilter.replace('+', ''));
+    }
+
+    if (startDate) {
+      params.set('start_date', startDate);
+    }
+
+    if (endDate) {
+      params.set('end_date', endDate);
     }
     
-    // Add pagination parameters
-    params.push(`page=${page}`);
-    params.push(`limit=${limit}`);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
     
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
-    }
+    const url = `${API_BASE_URL}/admin-users-list?${params.toString()}`;
     
     console.log('🚀 FETCH USERS LIST REQUEST:', {
       '🔗 URL': url,
       '🔍 Search Term': searchTerm,
       '📊 Status Filter': statusFilter,
       '⭐ Rating Filter': ratingFilter,
+      '📅 Start Date': startDate,
+      '📅 End Date': endDate,
       '📄 Page': page,
       '📏 Limit': limit,
       '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
+      '🔑 Has Anon Key': !!anonKey,
       '⏰ Timestamp': new Date().toISOString()
     });
 
@@ -53,7 +58,8 @@ export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingF
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
       },
     });
 
@@ -486,7 +492,7 @@ export const createUser = async (userData) => {
 };
 
 // Export users to CSV
-export const exportUsersToCSV = async (status = '') => {
+export const exportUsersToCSV = async (status = '', startDate = '', endDate = '') => {
   try {
     const token = getAuthToken();
     
@@ -494,14 +500,29 @@ export const exportUsersToCSV = async (status = '') => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    let url = `${API_BASE_URL}/admin-users-export-csv`;
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const params = new URLSearchParams();
+
     if (status && status !== 'All' && status.toLowerCase() !== 'all') {
-      url += `?status=${encodeURIComponent(status.toLowerCase())}`;
+      params.set('status', status.toLowerCase());
     }
+
+    if (startDate) {
+      params.set('start_date', startDate);
+    }
+
+    if (endDate) {
+      params.set('end_date', endDate);
+    }
+
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/admin-users-export-csv${queryString ? `?${queryString}` : ''}`;
 
     console.log('🚀 EXPORT USERS CSV REQUEST:', {
       '🔗 URL': url,
       '📊 Status Filter': status,
+      '📅 Start Date': startDate,
+      '📅 End Date': endDate,
       '🔑 Has Token': !!token,
       '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
@@ -511,7 +532,8 @@ export const exportUsersToCSV = async (status = '') => {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
       },
     });
 
@@ -686,6 +708,13 @@ export const fetchUserRideHistory = async (userId) => {
   }
 };
 
+export const getUserInitials = (name = '') => {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+};
+
 // Transform user data from API format to UI format
 export const transformUserData = (apiUser) => {
   // Handle null/undefined
@@ -694,7 +723,7 @@ export const transformUserData = (apiUser) => {
     return {
       id: '',
       name: 'Unknown User',
-      avatar: 'https://i.pravatar.cc/40',
+      avatar: '',
       joinedDate: 'N/A',
       contact: 'N/A',
       totalRides: 0,
@@ -754,7 +783,7 @@ export const transformUserData = (apiUser) => {
   const transformed = {
     id: getString(apiUser.id || apiUser.user_id || apiUser.userId, ''),
     name: getString(apiUser.full_name || apiUser.name || apiUser.fullName, 'Unknown User'),
-    avatar: getString(apiUser.avatar_url || apiUser.profile_picture || apiUser.avatar || apiUser.avatarUrl, 'https://i.pravatar.cc/40'),
+    avatar: apiUser.avatar_url || apiUser.profile_picture || apiUser.avatar || apiUser.avatarUrl || '',
     joinedDate: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split('T')[0] : 'N/A',
     contact: contactValue,
     totalRides: totalRidesValue,

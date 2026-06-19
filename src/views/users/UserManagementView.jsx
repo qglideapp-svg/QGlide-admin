@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './UserManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchUsersList, transformUserData, exportUsersToCSV, createUser } from '../../services/userService';
+import { fetchUsersList, transformUserData, exportUsersToCSV, createUser, getUserInitials } from '../../services/userService';
 import AddUserModal from '../../components/modals/AddUserModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -48,7 +48,8 @@ export default function UserManagementView() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [ratingFilter, setRatingFilter] = useState('Any');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -60,11 +61,12 @@ export default function UserManagementView() {
   };
 
   // Fetch users from API with filters
-  const loadUsers = useCallback(async (search = '', status = '', rating = '', page = 1) => {
+  const loadUsers = useCallback(async (search = '', status = '', page = 1, start = '', end = '') => {
     console.log('🔄 LOADING USERS:', {
       '🔍 Search Term': search,
       '📊 Status Filter': status,
-      '⭐ Rating Filter': rating,
+      '📅 Start Date': start,
+      '📅 End Date': end,
       '📄 Page': page,
       '⏰ Timestamp': new Date().toISOString()
     });
@@ -73,7 +75,7 @@ export default function UserManagementView() {
     setError(null);
 
     try {
-      const result = await fetchUsersList(search, status, rating, page, limit);
+      const result = await fetchUsersList(search, status, '', page, limit, start, end);
 
       console.log('📡 API RESULT RECEIVED:', {
         '✅ Success': result.success,
@@ -127,15 +129,16 @@ export default function UserManagementView() {
       console.log('🔍 SEARCH/FILTER TRIGGERED:', {
         '📝 Search Term': searchTerm,
         '📊 Status Filter': statusFilter,
-        '⭐ Rating Filter': ratingFilter,
+        '📅 Start Date': startDate,
+        '📅 End Date': endDate,
         '⏰ Timestamp': new Date().toISOString()
       });
-      loadUsers(searchTerm, statusFilter, ratingFilter, 1);
+      loadUsers(searchTerm, statusFilter, 1, startDate, endDate);
       setCurrentPage(1); // Reset to first page when filters change
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter, ratingFilter, loadUsers]);
+  }, [searchTerm, statusFilter, startDate, endDate, loadUsers]);
 
   // Fallback: Initialize with empty array if no users loaded after 5 seconds
   useEffect(() => {
@@ -210,7 +213,8 @@ export default function UserManagementView() {
   const handleClearFilters = () => {
     setSearchTerm('');
     setStatusFilter('All');
-    setRatingFilter('Any');
+    setStartDate('');
+    setEndDate('');
     setCurrentPage(1);
   };
 
@@ -218,7 +222,7 @@ export default function UserManagementView() {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
-      loadUsers(searchTerm, statusFilter, ratingFilter, newPage);
+      loadUsers(searchTerm, statusFilter, newPage, startDate, endDate);
     }
   };
 
@@ -226,7 +230,7 @@ export default function UserManagementView() {
     if (currentPage > 1) {
       const newPage = currentPage - 1;
       setCurrentPage(newPage);
-      loadUsers(searchTerm, statusFilter, ratingFilter, newPage);
+      loadUsers(searchTerm, statusFilter, newPage, startDate, endDate);
     }
   };
 
@@ -234,7 +238,7 @@ export default function UserManagementView() {
     if (currentPage < totalPages) {
       const newPage = currentPage + 1;
       setCurrentPage(newPage);
-      loadUsers(searchTerm, statusFilter, ratingFilter, newPage);
+      loadUsers(searchTerm, statusFilter, newPage, startDate, endDate);
     }
   };
 
@@ -274,7 +278,7 @@ export default function UserManagementView() {
         // Close modal and reload users list
         setShowAddUserModal(false);
         setTimeout(() => {
-          loadUsers(searchTerm, statusFilter, ratingFilter, currentPage);
+          loadUsers(searchTerm, statusFilter, currentPage, startDate, endDate);
         }, 1500);
       } else {
         setToast({
@@ -303,7 +307,7 @@ export default function UserManagementView() {
     setIsExporting(true);
 
     try {
-      const result = await exportUsersToCSV(statusFilter);
+      const result = await exportUsersToCSV(statusFilter, startDate, endDate);
 
       console.log('📡 EXPORT RESULT:', {
         '✅ Success': result.success,
@@ -476,15 +480,21 @@ export default function UserManagementView() {
                 <option value="Inactive">{t('common.status')}: {t('common.inactive')}</option>
                 <option value="Suspended">{t('common.status')}: {t('common.suspended')}</option>
               </select>
-              <select 
-                className="filter-select"
-                value={ratingFilter}
-                onChange={(e) => setRatingFilter(e.target.value)}
-              >
-                <option value="Any">{t('users.rating')}: {t('users.anyRating')}</option>
-                <option value="4.5+">{t('users.rating')}: 4.5+</option>
-                <option value="4.0+">{t('users.rating')}: 4.0+</option>
-              </select>
+              <input
+                type="date"
+                className="filter-date-input"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                aria-label={t('analytics.startDate')}
+              />
+              <input
+                type="date"
+                className="filter-date-input"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || undefined}
+                aria-label={t('analytics.endDate')}
+              />
               <button className="clear-filters" onClick={handleClearFilters}>
                 {t('users.clearFilters')}
               </button>
@@ -505,7 +515,6 @@ export default function UserManagementView() {
                     <th>{t('users.contact')}</th>
                     <th>{t('users.totalRides')}</th>
                     <th>{t('users.lastRide')}</th>
-                    <th>{t('users.rating')}</th>
                     <th>{t('users.status')}</th>
                     <th>{t('common.actions')}</th>
                   </tr>
@@ -513,7 +522,7 @@ export default function UserManagementView() {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <div className="loading-spinner" style={{ 
                             width: '24px', 
@@ -529,13 +538,13 @@ export default function UserManagementView() {
                     </tr>
                   ) : error ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ef4444' }}>error</span>
                           <div style={{ color: '#ef4444', fontWeight: '500' }}>{t('common.error')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>{error}</div>
                           <button 
-                            onClick={loadUsers}
+                            onClick={() => loadUsers(searchTerm, statusFilter, currentPage, startDate, endDate)}
                             style={{
                               padding: '8px 16px',
                               backgroundColor: '#3b82f6',
@@ -553,12 +562,12 @@ export default function UserManagementView() {
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
                           <div style={{ color: '#374151', fontWeight: '500' }}>{t('users.noUsersFound')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                            {searchTerm || statusFilter !== 'All' || ratingFilter !== 'Any' 
+                            {searchTerm || statusFilter !== 'All' || startDate || endDate
                               ? t('users.tryAdjustingFilters') 
                               : t('users.noUsersRegistered')
                             }
@@ -578,7 +587,13 @@ export default function UserManagementView() {
                       </td>
                       <td className="user-cell">
                         <div className="user-info-cell">
-                          <img src={user.avatar} alt={user.name} className="user-avatar" />
+                          {user.avatar ? (
+                            <img src={user.avatar} alt={user.name} className="user-avatar" />
+                          ) : (
+                            <div className="user-avatar user-avatar-fallback" aria-hidden="true">
+                              {getUserInitials(user.name)}
+                            </div>
+                          )}
                           <div>
                             <div className="user-name-text">{user.name}</div>
                             <div className="user-joined">Joined {getTimeAgo(user.joinedDate)}</div>
@@ -588,9 +603,6 @@ export default function UserManagementView() {
                       <td className="contact-cell">{user.contact || 'N/A'}</td>
                       <td className="rides-cell">{user.totalRides || 0}</td>
                       <td className="date-cell">{user.lastRide || 'N/A'}</td>
-                      <td className="rating-cell">
-                        <span className="star-icon">★</span> {user.rating ? (typeof user.rating === 'number' ? user.rating.toFixed(1) : parseFloat(user.rating).toFixed(1)) : '0.0'}
-                      </td>
                       <td><StatusBadge status={user.status} /></td>
                       <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                         <button className="action-menu-btn" aria-label="Actions">

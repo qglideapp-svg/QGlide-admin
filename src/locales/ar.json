@@ -413,6 +413,13 @@
     "pointsForFreeRide": "النقاط لرحلة مجانية واحدة",
     "pointsForFreeRideDesc": "إجمالي النقاط التي يجب على الراكب جمعها لاستبدال رحلة مجانية",
     "pointsConfigUpdated": "تم تحديث إعدادات برنامج النقاط بنجاح",
+    "governmentImposition": "الرسوم الحكومية (5 ريال قطري)",
+    "governmentImpositionIntro": "تحكم في ما إذا كان الركاب يرون إشعار الرسوم الحكومية ورسوم 5 ريال قطري على الرحلات.",
+    "governmentImpositionToggle": "عرض الرسوم الحكومية على الرحلات",
+    "governmentImpositionDesc": "عند التفعيل، يُعرض على الركاب إشعار الرسوم الحكومية وتُطبق رسوم 5 ريال قطري على الرحلات.",
+    "governmentImpositionUpdated": "تم تحديث إعداد الرسوم الحكومية بنجاح",
+    "enabled": "مفعّل",
+    "disabled": "معطّل",
     "failedToUpdate": "فشل التحديث",
     "failedToLoad": "فشل تحميل بيانات الإعدادات"
   },

@@ -71,6 +71,29 @@
   box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.1);
 }
 
+.filter-date-input {
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.filter-date-input:hover {
+  border-color: #9CA3AF;
+}
+
+.filter-date-input:focus {
+  border-color: #FCD34D;
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.1);
+}
+
 .clear-filters {
   padding: 10px 16px;
   background: transparent;
@@ -352,7 +375,8 @@
     width: 100%;
   }
   
-  .filter-select {
+  .filter-select,
+  .filter-date-input {
     width: 100%;
   }
   

@@ -3,7 +3,24 @@ import { getAuthToken } from './authService';
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
-export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
+export const mapStatusFilterToApiValue = (statusFilter = '') => {
+  if (!statusFilter || statusFilter === 'All Statuses' || statusFilter.toLowerCase() === 'all') {
+    return '';
+  }
+
+  return statusFilter.toLowerCase();
+};
+
+export const driverMatchesStatusFilter = (driverStatus = '', statusFilter = 'All Statuses') => {
+  if (statusFilter === 'All Statuses') return true;
+
+  const normalizedDriverStatus = String(driverStatus).toLowerCase();
+  const normalizedFilter = statusFilter.toLowerCase();
+
+  return normalizedDriverStatus === normalizedFilter;
+};
+
+export const fetchDriversList = async (searchTerm = '', statusFilter = '', ratingFilter = '', page = 1, limit = 20, startDate = '', endDate = '') => {
   try {
     // Use saved token from login
     const token = getAuthToken();
@@ -12,26 +29,45 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    // Build URL with type, search and status parameters
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
-    const params = [];
-    params.push('type=drivers'); // Add type parameter for unified endpoint
+    const params = new URLSearchParams();
     
     if (searchTerm && searchTerm.trim()) {
-      params.push(`search=${encodeURIComponent(searchTerm.trim())}`);
+      params.set('search', searchTerm.trim());
     }
     
-    if (statusFilter && statusFilter !== 'All Statuses' && statusFilter.toLowerCase() !== 'all') {
-      params.push(`status=${encodeURIComponent(statusFilter.toLowerCase())}`);
+    const apiStatus = mapStatusFilterToApiValue(statusFilter);
+    if (apiStatus) {
+      params.set('status', apiStatus);
     }
+
+    if (ratingFilter && ratingFilter !== 'Any Rating' && ratingFilter !== 'Any') {
+      params.set('min_rating', ratingFilter.replace('+', ''));
+    }
+
+    if (startDate) {
+      params.set('start_date', startDate);
+    }
+
+    if (endDate) {
+      params.set('end_date', endDate);
+    }
+
+    params.set('page', String(page));
+    params.set('limit', String(limit));
     
-    const queryString = params.join('&');
+    const queryString = params.toString();
     const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
 
     console.log('🚀 API REQUEST DETAILS:', {
       '🔗 URL': url,
       '🔍 Search Term': searchTerm,
       '📊 Status Filter': statusFilter,
+      '⭐ Rating Filter': ratingFilter,
+      '📅 Start Date': startDate,
+      '📅 End Date': endDate,
+      '📄 Page': page,
+      '📏 Limit': limit,
       '🔑 Has Token': !!token,
       '🔑 Has Anon Key': !!anonKey,
       '⏰ Timestamp': new Date().toISOString(),
@@ -104,8 +140,8 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '') => {
     const transformedData = {
       drivers: driversArray,
       totalCount: data.data?.total_count || data.totalCount || data.total || data.count || driversArray.length,
-      totalPages: data.data?.total_pages || data.totalPages || Math.ceil((data.data?.total_count || data.totalCount || data.total || data.count || driversArray.length) / 20),
-      currentPage: data.data?.page || 1,
+      totalPages: data.data?.total_pages || data.totalPages || Math.ceil((data.data?.total_count || data.totalCount || data.total || data.count || driversArray.length) / limit) || 1,
+      currentPage: data.data?.page || data.page || page,
       hasNextPage: data.data?.hasNextPage || data.hasNextPage || false,
       hasPrevPage: data.data?.hasPrevPage || data.hasPrevPage || false
     };
@@ -562,7 +598,7 @@ export const deleteDriver = async (driverId, reason) => {
 };
 
 // Export drivers to CSV
-export const exportDriversToCSV = async (status = '', minRating = '') => {
+export const exportDriversToCSV = async (status = '', minRating = '', startDate = '', endDate = '') => {
   try {
     const token = getAuthToken();
     
@@ -578,13 +614,24 @@ export const exportDriversToCSV = async (status = '', minRating = '') => {
     params.push('format=csv'); // Required for CSV export
     
     if (status && status !== 'All Statuses' && status.toLowerCase() !== 'all') {
-      params.push(`status=${encodeURIComponent(status.toLowerCase())}`);
+      const apiStatus = mapStatusFilterToApiValue(status);
+      if (apiStatus) {
+        params.push(`status=${encodeURIComponent(apiStatus)}`);
+      }
     }
     
     if (minRating && minRating !== 'Any Rating') {
       // Extract numeric value from rating filter (e.g., "4.5+" -> "4.5")
       const ratingValue = minRating.replace('+', '');
       params.push(`min_rating=${encodeURIComponent(ratingValue)}`);
+    }
+
+    if (startDate) {
+      params.push(`start_date=${encodeURIComponent(startDate)}`);
+    }
+
+    if (endDate) {
+      params.push(`end_date=${encodeURIComponent(endDate)}`);
     }
     
     const queryString = params.join('&');
@@ -784,6 +831,58 @@ export const getDriverInitials = (name = '') => {
   return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
 };
 
+export const normalizeDriverStatus = (apiDriver) => {
+  const rawStatus = String(apiDriver.status || apiDriver.driver_status || '').toLowerCase();
+
+  if (rawStatus === 'suspended' ||
+      apiDriver.driver_profile?.status?.toLowerCase() === 'suspended' ||
+      apiDriver.is_suspended === true ||
+      apiDriver.driver_profile?.is_suspended === true) {
+    return 'Suspended';
+  }
+
+  if (rawStatus === 'pending' ||
+      rawStatus === 'awaiting verification' ||
+      apiDriver.driver_profile?.status?.toLowerCase() === 'pending' ||
+      apiDriver.driver_profile?.status?.toLowerCase() === 'awaiting verification') {
+    return 'Pending';
+  }
+
+  if (rawStatus === 'active' || rawStatus === 'online') {
+    return 'Active';
+  }
+
+  if (rawStatus === 'offline') {
+    return 'Offline';
+  }
+
+  if (apiDriver.driver_profile?.is_online === true || apiDriver.is_online === true) {
+    return 'Active';
+  }
+
+  if (rawStatus) {
+    return rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+  }
+
+  return 'Offline';
+};
+
+export const matchesDriverFilters = (driver, { searchTerm = '', statusFilter = 'All Statuses', ratingFilter = 'Any Rating', applyStatusFilter = true } = {}) => {
+  const search = searchTerm.trim().toLowerCase();
+  const matchesSearch = !search ||
+    driver.name.toLowerCase().includes(search) ||
+    (driver.phone && driver.phone.toLowerCase().includes(search));
+
+  const matchesStatus = !applyStatusFilter || driverMatchesStatusFilter(driver.status, statusFilter);
+
+  const matchesRating = ratingFilter === 'Any Rating' ||
+    (ratingFilter === '4.5+' && driver.rating >= 4.5) ||
+    (ratingFilter === '4.0+' && driver.rating >= 4.0) ||
+    (ratingFilter === '3.5+' && driver.rating >= 3.5);
+
+  return matchesSearch && matchesStatus && matchesRating;
+};
+
 export const transformDriverWithoutDocsData = (apiDriver) => {
   const nestedDriver = apiDriver?.driver || apiDriver?.driver_profile || apiDriver?.profile || null;
   const source = nestedDriver ? { ...nestedDriver, ...apiDriver } : apiDriver;
@@ -937,9 +1036,10 @@ export const transformDriverData = (apiDriver) => {
       model: apiDriver.vehicle_model || apiDriver.vehicle?.model || apiDriver.car_model || 'Unknown Vehicle',
       year: apiDriver.vehicle_year || apiDriver.vehicle?.year || apiDriver.car_year || new Date().getFullYear()
     },
-    status: apiDriver.status || apiDriver.driver_status || 'Unknown',
+    status: normalizeDriverStatus(apiDriver),
     rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
     totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0),
-    earnings: parseFloat(apiDriver.total_earnings || apiDriver.earnings || 0)
+    earnings: parseFloat(apiDriver.total_earnings || apiDriver.earnings || 0),
+    joinedDate: apiDriver.created_at || apiDriver.registered_at || null
   };
 };

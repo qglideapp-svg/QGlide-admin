@@ -2,10 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriversList, transformDriverData, exportDriversToCSV, getDriverInitials } from '../../services/driverService';
+import { fetchDriversList, transformDriverData, exportDriversToCSV, getDriverInitials, matchesDriverFilters } from '../../services/driverService';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import { useLanguage } from '../../contexts/LanguageContext';
-import AddDriverModal from '../../components/modals/AddDriverModal';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -49,22 +48,26 @@ export default function DriverManagementView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
   const [ratingFilter, setRatingFilter] = useState('Any Rating');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [selectedDrivers, setSelectedDrivers] = useState([]);
   
   // Export state
   const [isExporting, setIsExporting] = useState(false);
-  const [isAddDriverModalOpen, setIsAddDriverModalOpen] = useState(false);
-  const [isAddingDriver, setIsAddingDriver] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   // Fetch drivers from API
-  const loadDrivers = useCallback(async (search = '', status = '') => {
+  const loadDrivers = useCallback(async (search = '', status = '', rating = '', page = 1, start = '', end = '') => {
     console.log('🔄 LOADING DRIVERS:', {
       '🔍 Search Term': search,
       '📊 Status Filter': status,
+      '⭐ Rating Filter': rating,
+      '📅 Start Date': start,
+      '📅 End Date': end,
+      '📄 Page': page,
       '⏰ Timestamp': new Date().toISOString()
     });
     
@@ -72,7 +75,7 @@ export default function DriverManagementView() {
     setError(null);
 
     try {
-      const result = await fetchDriversList(search, status);
+      const result = await fetchDriversList(search, status, rating, page, limit, start, end);
 
       console.log('📡 API RESULT RECEIVED:', {
         '✅ Success': result.success,
@@ -94,6 +97,7 @@ export default function DriverManagementView() {
         setDrivers(transformedDrivers);
         setTotalPages(result.data.totalPages || 1);
         setTotalCount(result.data.totalCount || 0);
+        setCurrentPage(result.data.currentPage || page);
         
         console.log('✅ DRIVERS LOADED SUCCESSFULLY:', {
           '📊 Transformed Count': transformedDrivers.length,
@@ -115,12 +119,7 @@ export default function DriverManagementView() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  // Load drivers on mount
-  useEffect(() => {
-    loadDrivers();
-  }, []);
+  }, [limit]);
 
   // Debounced search and filter effect
   useEffect(() => {
@@ -128,13 +127,17 @@ export default function DriverManagementView() {
       console.log('🔍 SEARCH/FILTER TRIGGERED:', {
         '📝 Search Term': searchTerm,
         '📊 Status Filter': statusFilter,
+        '⭐ Rating Filter': ratingFilter,
+        '📅 Start Date': startDate,
+        '📅 End Date': endDate,
         '⏰ Timestamp': new Date().toISOString()
       });
-      loadDrivers(searchTerm, statusFilter);
+      loadDrivers(searchTerm, statusFilter, ratingFilter, 1, startDate, endDate);
+      setCurrentPage(1);
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, ratingFilter, startDate, endDate, loadDrivers]);
 
   // Fallback: Initialize with empty array if no drivers loaded after 5 seconds
   useEffect(() => {
@@ -212,6 +215,8 @@ export default function DriverManagementView() {
     setSearchTerm('');
     setStatusFilter('All Statuses');
     setRatingFilter('Any Rating');
+    setStartDate('');
+    setEndDate('');
     setCurrentPage(1);
   };
 
@@ -226,7 +231,7 @@ export default function DriverManagementView() {
     setIsExporting(true);
 
     try {
-      const result = await exportDriversToCSV(statusFilter, ratingFilter);
+      const result = await exportDriversToCSV(statusFilter, ratingFilter, startDate, endDate);
 
       console.log('📡 EXPORT RESULT:', {
         '✅ Success': result.success,
@@ -258,18 +263,23 @@ export default function DriverManagementView() {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
+      loadDrivers(searchTerm, statusFilter, ratingFilter, newPage, startDate, endDate);
     }
   };
 
   const handlePrevPage = () => {
     if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+      const newPage = currentPage - 1;
+      setCurrentPage(newPage);
+      loadDrivers(searchTerm, statusFilter, ratingFilter, newPage, startDate, endDate);
     }
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+      const newPage = currentPage + 1;
+      setCurrentPage(newPage);
+      loadDrivers(searchTerm, statusFilter, ratingFilter, newPage, startDate, endDate);
     }
   };
 
@@ -277,50 +287,15 @@ export default function DriverManagementView() {
     navigate(`/driver-profile/${driverId}`);
   };
 
-  const handleAddDriver = () => {
-    setIsAddDriverModalOpen(true);
-  };
-
-  const handleCloseAddDriverModal = () => {
-    setIsAddDriverModalOpen(false);
-  };
-
-  const handleAddDriverSubmit = async (driverData) => {
-    setIsAddingDriver(true);
-
-    try {
-      const newDriver = {
-        id: `new-${Date.now()}`,
-        name: driverData.full_name.trim(),
-        phone: driverData.phone?.trim() || '-',
-        avatar: 'https://i.pravatar.cc/40',
-        vehicle: {
-          model: driverData.vehicle_model?.trim() || '-',
-          year: driverData.vehicle_year || new Date().getFullYear()
-        },
-        status: 'Offline',
-        rating: 0,
-        totalRides: 0,
-        earnings: 0
-      };
-
-      setDrivers((prev) => [newDriver, ...prev]);
-      setTotalCount((prev) => prev + 1);
-      setIsAddDriverModalOpen(false);
-    } finally {
-      setIsAddingDriver(false);
-    }
-  };
-
-  // Apply client-side rating filter (since API doesn't support rating filtering)
-  const filteredDrivers = drivers.filter(driver => {
-    const matchesRating = ratingFilter === 'Any Rating' || 
-                         (ratingFilter === '4.5+' && driver.rating >= 4.5) ||
-                         (ratingFilter === '4.0+' && driver.rating >= 4.0) ||
-                         (ratingFilter === '3.5+' && driver.rating >= 3.5);
-    
-    return matchesRating;
-  });
+  // Apply client-side search/rating filters; status and dates are handled by the API
+  const filteredDrivers = drivers.filter((driver) =>
+    matchesDriverFilters(driver, {
+      searchTerm,
+      statusFilter,
+      ratingFilter,
+      applyStatusFilter: statusFilter === 'All Statuses',
+    })
+  );
 
   return (
     <div className={`driver-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -424,6 +399,21 @@ export default function DriverManagementView() {
                     <option value="4.0+">4.0+</option>
                     <option value="3.5+">3.5+</option>
                   </select>
+                  <input
+                    type="date"
+                    className="filter-date-input"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    aria-label={t('analytics.startDate')}
+                  />
+                  <input
+                    type="date"
+                    className="filter-date-input"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || undefined}
+                    aria-label={t('analytics.endDate')}
+                  />
                   <button className="clear-filters" onClick={handleClearFilters}>
                     {t('drivers.clearFilters')}
                   </button>
@@ -439,10 +429,6 @@ export default function DriverManagementView() {
                     {isExporting ? 'hourglass_empty' : 'download'}
                   </span>
                   {isExporting ? t('drivers.exporting') : t('drivers.exportCSV')}
-                </button>
-                <button className="btn-add-driver" onClick={handleAddDriver}>
-                  <span className="material-symbols-outlined">add</span>
-                  {t('drivers.addDriver')}
                 </button>
               </div>
             </div>
@@ -492,7 +478,7 @@ export default function DriverManagementView() {
                           <div style={{ color: '#ef4444', fontWeight: '500' }}>{t('common.error')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>{error}</div>
                           <button 
-                            onClick={loadDrivers}
+                            onClick={() => loadDrivers(searchTerm, statusFilter, ratingFilter, currentPage, startDate, endDate)}
                             style={{
                               padding: '8px 16px',
                               backgroundColor: '#3b82f6',
@@ -515,7 +501,7 @@ export default function DriverManagementView() {
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
                           <div style={{ color: '#374151', fontWeight: '500' }}>{t('drivers.noDriversFound')}</div>
                           <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                            {searchTerm || statusFilter !== 'All Statuses' || ratingFilter !== 'Any Rating' 
+                            {searchTerm || statusFilter !== 'All Statuses' || ratingFilter !== 'Any Rating' || startDate || endDate
                               ? t('drivers.tryAdjustingFilters') 
                               : t('drivers.noDriversRegistered')
                             }
@@ -654,12 +640,6 @@ export default function DriverManagementView() {
           </div>
         </div>
       </main>
-      <AddDriverModal
-        isOpen={isAddDriverModalOpen}
-        onClose={handleCloseAddDriverModal}
-        onConfirm={handleAddDriverSubmit}
-        isLoading={isAddingDriver}
-      />
     </div>
   );
 }

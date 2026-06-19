@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SettingsView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings, fetchFareCosts, updateFareCosts, fetchPointsConfig, updatePointsConfig } from '../../services/settingsService';
+import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings, fetchFareCosts, updateFareCosts, fetchPointsConfig, updatePointsConfig, fetchGovernmentImpositionAd, updateGovernmentImpositionAd } from '../../services/settingsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -52,6 +52,8 @@ export default function SettingsView() {
   });
   const [pointsDescriptions, setPointsDescriptions] = useState({});
   const [isSavingPointsConfig, setIsSavingPointsConfig] = useState(false);
+  const [governmentImpositionApproved, setGovernmentImpositionApproved] = useState(false);
+  const [isTogglingGovernmentImposition, setIsTogglingGovernmentImposition] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
@@ -70,12 +72,13 @@ export default function SettingsView() {
   const loadSettingsData = async () => {
     setIsLoading(true);
     try {
-      const [rolesResult, templatesResult, settingsResult, fareCostsResult, pointsConfigResult] = await Promise.all([
+      const [rolesResult, templatesResult, settingsResult, fareCostsResult, pointsConfigResult, governmentImpositionResult] = await Promise.all([
         fetchRoles(),
         fetchNotificationTemplates(),
         fetchSystemSettings(),
         fetchFareCosts(),
         fetchPointsConfig(),
+        fetchGovernmentImpositionAd(),
       ]);
 
       if (rolesResult.success) {
@@ -105,6 +108,11 @@ export default function SettingsView() {
         setPointsDescriptions(pointsConfigResult.descriptions || {});
       } else if (pointsConfigResult.error) {
         showToastMessage(pointsConfigResult.error, 'error');
+      }
+      if (governmentImpositionResult.success) {
+        setGovernmentImpositionApproved(governmentImpositionResult.approved);
+      } else if (governmentImpositionResult.error) {
+        showToastMessage(governmentImpositionResult.error, 'error');
       }
     } catch (error) {
       console.error('Error loading settings data:', error);
@@ -269,6 +277,28 @@ export default function SettingsView() {
       showToastMessage(t('settings.failedToUpdate'), 'error');
     } finally {
       setIsSavingPointsConfig(false);
+    }
+  };
+
+  const handleGovernmentImpositionToggle = async (approved) => {
+    if (approved === governmentImpositionApproved || isTogglingGovernmentImposition) {
+      return;
+    }
+
+    setIsTogglingGovernmentImposition(true);
+    try {
+      const result = await updateGovernmentImpositionAd(approved);
+      if (result.success) {
+        setGovernmentImpositionApproved(result.approved);
+        showToastMessage(result.message || t('settings.governmentImpositionUpdated'), 'success');
+      } else {
+        showToastMessage(result.error || t('settings.failedToUpdate'), 'error');
+      }
+    } catch (error) {
+      console.error('Error updating government imposition setting:', error);
+      showToastMessage(t('settings.failedToUpdate'), 'error');
+    } finally {
+      setIsTogglingGovernmentImposition(false);
     }
   };
 
@@ -685,6 +715,38 @@ export default function SettingsView() {
                         <p className="fare-description">{fareDescriptions.surgeMultiplier || t('settings.multiplierDescription')}</p>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Government Imposition Section */}
+              <div className="settings-card government-imposition-card">
+                <div className="card-header">
+                  <h2>{t('settings.governmentImposition')}</h2>
+                </div>
+                <div className="card-content">
+                  <p className="points-program-intro">{t('settings.governmentImpositionIntro')}</p>
+                  <div className="setting-group government-imposition-toggle">
+                    <label>{t('settings.governmentImpositionToggle')}</label>
+                    <div className="toggle-group">
+                      <button
+                        type="button"
+                        className={`toggle-btn ${governmentImpositionApproved ? 'active' : ''}`}
+                        onClick={() => handleGovernmentImpositionToggle(true)}
+                        disabled={isTogglingGovernmentImposition}
+                      >
+                        {t('settings.enabled')}
+                      </button>
+                      <button
+                        type="button"
+                        className={`toggle-btn ${!governmentImpositionApproved ? 'active' : ''}`}
+                        onClick={() => handleGovernmentImpositionToggle(false)}
+                        disabled={isTogglingGovernmentImposition}
+                      >
+                        {t('settings.disabled')}
+                      </button>
+                    </div>
+                    <p className="fare-description">{t('settings.governmentImpositionDesc')}</p>
                   </div>
                 </div>
               </div>

@@ -754,3 +754,106 @@ export const updateFareCosts = async (fareCostData) => {
     };
   }
 };
+
+function parseGovernmentImpositionApproved(json) {
+  const raw =
+    json?.government_imposition_ad_approved ??
+    json?.data?.government_imposition_ad_approved ??
+    json?.approved ??
+    json?.data?.approved;
+  return raw === true;
+}
+
+// Government imposition ad (GET/PUT /admin-government-imposition-ad)
+export const fetchGovernmentImpositionAd = async () => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'No authentication token found. Please login first.' };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin-government-imposition-ad`, {
+      method: 'GET',
+      headers: {
+        apikey: getAnonApiKey(),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const bodyText = await response.text();
+    let json;
+    try {
+      json = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      return {
+        success: false,
+        error: 'Invalid response from government imposition service',
+      };
+    }
+
+    if (!response.ok) {
+      const msg = json.error || json.message || `HTTP ${response.status}: ${response.statusText}`;
+      return { success: false, error: msg };
+    }
+
+    return {
+      success: true,
+      approved: parseGovernmentImpositionApproved(json),
+      message: json.message,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to load government imposition setting',
+    };
+  }
+};
+
+export const updateGovernmentImpositionAd = async (approved) => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'No authentication token found. Please login first.' };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin-government-imposition-ad`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: getAnonApiKey(),
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ approved: approved === true }),
+    });
+
+    const bodyText = await response.text();
+    let json;
+    try {
+      json = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+      json = {};
+    }
+
+    if (!response.ok) {
+      const msg = json.error || json.message || `HTTP ${response.status}: ${response.statusText}`;
+      return { success: false, error: msg };
+    }
+
+    return {
+      success: true,
+      approved: parseGovernmentImpositionApproved(json),
+      message: json.message || (approved ? 'Government imposition modal enabled' : 'Government imposition modal disabled'),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to update government imposition setting',
+    };
+  }
+};
