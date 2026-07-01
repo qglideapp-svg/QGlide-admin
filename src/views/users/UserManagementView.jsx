@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import './UserManagementView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchUsersList, transformUserData, exportUsersToCSV, createUser, getUserInitials } from '../../services/userService';
+import { createInfluencer } from '../../services/influencerService';
 import AddUserModal from '../../components/modals/AddUserModal';
+import AddInfluencerModal from '../../components/modals/AddInfluencerModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -53,7 +55,9 @@ export default function UserManagementView() {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showAddInfluencerModal, setShowAddInfluencerModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingInfluencer, setIsCreatingInfluencer] = useState(false);
   const [toast, setToast] = useState(null);
 
   const toggleSidebar = () => {
@@ -251,6 +255,10 @@ export default function UserManagementView() {
     setShowAddUserModal(true);
   };
 
+  const handleAddInfluencerClick = () => {
+    setShowAddInfluencerModal(true);
+  };
+
   // Handle create user confirmation - calls API
   const handleCreateUser = async (userData) => {
     console.log('🔄 CREATING USER:', {
@@ -294,6 +302,37 @@ export default function UserManagementView() {
       });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleCreateInfluencer = async (influencerData) => {
+    setIsCreatingInfluencer(true);
+
+    try {
+      const result = await createInfluencer(influencerData);
+
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: t('influencers.successToast'),
+        });
+        setShowAddInfluencerModal(false);
+        setTimeout(() => {
+          loadUsers(searchTerm, statusFilter, currentPage, startDate, endDate);
+        }, 1500);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || t('influencers.errorCreate'),
+        });
+      }
+    } catch (error) {
+      setToast({
+        type: 'error',
+        message: error.message || t('influencers.errorCreate'),
+      });
+    } finally {
+      setIsCreatingInfluencer(false);
     }
   };
 
@@ -449,6 +488,10 @@ export default function UserManagementView() {
                     {isExporting ? 'hourglass_empty' : 'upload'}
                   </span>
                   {isExporting ? t('users.exporting') : t('common.export')}
+                </button>
+                <button className="btn-add-influencer" onClick={handleAddInfluencerClick}>
+                  <span className="material-symbols-outlined">campaign</span>
+                  {t('users.addInfluencer')}
                 </button>
                 <button className="btn-add-user" onClick={handleAddUserClick}>
                   <span className="material-symbols-outlined">add</span>
@@ -707,6 +750,13 @@ export default function UserManagementView() {
         onClose={() => setShowAddUserModal(false)}
         onConfirm={handleCreateUser}
         isLoading={isCreating}
+      />
+
+      <AddInfluencerModal
+        isOpen={showAddInfluencerModal}
+        onClose={() => setShowAddInfluencerModal(false)}
+        onConfirm={handleCreateInfluencer}
+        isLoading={isCreatingInfluencer}
       />
       
       {/* Toast Notification */}

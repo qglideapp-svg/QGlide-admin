@@ -109,6 +109,30 @@
   font-size: 18px;
 }
 
+.btn-add-influencer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #E9D5FF;
+  border: 1px solid #C084FC;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6B21A8;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-influencer:hover {
+  background: #D8B4FE;
+}
+
+.btn-add-influencer .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .btn-add-user {
   display: flex;
   align-items: center;
@@ -424,6 +448,7 @@
   }
   
   .btn-export,
+  .btn-add-influencer,
   .btn-add-user {
     flex: 1;
   }

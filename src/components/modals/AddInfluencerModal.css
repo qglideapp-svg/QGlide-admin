@@ -1,0 +1,31 @@
+.add-influencer-modal-content.modal-content {
+  max-width: 720px;
+  width: 92%;
+  border-left: 4px solid #9333ea;
+}
+
+.add-influencer-modal-content .modal-header h2 {
+  color: #6b21a8;
+}
+
+.add-influencer-modal-content .info-banner {
+  background: #f3e8ff;
+  border: 1px solid #d8b4fe;
+}
+
+.add-influencer-modal-content .info-banner p {
+  color: #6b21a8;
+}
+
+.add-influencer-modal-content .form-group input:focus {
+  border-color: #9333ea;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+}
+
+.add-influencer-modal-content .btn-create {
+  background: #9333ea;
+}
+
+.add-influencer-modal-content .btn-create:hover:not(:disabled) {
+  background: #7e22ce;
+}
