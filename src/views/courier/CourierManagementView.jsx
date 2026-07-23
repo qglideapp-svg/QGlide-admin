@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './CourierManagementView.css';
 import { logoutUser } from '../../services/authService';
 import Toast from '../../components/common/Toast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -36,6 +37,7 @@ const StatusBadge = ({ status }) => {
 
 export default function CourierManagementView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // State management
@@ -149,6 +151,8 @@ export default function CourierManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -201,7 +205,8 @@ export default function CourierManagementView() {
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />

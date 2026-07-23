@@ -5,6 +5,7 @@ import { logoutUser } from '../../services/authService';
 import { fetchRidesList } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -118,7 +119,7 @@ export default function RideManagementView() {
         setRides([
           {
             id: 'QG12345',
-            user: { name: 'Fatima Al-Marri', phone: '+974 55123456', avatar: 'https://i.pravatar.cc/40?img=1' },
+            user: { name: 'Fatima Al-Marri', phone: '+974 55123456', avatar: '' },
             driver: { name: 'Yusuf Ahmed', car: 'Toyota Camry' },
             date: '2025-10-07',
             time: '02:15 AM',
@@ -127,7 +128,7 @@ export default function RideManagementView() {
           },
           {
             id: 'QG12346',
-            user: { name: 'Omar Hassan', phone: '+974 55987654', avatar: 'https://i.pravatar.cc/40?img=2' },
+            user: { name: 'Omar Hassan', phone: '+974 55987654', avatar: '' },
             driver: { name: 'Ali Khan', car: 'Lexus ES' },
             date: '2025-10-07',
             time: '01:50 AM',
@@ -145,7 +146,7 @@ export default function RideManagementView() {
       setRides([
         {
           id: 'QG12345',
-          user: { name: 'Fatima Al-Marri', phone: '+974 55123456', avatar: 'https://i.pravatar.cc/40?img=1' },
+          user: { name: 'Fatima Al-Marri', phone: '+974 55123456', avatar: '' },
           driver: { name: 'Yusuf Ahmed', car: 'Toyota Camry' },
           date: '2025-10-07',
           time: '02:15 AM',
@@ -154,7 +155,7 @@ export default function RideManagementView() {
         },
         {
           id: 'QG12346',
-          user: { name: 'Omar Hassan', phone: '+974 55987654', avatar: 'https://i.pravatar.cc/40?img=2' },
+          user: { name: 'Omar Hassan', phone: '+974 55987654', avatar: '' },
           driver: { name: 'Ali Khan', car: 'Lexus ES' },
           date: '2025-10-07',
           time: '01:50 AM',
@@ -208,6 +209,8 @@ export default function RideManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     }
   };
 
@@ -255,7 +258,7 @@ export default function RideManagementView() {
                 setRides([
                   {
                     id: 'QG12345',
-                    user: { name: 'Fatima Al-Marri', phone: '+974 55123456', avatar: 'https://i.pravatar.cc/40?img=1' },
+                    user: { name: 'Fatima Al-Marri', phone: '+974 55123456', avatar: '' },
                     driver: { name: 'Yusuf Ahmed', car: 'Toyota Camry' },
                     date: '2025-10-07',
                     time: '02:15 AM',
@@ -264,7 +267,7 @@ export default function RideManagementView() {
                   },
                   {
                     id: 'QG12346',
-                    user: { name: 'Omar Hassan', phone: '+974 55987654', avatar: 'https://i.pravatar.cc/40?img=2' },
+                    user: { name: 'Omar Hassan', phone: '+974 55987654', avatar: '' },
                     driver: { name: 'Ali Khan', car: 'Lexus ES' },
                     date: '2025-10-07',
                     time: '01:50 AM',
@@ -301,7 +304,8 @@ export default function RideManagementView() {
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -390,10 +394,10 @@ export default function RideManagementView() {
                           <td className="ride-id">#{ride.id.substring(0, 8)}</td>
                           <td className="user-cell">
                             <div className="user-info">
-                              <img 
-                                src={ride.rider?.avatar_url || 'https://i.pravatar.cc/40?img=' + Math.floor(Math.random() * 10)} 
-                                alt={ride.rider?.name || 'Unknown'} 
-                                className="user-avatar" 
+                              <UserAvatar
+                                src={ride.rider?.avatar_url || ride.rider?.avatar}
+                                name={ride.rider?.name || 'Unknown Rider'}
+                                className="user-avatar"
                               />
                               <div>
                                 <div className="user-name">{ride.rider?.name || 'Unknown Rider'}</div>
@@ -413,7 +417,7 @@ export default function RideManagementView() {
                               <div className="time">{formattedTime}</div>
                             </div>
                           </td>
-                          <td className="fare-cell">QAR {ride.fare ? (ride.fare / 100).toFixed(2) : '0.00'}</td>
+                          <td className="fare-cell">QAR {Number(ride.fare ?? 0).toFixed(2)}</td>
                           <td><StatusBadge status={ride.status || 'pending'} /></td>
                           <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                             <div className="actions">

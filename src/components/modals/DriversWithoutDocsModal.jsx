@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './DriversWithoutDocsModal.css';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { getDriverInitials } from '../../services/driverService';
+import UserAvatar from '../common/UserAvatar';
 
 const DriversWithoutDocsModal = ({
   isOpen,
@@ -118,13 +118,11 @@ const DriversWithoutDocsModal = ({
                         <tr key={driver.id}>
                           <td>
                             <div className="driver-info-cell">
-                              {driver.avatar ? (
-                                <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
-                              ) : (
-                                <div className="driver-avatar driver-avatar-fallback" aria-hidden="true">
-                                  {getDriverInitials(driver.name)}
-                                </div>
-                              )}
+                              <UserAvatar
+                                src={driver.avatar}
+                                name={driver.name}
+                                className="driver-avatar"
+                              />
                               <div>
                                 <div className="driver-name-text">{driver.name}</div>
                                 {driver.registeredAt && (

@@ -15,6 +15,7 @@ import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved, m
 import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import UserAvatar from '../../components/common/UserAvatar';
 import AdminWithdrawModal from '../../components/modals/AdminWithdrawModal';
 import DriversWithoutDocsModal from '../../components/modals/DriversWithoutDocsModal';
 import { fetchDriversWithoutDocs, sendDocumentReminderEmails } from '../../services/driverService';
@@ -575,6 +576,8 @@ export default function DashboardView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     }
     // Add other navigation handlers as needed
   }, [navigate]);
@@ -931,7 +934,8 @@ export default function DashboardView() {
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} active={activeSection === 'financial'} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} active={activeSection === 'support'} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} active={activeSection === 'analytics'} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -1348,12 +1352,6 @@ export default function DashboardView() {
                             // Use driverName from API response, fallback to user field
                             const driverName = payout.driverName || payout.user?.replace(' (Driver)', '') || payout.user || 'Unknown Driver';
                             
-                            // Use avatar from API response, or generate one based on driver name
-                            const avatarUrl = payout.avatar || payout.driver_avatar || (() => {
-                              const nameHash = driverName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                              return `https://i.pravatar.cc/80?img=${(nameHash % 70) + 1}`;
-                            })();
-                            
                             return (
                               <div 
                                 key={payout.id} 
@@ -1361,10 +1359,10 @@ export default function DashboardView() {
                                 onClick={() => navigate('/withdrawals')}
                                 style={{ cursor: 'pointer' }}
                               >
-                                <img 
-                                  src={avatarUrl} 
-                                  alt={driverName} 
-                                  className="payout-avatar" 
+                                <UserAvatar
+                                  src={payout.avatar || payout.driver_avatar}
+                                  name={driverName}
+                                  className="payout-avatar"
                                 />
                                 <div className="payout-info">
                                   <div className="payout-name">{driverName}</div>
@@ -1943,7 +1941,11 @@ export default function DashboardView() {
                               <tr key={driver.id}>
                                 <td>
                                   <div className="driver-cell">
-                                    <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
+                                    <UserAvatar
+                                      src={driver.avatar}
+                                      name={driver.name}
+                                      className="driver-avatar"
+                                    />
                                     <span className="driver-name">{driver.name}</span>
                                   </div>
                                 </td>

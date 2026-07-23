@@ -5,10 +5,12 @@ import { fetchRideDetails } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import MapRoute from '../../components/common/MapRoute';
+import UserAvatar from '../../components/common/UserAvatar';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
 import { logoutUser } from '../../services/authService';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -19,6 +21,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export default function RideDetailsView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { rideId } = useParams();
   const [rideData, setRideData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +45,7 @@ export default function RideDetailsView() {
       rider: {
         name: apiData.rider?.name || 'Unknown Rider',
         phone: apiData.rider?.phone || 'N/A',
-        avatar: apiData.rider?.avatar_url || apiData.rider?.avatar || 'https://i.pravatar.cc/40?img=1',
+        avatar: apiData.rider?.avatar_url || apiData.rider?.avatar || '',
         rating: apiData.rider?.rating || 0,
         totalRides: apiData.rider?.total_rides || 0
       },
@@ -52,7 +55,7 @@ export default function RideDetailsView() {
         name: apiData.driver?.name || 'Unknown Driver',
         rating: apiData.driver?.rating || 0,
         totalRides: apiData.driver?.total_rides || 0,
-        avatar: apiData.driver?.avatar_url || apiData.driver?.avatar || 'https://i.pravatar.cc/40?img=2',
+        avatar: apiData.driver?.avatar_url || apiData.driver?.avatar || '',
         vehicle: apiData.driver?.vehicle || 'N/A',
         licensePlate: apiData.driver?.license_plate || 'N/A'
       },
@@ -147,13 +150,13 @@ export default function RideDetailsView() {
           rider: {
             name: 'John Doe',
             phone: '(123) 456-7890',
-            avatar: 'https://i.pravatar.cc/40?img=1',
+            avatar: '',
             rating: 4.8,
             totalRides: 25
           },
           driver: {
             name: 'John Driver',
-            avatar: 'https://i.pravatar.cc/40?img=2',
+            avatar: '',
             rating: 4.9,
             totalRides: 150,
             vehicle: 'Toyota Camry',
@@ -194,13 +197,13 @@ export default function RideDetailsView() {
         rider: {
           name: 'John Doe',
           phone: '(123) 456-7890',
-          avatar: 'https://i.pravatar.cc/40?img=1',
+          avatar: '',
           rating: 4.8,
           totalRides: 25
         },
         driver: {
           name: 'John Driver',
-          avatar: 'https://i.pravatar.cc/40?img=2',
+          avatar: '',
           rating: 4.9,
           totalRides: 150,
           vehicle: 'Toyota Camry',
@@ -245,13 +248,13 @@ export default function RideDetailsView() {
     dropoffLocation: 'Hamad International Airport',
     rider: {
       name: 'Jassim Al-Kuwari',
-      avatar: 'https://i.pravatar.cc/80?img=4',
+      avatar: '',
       rating: 4.92,
       totalRides: 128
     },
     driver: {
       name: 'Farhan Khan',
-      avatar: 'https://i.pravatar.cc/80?img=6',
+      avatar: '',
       rating: 4.88,
       totalRides: 512,
       vehicle: 'Toyota Camry (2023)',
@@ -336,6 +339,8 @@ export default function RideDetailsView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -402,7 +407,8 @@ export default function RideDetailsView() {
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -560,7 +566,11 @@ export default function RideDetailsView() {
               <div className="section">
                 <h3>Rider Information</h3>
                 <div className="user-card">
-                  <img src={currentRideData.rider?.avatar || currentRideData.rider?.avatar_url || 'https://i.pravatar.cc/40?img=1'} alt={currentRideData.rider?.name || 'Unknown'} className="user-avatar" />
+                  <UserAvatar
+                    src={currentRideData.rider?.avatar || currentRideData.rider?.avatar_url}
+                    name={currentRideData.rider?.name || 'Unknown Rider'}
+                    className="user-avatar"
+                  />
                   <div className="user-details">
                     <div className="user-name">{currentRideData.rider?.name || 'Unknown Rider'}</div>
                     <div className="user-rating">
@@ -574,7 +584,11 @@ export default function RideDetailsView() {
               <div className="section">
                 <h3>Driver Information</h3>
                 <div className="user-card">
-                  <img src={currentRideData.driver?.avatar || currentRideData.driver?.avatar_url || 'https://i.pravatar.cc/40?img=2'} alt={currentRideData.driver?.name || 'Unknown'} className="user-avatar" />
+                  <UserAvatar
+                    src={currentRideData.driver?.avatar || currentRideData.driver?.avatar_url}
+                    name={currentRideData.driver?.name || 'Unknown Driver'}
+                    className="user-avatar"
+                  />
                   <div className="user-details">
                     <div className="user-name">{currentRideData.driver?.name || 'Unknown Driver'}</div>
                     <div className="user-rating">

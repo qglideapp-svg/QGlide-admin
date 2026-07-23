@@ -22,6 +22,7 @@ import RentalManagementView from './views/rentals/RentalManagementView.jsx';
 import WithdrawalManagementView from './views/withdrawals/WithdrawalManagementView.jsx';
 import NotificationManagementView from './views/notifications/NotificationManagementView.jsx';
 import MarketersManagementView from './views/marketers/MarketersManagementView.jsx';
+import AppUpdateView from './views/app-update/AppUpdateView.jsx';
 import AuthGuard from './components/layout/AuthGuard.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -100,6 +101,11 @@ createRoot(document.getElementById('root')).render(
         <Route path="/marketers" element={
           <AuthGuard>
             <MarketersManagementView />
+          </AuthGuard>
+        } />
+        <Route path="/app-update" element={
+          <AuthGuard>
+            <AppUpdateView />
           </AuthGuard>
         } />
         </Routes>

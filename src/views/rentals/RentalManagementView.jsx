@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './RentalManagementView.css';
 import { logoutUser } from '../../services/authService';
 import Toast from '../../components/common/Toast';
+import UserAvatar from '../../components/common/UserAvatar';
+import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -56,6 +58,7 @@ const VehicleTypeBadge = ({ type }) => {
 
 export default function RentalManagementView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // State management
@@ -95,7 +98,7 @@ export default function RentalManagementView() {
             name: 'Ahmed Al-Kuwari', 
             phone: '+974 55123456', 
             email: 'ahmed@example.com',
-            avatar: 'https://i.pravatar.cc/40?img=15'
+            avatar: ''
           },
           vehicle: { 
             model: 'Toyota Camry 2024', 
@@ -129,7 +132,7 @@ export default function RentalManagementView() {
             name: 'Fatima Al-Marri', 
             phone: '+974 55987654', 
             email: 'fatima@example.com',
-            avatar: 'https://i.pravatar.cc/40?img=20'
+            avatar: ''
           },
           vehicle: { 
             model: 'Range Rover Sport 2024', 
@@ -163,7 +166,7 @@ export default function RentalManagementView() {
             name: 'Omar Hassan', 
             phone: '+974 55345678', 
             email: 'omar@example.com',
-            avatar: 'https://i.pravatar.cc/40?img=12'
+            avatar: ''
           },
           vehicle: { 
             model: 'Mercedes-Benz E-Class 2023', 
@@ -256,6 +259,8 @@ export default function RentalManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -309,7 +314,8 @@ export default function RentalManagementView() {
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -515,9 +521,9 @@ export default function RentalManagementView() {
                         <td className="customer-cell">
                           {rental.customer ? (
                             <div className="customer-info">
-                              <img 
-                                src={rental.customer.avatar || 'https://i.pravatar.cc/40?img=1'} 
-                                alt={rental.customer.name}
+                              <UserAvatar
+                                src={rental.customer.avatar}
+                                name={rental.customer.name}
                                 className="customer-avatar"
                               />
                               <div className="customer-details">

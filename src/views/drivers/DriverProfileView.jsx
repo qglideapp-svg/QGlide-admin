@@ -9,6 +9,7 @@ import UnsuspendDriverModal from '../../components/modals/UnsuspendDriverModal';
 import EditDriverModal from '../../components/modals/EditDriverModal';
 import DocumentViewModal from '../../components/modals/DocumentViewModal';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -153,7 +154,7 @@ export default function DriverProfileView() {
           const transformedData = {
             id: apiDriver.id || driverId,
             name: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
-            avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || `https://i.pravatar.cc/120?img=${driverId}`,
+            avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || '',
             status: driverStatus,
             rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
             totalReviews: Math.floor(Math.random() * 1000) + 100, // Mock reviews count
@@ -641,6 +642,8 @@ export default function DriverProfileView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -680,7 +683,8 @@ export default function DriverProfileView() {
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -764,7 +768,11 @@ export default function DriverProfileView() {
           {/* Driver Header Card */}
           <div className="driver-header-card">
             <div className="driver-header-left">
-              <img src={driverData.avatar} alt={driverData.name} className="driver-avatar-large" />
+              <UserAvatar
+                src={driverData.avatar}
+                name={driverData.name}
+                className="driver-avatar-large"
+              />
               <div className="driver-header-info">
                 <div className="driver-name-row">
                   <h2 className="driver-name-large">{driverData.name}</h2>

@@ -5,6 +5,8 @@ import { logoutUser } from '../../services/authService';
 import { fetchWithdrawals, approveWithdrawal, rejectWithdrawal } from '../../services/financialService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import UserAvatar from '../../components/common/UserAvatar';
+import { useLanguage } from '../../contexts/LanguageContext';
 import ApproveWithdrawalModal from '../../components/modals/ApproveWithdrawalModal';
 import RejectWithdrawalModal from '../../components/modals/RejectWithdrawalModal';
 import logo from '../../assets/images/logo.webp';
@@ -35,6 +37,7 @@ const StatusBadge = ({ status }) => {
 
 export default function WithdrawalManagementView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [withdrawals, setWithdrawals] = useState([]);
@@ -129,6 +132,8 @@ export default function WithdrawalManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     }
   };
 
@@ -263,7 +268,8 @@ export default function WithdrawalManagementView() {
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" active={true} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" onClick={() => handleNavClick('reports')} />
@@ -374,18 +380,13 @@ export default function WithdrawalManagementView() {
                         <tr key={withdrawal.id} className="withdrawal-row">
                           <td className="driver-cell">
                             <div className="driver-info">
-                              {withdrawal.driver_avatar ? (
-                                <img 
-                                  src={withdrawal.driver_avatar} 
-                                  alt={withdrawal.driver_name || 'Driver'} 
-                                  className="driver-avatar" 
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <div className="driver-avatar-placeholder">N/A</div>
-                              )}
+                              <UserAvatar
+                                src={withdrawal.driver_avatar}
+                                name={typeof withdrawal.driver_name === 'string'
+                                  ? withdrawal.driver_name
+                                  : 'Driver'}
+                                className="driver-avatar"
+                              />
                               <div>
                                 <div className="driver-name">
                                   {typeof withdrawal.driver_name === 'string' 

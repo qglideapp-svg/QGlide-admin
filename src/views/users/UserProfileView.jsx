@@ -8,6 +8,7 @@ import EditUserModal from '../../components/modals/EditUserModal';
 import DeleteUserModal from '../../components/modals/DeleteUserModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -110,7 +111,7 @@ export default function UserProfileView() {
         const transformedData = {
           id: apiUser.id || userId,
           name: apiUser.full_name || 'Unknown User',
-          avatar: apiUser.avatar_url || `https://i.pravatar.cc/120?img=${userId}`,
+          avatar: apiUser.avatar_url || apiUser.profile_picture || apiUser.avatar || '',
           status: apiUser.status || 'Active',
           email: apiUser.email || 'No email provided',
           phone: apiUser.phone || 'No phone provided',
@@ -430,6 +431,8 @@ export default function UserProfileView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -469,7 +472,8 @@ export default function UserProfileView() {
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -554,7 +558,11 @@ export default function UserProfileView() {
                 {/* Profile Header */}
                 <div className="profile-header">
                   <div className="avatar-wrapper">
-                    <img src={userData.avatar} alt={userData.name} className="user-avatar-large" />
+                    <UserAvatar
+                      src={userData.avatar}
+                      name={userData.name}
+                      className="user-avatar-large"
+                    />
                   </div>
                   <h2 className="user-name-large">{userData.name}</h2>
                   <div className="user-id">{t('users.userId')}: #{userData.id}</div>

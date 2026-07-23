@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './UserManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchUsersList, transformUserData, exportUsersToCSV, createUser, getUserInitials } from '../../services/userService';
+import { fetchUsersList, transformUserData, exportUsersToCSV, createUser } from '../../services/userService';
+import UserAvatar from '../../components/common/UserAvatar';
 import { createInfluencer } from '../../services/influencerService';
 import AddUserModal from '../../components/modals/AddUserModal';
 import AddInfluencerModal from '../../components/modals/AddInfluencerModal';
@@ -181,6 +182,8 @@ export default function UserManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     }
   };
 
@@ -414,7 +417,8 @@ export default function UserManagementView() {
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -630,13 +634,11 @@ export default function UserManagementView() {
                       </td>
                       <td className="user-cell">
                         <div className="user-info-cell">
-                          {user.avatar ? (
-                            <img src={user.avatar} alt={user.name} className="user-avatar" />
-                          ) : (
-                            <div className="user-avatar user-avatar-fallback" aria-hidden="true">
-                              {getUserInitials(user.name)}
-                            </div>
-                          )}
+                          <UserAvatar
+                            src={user.avatar}
+                            name={user.name}
+                            className="user-avatar"
+                          />
                           <div>
                             <div className="user-name-text">{user.name}</div>
                             <div className="user-joined">Joined {getTimeAgo(user.joinedDate)}</div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriversList, transformDriverData, exportDriversToCSV, getDriverInitials, matchesDriverFilters } from '../../services/driverService';
+import { fetchDriversList, transformDriverData, exportDriversToCSV, matchesDriverFilters } from '../../services/driverService';
+import UserAvatar from '../../components/common/UserAvatar';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
@@ -178,6 +179,8 @@ export default function DriverManagementView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     }
   };
 
@@ -311,7 +314,8 @@ export default function DriverManagementView() {
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />
@@ -521,13 +525,11 @@ export default function DriverManagementView() {
                       </td>
                       <td className="driver-cell">
                         <div className="driver-info-cell">
-                          {driver.avatar ? (
-                            <img src={driver.avatar} alt={driver.name} className="driver-avatar" />
-                          ) : (
-                            <div className="driver-avatar driver-avatar-fallback" aria-hidden="true">
-                              {getDriverInitials(driver.name)}
-                            </div>
-                          )}
+                          <UserAvatar
+                            src={driver.avatar}
+                            name={driver.name}
+                            className="driver-avatar"
+                          />
                           <div>
                             <div className="driver-name-text">{driver.name}</div>
                             <div className="driver-phone">{driver.phone}</div>

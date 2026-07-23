@@ -87,6 +87,7 @@ export default function MarketersManagementView() {
     else if (navItem === 'reports') navigate('/reports');
     else if (navItem === 'withdrawals') navigate('/withdrawals');
     else if (navItem === 'notifications') navigate('/notifications');
+    else if (navItem === 'app-update') navigate('/app-update');
   };
 
   const handleLogout = async () => {
@@ -174,6 +175,7 @@ export default function MarketersManagementView() {
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
           <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label={t('navigation.reports')} onClick={() => handleNavClick('reports')} />

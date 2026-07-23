@@ -1,223 +1,370 @@
-// Mock data for reports
-const mockReports = [
-  {
-    id: 'RPT_001',
-    name: 'Monthly Ride History',
-    dateRange: '01 Oct 2025 - 31 Oct 2025',
-    generatedOn: '01 Nov 2025, 09:15 AM',
-    status: 'Ready',
-    type: 'Ride History',
-    format: 'CSV',
-    downloadUrl: '#',
-    createdAt: '2025-11-01T09:15:00Z'
-  },
-  {
-    id: 'RPT_002',
-    name: 'Q4 Driver Performance',
-    dateRange: '01 Jul 2025 - 30 Sep 2025',
-    generatedOn: '01 Oct 2025, 11:30 AM',
-    status: 'Ready',
-    type: 'Driver Performance',
-    format: 'PDF',
-    downloadUrl: '#',
-    createdAt: '2025-10-01T11:30:00Z'
-  },
-  {
-    id: 'RPT_003',
-    name: 'Weekly Payment Transactions',
-    dateRange: '20 Oct 2025 - 26 Oct 2025',
-    generatedOn: '27 Oct 2025, 10:00 AM',
-    status: 'Processing',
-    type: 'Payment Transactions',
-    format: 'XLSX',
-    downloadUrl: '#',
-    createdAt: '2025-10-27T10:00:00Z'
-  },
-  {
-    id: 'RPT_004',
-    name: 'Daily User Activity',
-    dateRange: '06 Oct 2025',
-    generatedOn: '07 Oct 2025, 08:00 AM',
-    status: 'Failed',
-    type: 'User Activity',
-    format: 'CSV',
-    downloadUrl: '#',
-    createdAt: '2025-10-07T08:00:00Z'
-  }
+import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
+
+const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1/admin-reports';
+
+const getAnonApiKey = () => localStorage.getItem('anonKey') || SUPABASE_ANON_KEY;
+
+const DEFAULT_REPORT_TYPES = [
+  { value: 'ride_history', label: 'Ride History' },
+  { value: 'driver_performance', label: 'Driver Performance' },
+  { value: 'payment_transactions', label: 'Payment Transactions' },
+  { value: 'user_activity', label: 'User Activity' },
+  { value: 'financial_summary', label: 'Financial Summary' },
+  { value: 'analytics_overview', label: 'Analytics Overview' },
 ];
 
-const reportTypes = [
-  'Ride History',
-  'Driver Performance',
-  'Payment Transactions',
-  'User Activity',
-  'Financial Summary',
-  'Analytics Overview'
+const DEFAULT_RIDE_STATUSES = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'active', label: 'Active' },
+  { value: 'pending', label: 'Pending' },
 ];
 
-const rideStatuses = [
-  'All Statuses',
-  'Completed',
-  'Cancelled',
-  'Active',
-  'Pending'
+const DEFAULT_EXPORT_FORMATS = [
+  { value: 'csv', label: 'CSV' },
+  { value: 'pdf', label: 'PDF' },
+  { value: 'xlsx', label: 'XLSX' },
 ];
 
-const exportFormats = [
-  'CSV',
-  'PDF',
-  'XLSX'
-];
-
-// Simulate API delay
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Fetch all reports
-export const fetchReports = async () => {
-  await delay(500);
-  return {
-    success: true,
-    data: mockReports
-  };
-};
-
-// Generate a new report
-export const generateReport = async (reportConfig) => {
-  await delay(2000); // Simulate report generation time
-  
-  const newReport = {
-    id: `RPT_${Date.now()}`,
-    name: `${reportConfig.type} Report`,
-    dateRange: reportConfig.dateRange,
-    generatedOn: new Date().toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }),
-    status: 'Processing',
-    type: reportConfig.type,
-    format: reportConfig.format,
-    downloadUrl: '#',
-    createdAt: new Date().toISOString()
-  };
-  
-  // Add to mock data
-  mockReports.unshift(newReport);
-  
-  return {
-    success: true,
-    data: newReport
-  };
-};
-
-// Delete a report
-export const deleteReport = async (reportId) => {
-  await delay(300);
-  
-  const index = mockReports.findIndex(report => report.id === reportId);
-  if (index !== -1) {
-    mockReports.splice(index, 1);
-    return {
-      success: true,
-      message: 'Report deleted successfully'
-    };
+const getAuthHeaders = (includeJson = false) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token found');
   }
-  
-  return {
-    success: false,
-    error: 'Report not found'
-  };
-};
 
-// Retry a failed report
-export const retryReport = async (reportId) => {
-  await delay(1000);
-  
-  const report = mockReports.find(report => report.id === reportId);
-  if (report) {
-    report.status = 'Processing';
-    report.generatedOn = new Date().toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-    
-    // Simulate processing completion after a delay
-    setTimeout(() => {
-      report.status = 'Ready';
-    }, 3000);
-    
-    return {
-      success: true,
-      message: 'Report generation restarted'
-    };
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    apikey: getAnonApiKey(),
+  };
+
+  if (includeJson) {
+    headers['Content-Type'] = 'application/json';
   }
-  
-  return {
-    success: false,
-    error: 'Report not found'
-  };
+
+  return headers;
 };
 
-// Download report
-export const downloadReport = async (reportId) => {
-  await delay(500);
-  
-  const report = mockReports.find(report => report.id === reportId);
-  if (report && report.status === 'Ready') {
-    // Simulate file download
-    const blob = new Blob(['Mock report data'], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${report.name}.${report.format.toLowerCase()}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    return {
-      success: true,
-      message: 'Report downloaded successfully'
-    };
+const parseErrorMessage = async (response) => {
+  try {
+    const errorData = await response.json();
+    return errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+  } catch {
+    return response.statusText || `HTTP error! status: ${response.status}`;
   }
-  
+};
+
+const formatLabel = (value) => {
+  if (!value) return '';
+  return String(value)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const formatDateTime = (value) => {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
+const formatDateRange = (report) => {
+  if (report.date_range) return report.date_range;
+  if (report.dateRange) return report.dateRange;
+
+  const start = report.start_date || report.startDate;
+  const end = report.end_date || report.endDate;
+
+  if (start && end) return `${start} - ${end}`;
+  if (start) return start;
+  return 'N/A';
+};
+
+const normalizeStatus = (status) => {
+  if (!status) return 'Processing';
+  const normalized = String(status).toLowerCase();
+  if (normalized === 'ready' || normalized === 'completed') return 'Ready';
+  if (normalized === 'failed' || normalized === 'error') return 'Failed';
+  if (normalized === 'processing' || normalized === 'pending') return 'Processing';
+  return formatLabel(status);
+};
+
+export const transformReportData = (report) => {
+  if (!report || typeof report !== 'object') return null;
+
   return {
-    success: false,
-    error: 'Report not ready for download'
+    id: report.id || report.report_id,
+    name: report.name || report.report_name || formatLabel(report.report_type || report.type) || 'Report',
+    dateRange: formatDateRange(report),
+    generatedOn: formatDateTime(report.generated_on || report.generated_at || report.created_at || report.createdAt),
+    status: normalizeStatus(report.status),
+    type: report.report_type || report.type || '',
+    format: (report.format || '').toUpperCase(),
+    downloadUrl: report.download_url || report.downloadUrl || null,
+    createdAt: report.created_at || report.createdAt || null,
   };
 };
 
-// Get report configuration options
-export const getReportOptions = async () => {
-  await delay(200);
-  return {
-    success: true,
-    data: {
-      reportTypes,
-      rideStatuses,
-      exportFormats
+const extractReportsList = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.reports)) return payload.reports;
+  if (Array.isArray(payload?.data?.reports)) return payload.data.reports;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+const normalizeOptionList = (items, fallback) => {
+  if (!Array.isArray(items) || items.length === 0) return fallback;
+
+  return items.map((item) => {
+    if (typeof item === 'string') {
+      const value = item.toLowerCase().replace(/\s+/g, '_');
+      return { value, label: formatLabel(item) };
     }
+
+    const value = item.value || item.id || item.key || item.code || item.report_type;
+    const label = item.label || item.name || item.title || formatLabel(value);
+
+    return { value, label };
+  }).filter((item) => item.value);
+};
+
+const normalizeOptions = (payload) => {
+  const source = payload?.data || payload || {};
+
+  return {
+    reportTypes: normalizeOptionList(
+      source.report_types || source.reportTypes || source.types,
+      DEFAULT_REPORT_TYPES
+    ),
+    rideStatuses: normalizeOptionList(
+      source.ride_statuses || source.rideStatuses || source.statuses || source.status_filters,
+      DEFAULT_RIDE_STATUSES
+    ),
+    exportFormats: normalizeOptionList(
+      source.formats || source.export_formats || source.exportFormats,
+      DEFAULT_EXPORT_FORMATS
+    ),
   };
 };
 
-// Search reports
-export const searchReports = async (searchTerm) => {
-  await delay(300);
-  
-  const filteredReports = mockReports.filter(report =>
-    report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    report.type.toLowerCase().includes(searchTerm.toLowerCase())
+export const getReportOptions = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}?action=options`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+
+    const data = await response.json();
+    return { success: true, data: normalizeOptions(data) };
+  } catch (error) {
+    console.error('Report Options API Error:', error);
+    return {
+      success: true,
+      data: normalizeOptions({}),
+      warning: error.message,
+    };
+  }
+};
+
+export const fetchReports = async ({ page = 1, limit = 20 } = {}) => {
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    const response = await fetch(`${API_BASE_URL}?${params.toString()}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+
+    const data = await response.json();
+    const reports = extractReportsList(data)
+      .map(transformReportData)
+      .filter(Boolean);
+
+    return {
+      success: true,
+      data: reports,
+      pagination: {
+        page: data.page || data.data?.page || page,
+        limit: data.limit || data.data?.limit || limit,
+        total: data.total || data.data?.total || reports.length,
+        totalPages: data.total_pages || data.data?.total_pages || 1,
+      },
+    };
+  } catch (error) {
+    console.error('Reports List API Error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const generateReport = async (reportConfig) => {
+  try {
+    const body = {
+      report_type: reportConfig.type,
+      start_date: reportConfig.startDate,
+      end_date: reportConfig.endDate,
+      format: String(reportConfig.format || 'csv').toLowerCase(),
+    };
+
+    if (reportConfig.name?.trim()) {
+      body.name = reportConfig.name.trim();
+    }
+
+    if (reportConfig.type === 'ride_history' && reportConfig.rideStatus) {
+      body.status_filter = String(reportConfig.rideStatus).toLowerCase();
+    }
+
+    const response = await fetch(API_BASE_URL, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+
+    const data = await response.json();
+    const report = transformReportData(data.report || data.data?.report || data.data || data);
+
+    return {
+      success: true,
+      data: report,
+      message: data.message || 'Report generation started',
+    };
+  } catch (error) {
+    console.error('Generate Report API Error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const deleteReport = async (reportId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}?id=${encodeURIComponent(reportId)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      success: true,
+      message: data.message || 'Report deleted successfully',
+    };
+  } catch (error) {
+    console.error('Delete Report API Error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const retryReport = async (reportId) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}?action=retry&id=${encodeURIComponent(reportId)}`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      success: true,
+      message: data.message || 'Report generation restarted',
+    };
+  } catch (error) {
+    console.error('Retry Report API Error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const downloadReport = async (reportId, reportName = 'report', format = 'csv') => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}?action=download&id=${encodeURIComponent(reportId)}`,
+      {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+
+    const blob = await response.blob();
+    const extension = String(format || 'csv').toLowerCase();
+    const safeName = String(reportName || 'report').replace(/[^\w\-]+/g, '_');
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${safeName}.${extension}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(url);
+
+    return {
+      success: true,
+      message: 'Report downloaded successfully',
+    };
+  } catch (error) {
+    console.error('Download Report API Error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const searchReports = async (searchTerm, { page = 1, limit = 20 } = {}) => {
+  const result = await fetchReports({ page, limit });
+  if (!result.success) return result;
+
+  const query = searchTerm.trim().toLowerCase();
+  if (!query) return result;
+
+  const filteredReports = result.data.filter((report) =>
+    report.name.toLowerCase().includes(query) ||
+    report.type.toLowerCase().includes(query) ||
+    report.status.toLowerCase().includes(query)
   );
-  
+
   return {
-    success: true,
-    data: filteredReports
+    ...result,
+    data: filteredReports,
   };
 };
+
+export const getDefaultReportConfig = () => ({
+  type: DEFAULT_REPORT_TYPES[0].value,
+  startDate: '',
+  endDate: '',
+  rideStatus: DEFAULT_RIDE_STATUSES[0].value,
+  format: DEFAULT_EXPORT_FORMATS[0].value,
+  name: '',
+});
+
+export const getDefaultReportOptions = () => normalizeOptions({});

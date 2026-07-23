@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ReportsGeneratorView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchReports, generateReport, deleteReport, retryReport, downloadReport, getReportOptions, searchReports } from '../../services/reportsService';
+import { fetchReports, generateReport, deleteReport, retryReport, downloadReport, getReportOptions, searchReports, getDefaultReportConfig, getDefaultReportOptions } from '../../services/reportsService';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -19,6 +20,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 const StatusBadge = ({ status }) => {
   const getStatusClass = (status) => {
+    if (!status) return 'status-ready';
     switch (status.toLowerCase()) {
       case 'ready': return 'status-ready';
       case 'processing': return 'status-processing';
@@ -33,6 +35,7 @@ const StatusBadge = ({ status }) => {
 export default function ReportsGeneratorView() {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // State for reports data
@@ -45,37 +48,44 @@ export default function ReportsGeneratorView() {
   const [toastType, setToastType] = useState('success');
   
   // State for report configuration
-  const [reportConfig, setReportConfig] = useState({
-    type: 'Ride History',
-    dateRange: '',
-    rideStatus: 'All Statuses',
-    format: 'CSV'
-  });
+  const [reportConfig, setReportConfig] = useState(getDefaultReportConfig());
   
   // State for report options
-  const [reportOptions, setReportOptions] = useState({
-    reportTypes: [],
-    rideStatuses: [],
-    exportFormats: []
-  });
+  const [reportOptions, setReportOptions] = useState(getDefaultReportOptions());
 
   useEffect(() => {
     loadReports();
     loadReportOptions();
   }, []);
 
-  const loadReports = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    const hasProcessingReports = reports.some(
+      (report) => report.status?.toLowerCase() === 'processing'
+    );
+
+    if (!hasProcessingReports) return undefined;
+
+    const intervalId = setInterval(() => {
+      loadReports(false);
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [reports]);
+
+  const loadReports = async (showLoader = true) => {
+    if (showLoader) setIsLoading(true);
     try {
       const result = await fetchReports();
       if (result.success) {
         setReports(result.data);
+      } else {
+        showToastMessage(result.error || 'Failed to load reports', 'error');
       }
     } catch (error) {
       console.error('Error loading reports:', error);
       showToastMessage('Failed to load reports', 'error');
     } finally {
-      setIsLoading(false);
+      if (showLoader) setIsLoading(false);
     }
   };
 
@@ -84,6 +94,12 @@ export default function ReportsGeneratorView() {
       const result = await getReportOptions();
       if (result.success) {
         setReportOptions(result.data);
+        setReportConfig((prev) => ({
+          ...prev,
+          type: prev.type || result.data.reportTypes[0]?.value || getDefaultReportConfig().type,
+          rideStatus: prev.rideStatus || result.data.rideStatuses[0]?.value || getDefaultReportConfig().rideStatus,
+          format: prev.format || result.data.exportFormats[0]?.value || getDefaultReportConfig().format,
+        }));
       }
     } catch (error) {
       console.error('Error loading report options:', error);
@@ -102,8 +118,13 @@ export default function ReportsGeneratorView() {
   };
 
   const handleGenerateReport = async () => {
-    if (!reportConfig.dateRange) {
-      showToastMessage('Please select a date range', 'error');
+    if (!reportConfig.startDate || !reportConfig.endDate) {
+      showToastMessage('Please select a start and end date', 'error');
+      return;
+    }
+
+    if (reportConfig.startDate > reportConfig.endDate) {
+      showToastMessage('Start date must be before end date', 'error');
       return;
     }
 
@@ -111,14 +132,21 @@ export default function ReportsGeneratorView() {
     try {
       const result = await generateReport(reportConfig);
       if (result.success) {
-        setReports(prev => [result.data, ...prev]);
-        showToastMessage('Report generation started', 'success');
+        if (result.data) {
+          setReports((prev) => [result.data, ...prev.filter((report) => report.id !== result.data.id)]);
+        } else {
+          loadReports(false);
+        }
+        showToastMessage(result.message || 'Report generation started', 'success');
         
-        // Reset form
-        setReportConfig(prev => ({
+        setReportConfig((prev) => ({
           ...prev,
-          dateRange: ''
+          startDate: '',
+          endDate: '',
+          name: '',
         }));
+      } else {
+        showToastMessage(result.error || 'Failed to generate report', 'error');
       }
     } catch (error) {
       console.error('Error generating report:', error);
@@ -134,7 +162,9 @@ export default function ReportsGeneratorView() {
         const result = await deleteReport(reportId);
         if (result.success) {
           setReports(prev => prev.filter(report => report.id !== reportId));
-          showToastMessage('Report deleted successfully', 'success');
+          showToastMessage(result.message || 'Report deleted successfully', 'success');
+        } else {
+          showToastMessage(result.error || 'Failed to delete report', 'error');
         }
       } catch (error) {
         console.error('Error deleting report:', error);
@@ -147,8 +177,10 @@ export default function ReportsGeneratorView() {
     try {
       const result = await retryReport(reportId);
       if (result.success) {
-        showToastMessage('Report generation restarted', 'success');
-        loadReports(); // Refresh the list
+        showToastMessage(result.message || 'Report generation restarted', 'success');
+        loadReports(false);
+      } else {
+        showToastMessage(result.error || 'Failed to retry report', 'error');
       }
     } catch (error) {
       console.error('Error retrying report:', error);
@@ -156,9 +188,9 @@ export default function ReportsGeneratorView() {
     }
   };
 
-  const handleDownloadReport = async (reportId) => {
+  const handleDownloadReport = async (report) => {
     try {
-      const result = await downloadReport(reportId);
+      const result = await downloadReport(report.id, report.name, report.format);
       if (result.success) {
         showToastMessage('Report downloaded successfully', 'success');
       } else {
@@ -181,6 +213,8 @@ export default function ReportsGeneratorView() {
       const result = await searchReports(searchTerm);
       if (result.success) {
         setReports(result.data);
+      } else {
+        showToastMessage(result.error || 'Failed to search reports', 'error');
       }
     } catch (error) {
       console.error('Error searching reports:', error);
@@ -215,6 +249,8 @@ export default function ReportsGeneratorView() {
       navigate('/withdrawals');
     } else if (navItem === 'notifications') {
       navigate('/notifications');
+    } else if (navItem === 'app-update') {
+      navigate('/app-update');
     } else if (navItem === 'support') {
       navigate('/dashboard?section=support');
     } else if (navItem === 'analytics') {
@@ -251,7 +287,8 @@ export default function ReportsGeneratorView() {
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" onClick={() => handleNavClick('withdrawals')} />
-          <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+                    <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />
+          <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label="Support" onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label="Analytics" onClick={() => handleNavClick('analytics')} />
           <NavItem icon="assessment" label="Reports" active={true} />
@@ -330,8 +367,8 @@ export default function ReportsGeneratorView() {
                       onChange={(e) => setReportConfig(prev => ({ ...prev, type: e.target.value }))}
                       className="form-select"
                     >
-                      {reportOptions.reportTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                      {reportOptions.reportTypes.map((type) => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
                       ))}
                     </select>
                     <span className="dropdown-arrow material-symbols-outlined">expand_more</span>
@@ -339,13 +376,23 @@ export default function ReportsGeneratorView() {
                 </div>
 
                 <div className="form-group">
-                  <label>Date Range</label>
+                  <label>Report Name (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Monthly Ride History"
+                    value={reportConfig.name}
+                    onChange={(e) => setReportConfig(prev => ({ ...prev, name: e.target.value }))}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Start Date</label>
                   <div className="date-input-container">
                     <input
-                      type="text"
-                      placeholder="Select date range"
-                      value={reportConfig.dateRange}
-                      onChange={(e) => setReportConfig(prev => ({ ...prev, dateRange: e.target.value }))}
+                      type="date"
+                      value={reportConfig.startDate}
+                      onChange={(e) => setReportConfig(prev => ({ ...prev, startDate: e.target.value }))}
                       className="form-input date-input"
                     />
                     <span className="date-icon material-symbols-outlined">calendar_month</span>
@@ -353,34 +400,49 @@ export default function ReportsGeneratorView() {
                 </div>
 
                 <div className="form-group">
-                  <label>Ride Status</label>
-                  <div className="dropdown-container">
-                    <select
-                      value={reportConfig.rideStatus}
-                      onChange={(e) => setReportConfig(prev => ({ ...prev, rideStatus: e.target.value }))}
-                      className="form-select"
-                    >
-                      {reportOptions.rideStatuses.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                    <span className="dropdown-arrow material-symbols-outlined">expand_more</span>
+                  <label>End Date</label>
+                  <div className="date-input-container">
+                    <input
+                      type="date"
+                      value={reportConfig.endDate}
+                      onChange={(e) => setReportConfig(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="form-input date-input"
+                    />
+                    <span className="date-icon material-symbols-outlined">calendar_month</span>
                   </div>
                 </div>
+
+                {reportConfig.type === 'ride_history' && (
+                  <div className="form-group">
+                    <label>Ride Status</label>
+                    <div className="dropdown-container">
+                      <select
+                        value={reportConfig.rideStatus}
+                        onChange={(e) => setReportConfig(prev => ({ ...prev, rideStatus: e.target.value }))}
+                        className="form-select"
+                      >
+                        {reportOptions.rideStatuses.map((status) => (
+                          <option key={status.value} value={status.value}>{status.label}</option>
+                        ))}
+                      </select>
+                      <span className="dropdown-arrow material-symbols-outlined">expand_more</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label>Export Format</label>
                   <div className="radio-group">
-                    {reportOptions.exportFormats.map(format => (
-                      <label key={format} className="radio-option">
+                    {reportOptions.exportFormats.map((format) => (
+                      <label key={format.value} className="radio-option">
                         <input
                           type="radio"
                           name="format"
-                          value={format}
-                          checked={reportConfig.format === format}
+                          value={format.value}
+                          checked={reportConfig.format === format.value}
                           onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value }))}
                         />
-                        <span className="radio-label">{format}</span>
+                        <span className="radio-label">{format.label}</span>
                       </label>
                     ))}
                   </div>
@@ -423,7 +485,12 @@ export default function ReportsGeneratorView() {
                       </tr>
                     </thead>
                     <tbody>
-                      {reports.map((report) => (
+                      {reports.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="empty-reports-cell">No reports found.</td>
+                        </tr>
+                      ) : (
+                      reports.map((report) => (
                         <tr key={report.id}>
                           <td className="report-name">{report.name}</td>
                           <td className="date-range">{report.dateRange}</td>
@@ -434,7 +501,7 @@ export default function ReportsGeneratorView() {
                               {report.status === 'Ready' && (
                                 <button
                                   className="action-btn download-btn"
-                                  onClick={() => handleDownloadReport(report.id)}
+                                  onClick={() => handleDownloadReport(report)}
                                   title="Download"
                                 >
                                   <span className="material-symbols-outlined">download</span>
@@ -459,7 +526,8 @@ export default function ReportsGeneratorView() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      ))
+                      )}
                     </tbody>
                   </table>
                 </div>

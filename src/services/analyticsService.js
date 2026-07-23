@@ -155,13 +155,13 @@ const transformAnalyticsData = (apiData) => {
     ? driver_performance_leaderboard.map(driver => ({
         id: driver.id || Math.random(),
         name: driver.name || 'Unknown Driver',
-        avatar: driver.avatar || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 20) + 1}`,
+        avatar: driver.avatar || '',
         rides: driver.rides || 0,
         rating: driver.rating || 0,
         acceptanceRate: driver.acceptance_rate || 0
       }))
     : [
-        { id: 1, name: 'No Data Available', avatar: 'https://i.pravatar.cc/150?img=1', rides: 0, rating: 0, acceptanceRate: 0 }
+        { id: 1, name: 'No Data Available', avatar: '', rides: 0, rating: 0, acceptanceRate: 0 }
       ];
 
   // Transform revenue by payment type - provide fallback data if empty
