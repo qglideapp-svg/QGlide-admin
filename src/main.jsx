@@ -22,6 +22,8 @@ import RentalManagementView from './views/rentals/RentalManagementView.jsx';
 import WithdrawalManagementView from './views/withdrawals/WithdrawalManagementView.jsx';
 import NotificationManagementView from './views/notifications/NotificationManagementView.jsx';
 import MarketersManagementView from './views/marketers/MarketersManagementView.jsx';
+import InfluencersManagementView from './views/influencers/InfluencersManagementView.jsx';
+import InfluencerDetailView from './views/influencers/InfluencerDetailView.jsx';
 import AppUpdateView from './views/app-update/AppUpdateView.jsx';
 import AuthGuard from './components/layout/AuthGuard.jsx';
 
@@ -101,6 +103,16 @@ createRoot(document.getElementById('root')).render(
         <Route path="/marketers" element={
           <AuthGuard>
             <MarketersManagementView />
+          </AuthGuard>
+        } />
+        <Route path="/influencers" element={
+          <AuthGuard>
+            <InfluencersManagementView />
+          </AuthGuard>
+        } />
+        <Route path="/influencers/:influencerId/activity" element={
+          <AuthGuard>
+            <InfluencerDetailView />
           </AuthGuard>
         } />
         <Route path="/app-update" element={

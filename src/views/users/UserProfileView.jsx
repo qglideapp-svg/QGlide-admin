@@ -423,6 +423,8 @@ export default function UserProfileView() {
       navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
+    } else if (navItem === 'influencers') {
+      navigate('/influencers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
     } else if (navItem === 'financial') {
@@ -470,6 +472,7 @@ export default function UserProfileView() {
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label={t('navigation.userManagement')} active={true} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
+          <NavItem icon="campaign" label={t('navigation.influencers')} onClick={() => handleNavClick('influencers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
                     <NavItem icon="notifications" label="Notifications" onClick={() => handleNavClick('notifications')} />

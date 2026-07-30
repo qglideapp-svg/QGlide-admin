@@ -181,7 +181,7 @@ export async function createMarketer({ displayName, email, password, confirmPass
 }
 
 /**
- * Update marketer (`PATCH admin-update-marketer`).
+ * Update marketer (`POST admin-update-marketer`).
  * Body matches API: marketer_id, display_name, email, password (use "" to leave unchanged).
  */
 export async function updateMarketer(marketerId, { displayName, email, password, confirmPassword }) {
@@ -206,7 +206,7 @@ export async function updateMarketer(marketerId, { displayName, email, password,
     };
 
     const response = await fetch(url, {
-      method: 'PATCH',
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
