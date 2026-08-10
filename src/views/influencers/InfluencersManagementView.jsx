@@ -8,6 +8,8 @@ import { fetchInfluencerAnalyticsOverview } from '../../services/influencerAnaly
 import InfluencerAnalyticsDashboard from '../../components/influencers/InfluencerAnalyticsDashboard';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import AddInfluencerModal from '../../components/modals/AddInfluencerModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -24,7 +26,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export default function InfluencersManagementView() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatDateTime, formatApiDateTime, translateApiLabel, formatCurrency } = useLanguage();
   const { theme } = useTheme();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [influencers, setInfluencers] = useState([]);
@@ -193,6 +195,8 @@ export default function InfluencersManagementView() {
             </div>
           </div>
           <div className="acts">
+            <LanguageToggle />
+
             <ThemeToggle />
             <button className="ibtn" type="button" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
@@ -273,10 +277,7 @@ export default function InfluencersManagementView() {
 
           <div className="influencers-card">
             {isLoading ? (
-              <div className="influencers-panel-state">
-                <div className="influencers-loading-spinner" aria-hidden />
-                <p className="influencers-panel-message">{t('influencers.loading')}</p>
-              </div>
+              <LazyLoader variant="table" rows={6} columns={5} message={t('influencers.loading')} />
             ) : loadError ? (
               <div className="influencers-panel-state influencers-panel-state-error">
                 <span className="material-symbols-outlined influencers-panel-icon">error</span>
@@ -320,7 +321,7 @@ export default function InfluencersManagementView() {
                         <td className="influencers-cell influencers-cell-date">
                           {(() => {
                             const d = new Date(inf.createdAt);
-                            return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+                            return Number.isNaN(d.getTime()) ? '—' : formatDateTime(d);
                           })()}
                         </td>
                         <td className="influencers-cell influencers-cell-actions">

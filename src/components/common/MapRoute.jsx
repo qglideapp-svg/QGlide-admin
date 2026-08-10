@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import LazyLoader from './LazyLoader.jsx';
 import './MapRoute.css';
 
 const MapRoute = ({ 
@@ -451,10 +452,7 @@ const MapRoute = ({
   if (isLoading) {
     return (
       <div className={`map-route-container ${className}`}>
-        <div className="map-loading">
-          <div className="loading-spinner"></div>
-          <p>Loading Google Maps...</p>
-        </div>
+        <LazyLoader variant="content" lines={2} message="Loading Google Maps..." />
       </div>
     );
   }

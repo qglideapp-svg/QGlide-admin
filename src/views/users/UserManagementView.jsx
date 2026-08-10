@@ -7,6 +7,8 @@ import UserAvatar from '../../components/common/UserAvatar';
 import AddUserModal from '../../components/modals/AddUserModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -20,6 +22,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'status-inactive';
     switch (status.toLowerCase()) {
@@ -30,12 +33,12 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`status-badge ${getStatusClass(status)}`}>{status}</span>;
+  return <span className={`status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 export default function UserManagementView() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatDateTime, formatApiDateTime, translateApiLabel, formatCurrency } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // API-related state
@@ -365,6 +368,7 @@ export default function UserManagementView() {
 
   // Use API data directly (no client-side filtering needed)
   const filteredUsers = users;
+  const isInitialLoading = isLoading && users.length === 0 && !error;
 
   return (
     <div className={`user-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -422,8 +426,7 @@ export default function UserManagementView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder={t('common.search')} />
             </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label={t('common.notifications')}>
@@ -444,7 +447,7 @@ export default function UserManagementView() {
             <div className="card-header">
               <div className="header-left">
                 <h2>{t('users.allUsers')}</h2>
-                <p className="user-count">{t('users.totalOf')} {totalCount.toLocaleString()} {t('users.users')}</p>
+                <p className="user-count">{t('users.totalOf')} {formatNumber(totalCount)} {t('users.users')}</p>
               </div>
               <div className="header-actions">
                 <button 
@@ -508,6 +511,9 @@ export default function UserManagementView() {
             </div>
 
             <div className="table-container">
+              {isInitialLoading ? (
+                <LazyLoader variant="table" rows={8} columns={7} message={t('users.loadingUsers')} />
+              ) : (
               <table className="users-table">
                 <thead>
                   <tr>
@@ -527,23 +533,7 @@ export default function UserManagementView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                          <div className="loading-spinner" style={{ 
-                            width: '24px', 
-                            height: '24px', 
-                            border: '2px solid #e5e7eb', 
-                            borderTop: '2px solid #3b82f6', 
-                            borderRadius: '50%', 
-                            animation: 'spin 1s linear infinite' 
-                          }}></div>
-                          <span style={{ color: '#6b7280' }}>{t('users.loadingUsers')}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : error ? (
+                  {error ? (
                     <tr>
                       <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
@@ -619,10 +609,11 @@ export default function UserManagementView() {
                   )}
                 </tbody>
               </table>
+              )}
             </div>
             
             {/* Pagination Controls */}
-            {totalPages > 1 && !isLoading && !error && (
+            {totalPages > 1 && !isInitialLoading && !error && (
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 

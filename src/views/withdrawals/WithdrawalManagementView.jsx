@@ -5,6 +5,8 @@ import { logoutUser } from '../../services/authService';
 import { fetchWithdrawals, approveWithdrawal, rejectWithdrawal } from '../../services/financialService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ApproveWithdrawalModal from '../../components/modals/ApproveWithdrawalModal';
@@ -21,6 +23,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'status-pending';
     switch (status.toLowerCase()) {
@@ -32,12 +35,12 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`status-badge ${getStatusClass(status)}`}>{status || 'Pending'}</span>;
+  return <span className={`status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 export default function WithdrawalManagementView() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatDateTime, formatApiDateTime, translateApiLabel, formatCurrency } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [withdrawals, setWithdrawals] = useState([]);
@@ -219,13 +222,6 @@ export default function WithdrawalManagementView() {
     }
   };
 
-  const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return 'QAR 0.00';
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount);
-    if (isNaN(numAmount)) return 'QAR 0.00';
-    return `QAR ${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   const filteredWithdrawals = React.useMemo(() => {
     try {
       const withdrawalsArray = Array.isArray(withdrawals) ? withdrawals : [];
@@ -308,8 +304,7 @@ export default function WithdrawalManagementView() {
             </div>
           </div>
           <div className="acts">
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
@@ -351,10 +346,7 @@ export default function WithdrawalManagementView() {
 
             <div className="table-container">
               {isLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading withdrawals...</p>
-                </div>
+                <LazyLoader variant="table" rows={8} columns={6} message={t('common.loading')} />
               ) : filteredWithdrawals.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">💰</div>

@@ -5,6 +5,8 @@ import { logoutUser } from '../../services/authService';
 import Toast from '../../components/common/Toast';
 import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -17,6 +19,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'rental-status-pending';
     switch (status.toLowerCase()) {
@@ -31,7 +34,7 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`rental-status-badge ${getStatusClass(status)}`}>{status || 'pending'}</span>;
+  return <span className={`rental-status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 const VehicleTypeBadge = ({ type }) => {
@@ -358,8 +361,7 @@ export default function RentalManagementView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder="Search..." />
             </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
             </button>
@@ -462,10 +464,7 @@ export default function RentalManagementView() {
             {/* Table */}
             <div className="table-container">
               {isLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading rentals...</p>
-                </div>
+                <LazyLoader variant="table" rows={8} columns={7} message={t('common.loading')} />
               ) : filteredRentals.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">

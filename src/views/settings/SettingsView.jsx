@@ -6,6 +6,8 @@ import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -467,6 +469,8 @@ export default function SettingsView() {
                 <span className="material-symbols-outlined">search</span>
               </button>
             </div>
+            <LanguageToggle />
+
             <ThemeToggle />
             <button className="notifications-btn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />
@@ -483,10 +487,7 @@ export default function SettingsView() {
 
         <div className="container">
           {isLoading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>{t('common.loading')}</p>
-            </div>
+            <LazyLoader variant="form" lines={6} message={t('common.loading')} />
           ) : (
             <>
               {/* System Settings Section */}

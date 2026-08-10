@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './DriversWithoutDocsModal.css';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LazyLoader from '../common/LazyLoader.jsx';
 import UserAvatar from '../common/UserAvatar';
 
 const DriversWithoutDocsModal = ({
@@ -89,10 +90,7 @@ const DriversWithoutDocsModal = ({
 
               <div className="drivers-without-docs-table-wrap">
                 {isLoading ? (
-                  <div className="drivers-without-docs-loading">
-                    <div className="loading-spinner" />
-                    <span>{t('dashboard.loadingDriversWithoutDocs')}</span>
-                  </div>
+                  <LazyLoader variant="table" rows={5} columns={3} message={t('dashboard.loadingDriversWithoutDocs')} />
                 ) : drivers.length === 0 ? (
                   <div className="drivers-without-docs-empty">
                     <span className="material-symbols-outlined">

@@ -5,6 +5,7 @@ import { logoutUser } from '../../services/authService';
 import { sendPushNotification } from '../../services/notificationService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/images/logo.webp';
@@ -205,8 +206,7 @@ export default function NotificationManagementView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder={t('common.search')} />
             </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />

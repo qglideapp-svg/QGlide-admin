@@ -1,17 +1,12 @@
+import { authenticatedFetch } from './apiClient';
+
 const DASHBOARD_API_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1/admin-dashboard-overview';
 
 export const fetchDashboardData = async () => {
   try {
-    const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(DASHBOARD_API_URL, {
+    const response = await authenticatedFetch(DASHBOARD_API_URL, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -31,16 +26,9 @@ export const fetchDashboardData = async () => {
 
 export const fetchRidesAnalytics = async (timeframe = 'month') => {
   try {
-    const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1/admin-rides-analytics?timeframe=${timeframe}`, {
+    const response = await authenticatedFetch(`https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1/admin-rides-analytics?timeframe=${timeframe}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -60,16 +48,9 @@ export const fetchRidesAnalytics = async (timeframe = 'month') => {
 
 export const fetchRidesData = async () => {
   try {
-    const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch('https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1/admin-rides', {
+    const response = await authenticatedFetch('https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1/admin-rides', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });

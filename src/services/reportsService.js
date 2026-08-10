@@ -1,4 +1,6 @@
-import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
+import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1/admin-reports';
 
@@ -28,13 +30,7 @@ const DEFAULT_EXPORT_FORMATS = [
 ];
 
 const getAuthHeaders = (includeJson = false) => {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('No authentication token found');
-  }
-
   const headers = {
-    Authorization: `Bearer ${token}`,
     apikey: getAnonApiKey(),
   };
 
@@ -104,7 +100,12 @@ export const transformReportData = (report) => {
     name: report.name || report.report_name || formatLabel(report.report_type || report.type) || 'Report',
     dateRange: formatDateRange(report),
     generatedOn: formatDateTime(report.generated_on || report.generated_at || report.created_at || report.createdAt),
+    generatedOnAt: report.generated_on || report.generated_at || report.created_at || report.createdAt || null,
+    dateRangeStart: report.start_date || report.startDate || null,
+    dateRangeEnd: report.end_date || report.endDate || null,
+    dateRangeText: report.date_range || report.dateRange || null,
     status: normalizeStatus(report.status),
+    statusRaw: report.status || 'processing',
     type: report.report_type || report.type || '',
     format: (report.format || '').toUpperCase(),
     downloadUrl: report.download_url || report.downloadUrl || null,
@@ -157,7 +158,7 @@ const normalizeOptions = (payload) => {
 
 export const getReportOptions = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}?action=options`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}?action=options`, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
@@ -185,7 +186,7 @@ export const fetchReports = async ({ page = 1, limit = 20 } = {}) => {
       limit: String(limit),
     });
 
-    const response = await fetch(`${API_BASE_URL}?${params.toString()}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}?${params.toString()}`, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
@@ -232,7 +233,7 @@ export const generateReport = async (reportConfig) => {
       body.status_filter = String(reportConfig.rideStatus).toLowerCase();
     }
 
-    const response = await fetch(API_BASE_URL, {
+    const response = await authenticatedFetch(API_BASE_URL, {
       method: 'POST',
       headers: getAuthHeaders(true),
       body: JSON.stringify(body),
@@ -258,7 +259,7 @@ export const generateReport = async (reportConfig) => {
 
 export const deleteReport = async (reportId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}?id=${encodeURIComponent(reportId)}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}?id=${encodeURIComponent(reportId)}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -280,7 +281,7 @@ export const deleteReport = async (reportId) => {
 
 export const retryReport = async (reportId) => {
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${API_BASE_URL}?action=retry&id=${encodeURIComponent(reportId)}`,
       {
         method: 'POST',
@@ -305,7 +306,7 @@ export const retryReport = async (reportId) => {
 
 export const downloadReport = async (reportId, reportName = 'report', format = 'csv') => {
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${API_BASE_URL}?action=download&id=${encodeURIComponent(reportId)}`,
       {
         method: 'GET',

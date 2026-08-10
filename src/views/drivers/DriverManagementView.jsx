@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../../services/authService';
 import { fetchDriversList, transformDriverData, exportDriversToCSV, matchesDriverFilters } from '../../services/driverService';
 import UserAvatar from '../../components/common/UserAvatar';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
@@ -18,6 +20,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'driver-status-offline';
     switch (status.toLowerCase()) {
@@ -28,12 +31,12 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`driver-status-badge ${getStatusClass(status)}`}>{status}</span>;
+  return <span className={`driver-status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 export default function DriverManagementView() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatCurrency } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // API-related state
@@ -55,6 +58,7 @@ export default function DriverManagementView() {
   
   // Export state
   const [isExporting, setIsExporting] = useState(false);
+  const loadRequestIdRef = useRef(0);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -62,6 +66,8 @@ export default function DriverManagementView() {
 
   // Fetch drivers from API
   const loadDrivers = useCallback(async (search = '', status = '', rating = '', page = 1, start = '', end = '') => {
+    const requestId = ++loadRequestIdRef.current;
+
     console.log('🔄 LOADING DRIVERS:', {
       '🔍 Search Term': search,
       '📊 Status Filter': status,
@@ -77,6 +83,10 @@ export default function DriverManagementView() {
 
     try {
       const result = await fetchDriversList(search, status, rating, page, limit, start, end);
+
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
 
       console.log('📡 API RESULT RECEIVED:', {
         '✅ Success': result.success,
@@ -115,10 +125,16 @@ export default function DriverManagementView() {
         console.error('❌ Failed to load drivers:', result.error);
       }
     } catch (error) {
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+
       setError(error.message || 'An unexpected error occurred');
       console.error('❌ Load drivers error:', error);
     } finally {
-      setIsLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [limit]);
 
@@ -302,6 +318,9 @@ export default function DriverManagementView() {
     })
   );
 
+  const isInitialLoading = isLoading && drivers.length === 0 && !error;
+  const isSearching = isLoading && drivers.length > 0;
+
   return (
     <div className={`driver-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className={`side ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -355,18 +374,16 @@ export default function DriverManagementView() {
           </div>
           <div className="acts">
             <div className="search">
-              <span className="material-symbols-outlined">
+              <span className={`material-symbols-outlined${isLoading ? ' search-icon-loading' : ''}`}>
                 {isLoading ? 'hourglass_empty' : 'search'}
               </span>
               <input 
                 placeholder={t('drivers.searchDrivers')} 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                disabled={isLoading}
               />
             </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.notifications')}>
               <img src={notificationsIcon} alt="notifications" className="kimg" />
@@ -440,7 +457,15 @@ export default function DriverManagementView() {
               </div>
             </div>
 
-            <div className="table-container">
+            <div className={`table-container${isSearching ? ' is-searching' : ''}`}>
+              {isSearching && (
+                <div className="table-search-overlay" aria-hidden="true">
+                  <LazyLoader variant="inline" size="sm" message="" />
+                </div>
+              )}
+              {isInitialLoading ? (
+                <LazyLoader variant="table" rows={8} columns={8} message={t('drivers.loadingDrivers')} />
+              ) : (
               <table className="drivers-table">
                 <thead>
                   <tr>
@@ -461,23 +486,7 @@ export default function DriverManagementView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                          <div className="loading-spinner" style={{ 
-                            width: '24px', 
-                            height: '24px', 
-                            border: '2px solid #e5e7eb', 
-                            borderTop: '2px solid #3b82f6', 
-                            borderRadius: '50%', 
-                            animation: 'spin 1s linear infinite' 
-                          }}></div>
-                          <span style={{ color: '#6b7280' }}>{t('drivers.loadingDrivers')}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : error ? (
+                  {error && drivers.length === 0 ? (
                     <tr>
                       <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
@@ -547,8 +556,8 @@ export default function DriverManagementView() {
                       <td className="rating-cell">
                         <span className="star-icon">★</span> {driver.rating.toFixed(1)}
                       </td>
-                      <td className="rides-cell">{driver.totalRides.toLocaleString()}</td>
-                      <td className="earnings-cell">{driver.earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="rides-cell">{formatNumber(driver.totalRides)}</td>
+                      <td className="earnings-cell">{formatCurrency(driver.earnings)}</td>
                       <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                         <button className="action-menu-btn" aria-label="Actions">
                           <span className="material-symbols-outlined">more_vert</span>
@@ -559,10 +568,11 @@ export default function DriverManagementView() {
                   )}
                 </tbody>
               </table>
+              )}
             </div>
             
             {/* Pagination Controls */}
-            {totalPages > 1 && !isLoading && !error && (
+            {totalPages > 1 && !isInitialLoading && !error && (
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 

@@ -1,6 +1,7 @@
+import { authenticatedFetch } from './apiClient';
+
 // Analytics API Integration
 
-import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
@@ -16,11 +17,6 @@ const addColorsToData = (data, colorPalette) => {
 // Fetch all analytics data from API
 export const fetchAnalyticsReports = async (startDate, endDate) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     console.log('🔄 FETCHING ANALYTICS REPORTS:', {
       '📅 Start Date': startDate,
       '📅 End Date': endDate,
@@ -34,10 +30,9 @@ export const fetchAnalyticsReports = async (startDate, endDate) => {
       end_date: endDate
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json'
       }
@@ -279,11 +274,6 @@ export const fetchRevenueByPaymentType = async () => {
 // Export analytics report (downloads as CSV from backend API)
 export const exportAnalyticsReport = async (startDate, endDate) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     console.log('🔄 EXPORTING ANALYTICS CSV:', {
       '📅 Start Date': startDate,
       '📅 End Date': endDate,
@@ -298,10 +288,9 @@ export const exportAnalyticsReport = async (startDate, endDate) => {
       format: 'csv'
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json'
       }
@@ -344,11 +333,6 @@ export const exportAnalyticsReport = async (startDate, endDate) => {
 // Export analytics data as JSON (downloads from backend API)
 export const exportAnalyticsAsJSON = async (startDate, endDate) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     console.log('🔄 EXPORTING ANALYTICS JSON:', {
       '📅 Start Date': startDate,
       '📅 End Date': endDate,
@@ -362,10 +346,9 @@ export const exportAnalyticsAsJSON = async (startDate, endDate) => {
       end_date: endDate
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json'
       }
@@ -408,11 +391,6 @@ export const exportAnalyticsAsJSON = async (startDate, endDate) => {
 // Export only revenue data as CSV (downloads from backend API)
 export const exportRevenueData = async (startDate, endDate) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     console.log('🔄 EXPORTING REVENUE DATA CSV:', {
       '📅 Start Date': startDate,
       '📅 End Date': endDate,
@@ -429,10 +407,9 @@ export const exportRevenueData = async (startDate, endDate) => {
       sections: 'revenue_by_payment_type'
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json'
       }
@@ -475,11 +452,6 @@ export const exportRevenueData = async (startDate, endDate) => {
 // Export specific sections as CSV (downloads from backend API)
 export const exportSpecificSections = async (startDate, endDate, sections) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     // Validate sections array
     if (!sections || sections.length === 0) {
       throw new Error('No sections selected for export');
@@ -525,10 +497,9 @@ export const exportSpecificSections = async (startDate, endDate, sections) => {
       sections: sectionsParam
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-analytics-reports?${params}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json'
       }

@@ -1,5 +1,6 @@
 /* Import Poppins font */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import '../../components/layout/AdminShell.css';
 
 /* Driver Profile Layout */
 .driver-profile {
@@ -487,6 +488,10 @@
   font-weight: 500;
 }
 
+.document-status.approved {
+  color: #16A34A;
+}
+
 .document-status.verified {
   color: #16A34A;
 }
@@ -656,5 +661,149 @@
 
 .retry-btn:hover {
   background: #2563eb;
+}
+
+.driver-reviews-list {
+  display: grid;
+  gap: 16px;
+}
+
+.driver-review-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px;
+  background: #FFFFFF;
+}
+
+.driver-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.driver-review-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.driver-review-date {
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.driver-review-comment {
+  margin: 0 0 10px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.driver-review-comment.muted {
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+.driver-review-ride {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.driver-reviews-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #6B7280;
+}
+
+.ride-route-cell {
+  max-width: 220px;
+  line-height: 1.4;
+}
+
+.ride-route-arrow {
+  display: inline-block;
+  margin: 0 6px;
+  color: #9CA3AF;
+}
+
+.ride-review-cell {
+  max-width: 220px;
+}
+
+.ride-inline-review {
+  display: grid;
+  gap: 4px;
+}
+
+.ride-inline-review-rating {
+  color: #D97706;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.ride-inline-review-comment {
+  color: #4B5563;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.dark-mode .driver-review-card {
+  background: #1F2937;
+  border-color: #374151;
+}
+
+.dark-mode .driver-review-rating,
+.dark-mode .ride-history-table td {
+  color: #F9FAFB;
+}
+
+.dark-mode .driver-review-comment,
+.dark-mode .ride-inline-review-comment {
+  color: #D1D5DB;
+}
+
+.dark-mode .driver-header-card,
+.dark-mode .kpi-card,
+.dark-mode .details-panel,
+.dark-mode .documents-panel {
+  background: var(--card, #1e293b);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .driver-name-large,
+.dark-mode .rating-value,
+.dark-mode .kpi-value,
+.dark-mode .detail-value,
+.dark-mode .breadcrumb-current,
+.dark-mode .documents-panel h3,
+.dark-mode .document-name {
+  color: var(--text-dark, #f1f5f9);
+}
+
+.dark-mode .tab.active {
+  color: var(--text-dark, #f1f5f9);
+}
+
+.dark-mode .document-item {
+  background: #334155;
+}
+
+.dark-mode .document-item:hover {
+  background: #475569;
+}
+
+.dark-mode .ride-history-table thead {
+  background: #334155;
+}
+
+.dark-mode .tabs-header {
+  border-bottom-color: var(--border, #334155);
+}
+
+.dark-mode .detail-item {
+  border-bottom-color: var(--border, #334155);
 }
 

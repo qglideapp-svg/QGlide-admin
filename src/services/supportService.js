@@ -1,16 +1,11 @@
-import { getAuthToken } from './authService';
+import { authenticatedFetch } from './apiClient';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
 // Fetch support tickets with optional filter
 export const fetchSupportTickets = async (filter = 'open') => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     // Build URL with status parameter
     let url = `${API_BASE_URL}/admin-support-tickets-list`;
     if (filter !== 'all') {
@@ -21,15 +16,12 @@ export const fetchSupportTickets = async (filter = 'open') => {
     console.log('🚀 FETCH SUPPORT TICKETS REQUEST:', {
       '🔗 API': url,
       '📊 Filter': filter,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -105,24 +97,15 @@ export const fetchSupportTickets = async (filter = 'open') => {
 // Fetch details for a specific ticket
 export const fetchTicketDetails = async (ticketId) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     console.log('🚀 FETCH TICKET DETAILS REQUEST:', {
       '🔗 API': `${API_BASE_URL}/admin-support-ticket-details`,
       '🆔 Ticket ID': ticketId,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-support-ticket-details?ticket_id=${ticketId}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-support-ticket-details?ticket_id=${ticketId}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -238,25 +221,17 @@ export const fetchTicketDetails = async (ticketId) => {
 // Send a message in a ticket conversation
 export const sendMessage = async (ticketId, content, isInternalNote = false) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     console.log('🚀 SEND MESSAGE REQUEST:', {
       '🔗 API': `${API_BASE_URL}/admin-reply-ticket`,
       '🆔 Ticket ID': ticketId,
       '📝 Message Content': content,
       '🔍 Is Internal Note': isInternalNote,
-      '🔑 Has Token': !!token,
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-reply-ticket`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-reply-ticket`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -296,25 +271,17 @@ export const sendMessage = async (ticketId, content, isInternalNote = false) => 
 // Mark a ticket as resolved
 export const markAsResolved = async (ticketId, priority) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     console.log('🚀 MARK AS RESOLVED REQUEST:', {
       '🔗 API': `${API_BASE_URL}/admin-update-ticket-status`,
       '🆔 Ticket ID': ticketId,
       '📊 Status': 'resolved',
       '📊 Priority': priority,
-      '🔑 Has Token': !!token,
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-update-ticket-status`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-update-ticket-status`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -354,25 +321,17 @@ export const markAsResolved = async (ticketId, priority) => {
 // Mark a ticket as pending
 export const markAsPending = async (ticketId, priority) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     console.log('🚀 MARK AS PENDING REQUEST:', {
       '🔗 API': `${API_BASE_URL}/admin-update-ticket-status`,
       '🆔 Ticket ID': ticketId,
       '📊 Status': 'pending',
       '📊 Priority': priority,
-      '🔑 Has Token': !!token,
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin-update-ticket-status`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-update-ticket-status`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -476,6 +435,7 @@ export const transformTicketData = (apiTicket) => {
     requester: apiTicket.requester || apiTicket.user?.name || apiTicket.user_name || apiTicket.customer_name || '',
     status: apiTicket.status || 'open',
     priority: apiTicket.priority || 'medium',
+    createdAt: apiTicket.created_at || apiTicket.createdAt || apiTicket.date || null,
     date: apiTicket.created_at ? new Date(apiTicket.created_at).toLocaleDateString() : 
           apiTicket.date || new Date().toLocaleDateString(),
     timestamp: apiTicket.created_at ? new Date(apiTicket.created_at).getTime() : 

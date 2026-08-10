@@ -1,30 +1,22 @@
-import { getAuthToken } from './authService';
+import { authenticatedFetch } from './apiClient';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
 // Send push notification to all users
 export const sendPushNotification = async (notificationData) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-notifications`;
     
     console.log('🚀 SEND NOTIFICATION REQUEST:', {
       '🔗 URL': url,
       '📝 Notification Data': notificationData,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -71,26 +63,18 @@ export const sendPushNotification = async (notificationData) => {
 // Fetch notification history (if needed in the future)
 export const fetchNotificationHistory = async (page = 1, limit = 20) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-notifications-history?page=${page}&limit=${limit}`;
     
     console.log('🚀 FETCH NOTIFICATION HISTORY REQUEST:', {
       '🔗 URL': url,
       '📄 Page': page,
       '📏 Limit': limit,
-      '🔑 Has Token': !!token,
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });

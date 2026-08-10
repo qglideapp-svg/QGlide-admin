@@ -1,4 +1,6 @@
-import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
+import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
@@ -587,16 +589,10 @@ function mapPointsApiResponseToState(json) {
 
 export const fetchPointsConfig = async () => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/admin-points-config`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-points-config`, {
       method: 'GET',
       headers: {
         apikey: getAnonApiKey(),
-        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -633,20 +629,14 @@ export const fetchPointsConfig = async () => {
 
 export const updatePointsConfig = async (pointsData) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
     const pointsPerCompletedRide = parsePointsValue(pointsData.pointsPerCompletedRide) ?? 0;
     const pointsForFreeRide = parsePointsValue(pointsData.pointsForFreeRide) ?? 0;
 
-    const response = await fetch(`${API_BASE_URL}/admin-points-config`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-points-config`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         apikey: getAnonApiKey(),
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         points_per_completed_ride: pointsPerCompletedRide,
@@ -715,17 +705,11 @@ export const updatePointsConfig = async (pointsData) => {
 // Fetch fare cost settings (GET /admin-fare-config)
 export const fetchFareCosts = async () => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/admin-fare-config`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-fare-config`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         apikey: getAnonApiKey(),
-        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -766,11 +750,6 @@ export const fetchFareCosts = async () => {
 // Update fare cost settings (POST /admin-fare-config)
 export const updateFareCosts = async (fareCostData, rideTypeFares = {}) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
     const apiKey = getAnonApiKey();
     const ride_type_fares = {};
 
@@ -781,12 +760,11 @@ export const updateFareCosts = async (fareCostData, rideTypeFares = {}) => {
       };
     }
 
-    const rideTypeResponse = await fetch(`${API_BASE_URL}/admin-fare-config`, {
+    const rideTypeResponse = await authenticatedFetch(`${API_BASE_URL}/admin-fare-config`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         apikey: apiKey,
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ ride_type_fares }),
     });
@@ -807,12 +785,11 @@ export const updateFareCosts = async (fareCostData, rideTypeFares = {}) => {
           raw === '' || raw == null ? 0 : parseFloat(raw);
         const num = Number.isFinite(configValue) ? configValue : 0;
 
-        const response = await fetch(`${API_BASE_URL}/admin-fare-config`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/admin-fare-config`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             apikey: apiKey,
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             config_key: configKey,
@@ -904,16 +881,10 @@ function parseGovernmentImpositionApproved(json) {
 // Government imposition ad (GET/PUT /admin-government-imposition-ad)
 export const fetchGovernmentImpositionAd = async () => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/admin-government-imposition-ad`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-government-imposition-ad`, {
       method: 'GET',
       headers: {
         apikey: getAnonApiKey(),
-        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -948,17 +919,11 @@ export const fetchGovernmentImpositionAd = async () => {
 
 export const updateGovernmentImpositionAd = async (approved) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/admin-government-imposition-ad`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-government-imposition-ad`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         apikey: getAnonApiKey(),
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ approved: approved === true }),
     });

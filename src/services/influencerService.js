@@ -1,4 +1,6 @@
-import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
+import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
@@ -49,14 +51,6 @@ function extractInfluencersArray(data) {
  */
 export async function fetchInfluencersList(opts = {}) {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return {
-        success: false,
-        error: 'No authentication token found. Please login first.',
-      };
-    }
-
     const page = Math.max(1, parseInt(String(opts.page), 10) || 1);
     const limit = Math.max(1, parseInt(String(opts.limit), 10) || 50);
 
@@ -66,10 +60,9 @@ export async function fetchInfluencersList(opts = {}) {
     });
     const url = `${API_BASE_URL}/admin-influencers-list?${params.toString()}`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
       },
     });
@@ -139,18 +132,11 @@ export async function createInfluencer({
   phone,
 }) {
   try {
-    const token = getAuthToken();
-
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-create-influencer`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },

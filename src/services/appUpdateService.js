@@ -1,4 +1,6 @@
-import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
+import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
@@ -60,16 +62,10 @@ async function parseJsonResponse(response) {
 
 export const fetchAppVersionConfig = async () => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/admin-app-version-config`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-app-version-config`, {
       method: 'GET',
       headers: {
         apikey: getAnonApiKey(),
-        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -98,17 +94,11 @@ export const fetchAppVersionConfig = async () => {
 
 export const updateAppVersionConfig = async (config) => {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/admin-app-version-config`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-app-version-config`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         apikey: getAnonApiKey(),
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(mapAppVersionConfigToApi(config)),
     });

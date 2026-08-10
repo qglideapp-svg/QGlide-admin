@@ -5,6 +5,8 @@ import { logoutUser } from '../../services/authService';
 import { fetchRidesList } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
@@ -19,6 +21,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'status-pending';
     switch (status.toLowerCase()) {
@@ -29,7 +32,7 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`status-badge ${getStatusClass(status)}`}>{status || 'pending'}</span>;
+  return <span className={`status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 const ActionButton = ({ icon, title, onClick }) => (
@@ -42,7 +45,7 @@ export default function RideManagementView() {
   console.log('RideManagementView component rendering...');
   
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatDateTime, formatApiDateTime, translateApiLabel, formatCurrency, formatTime } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [isLoading, setIsLoading] = useState(true);
@@ -344,8 +347,7 @@ export default function RideManagementView() {
             </div>
           </div>
           <div className="acts">
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label={t('common.notifications')}><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
@@ -362,10 +364,7 @@ export default function RideManagementView() {
           <div className="ride-management-card">
             <div className="table-container">
               {isLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>{t('rides.loadingRides')}</p>
-                </div>
+                <LazyLoader variant="table" rows={8} columns={7} message={t('rides.loadingRides')} />
               ) : !Array.isArray(rides) || rides.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">🚗</div>
@@ -390,7 +389,7 @@ export default function RideManagementView() {
                       // Format date from API response
                       const rideDate = new Date(ride.created_at);
                       const formattedDate = rideDate.toLocaleDateString();
-                      const formattedTime = rideDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                      const formattedTime = formatTime(rideDate);
                       
                       return (
                         <tr key={ride.id} className="ride-row" onClick={() => handleRideClick(ride.id)}>

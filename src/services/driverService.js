@@ -1,4 +1,5 @@
-import { getAuthToken } from './authService';
+import { authenticatedFetch } from './apiClient';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
@@ -23,12 +24,6 @@ export const driverMatchesStatusFilter = (driverStatus = '', statusFilter = 'All
 export const fetchDriversList = async (searchTerm = '', statusFilter = '', ratingFilter = '', page = 1, limit = 20, startDate = '', endDate = '') => {
   try {
     // Use saved token from login
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const params = new URLSearchParams();
     
@@ -68,16 +63,14 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '', ratin
       '📅 End Date': endDate,
       '📄 Page': page,
       '📏 Limit': limit,
-      '🔑 Has Token': !!token,
       '🔑 Has Anon Key': !!anonKey,
       '⏰ Timestamp': new Date().toISOString(),
       '🔍 Making request to admin-drivers-list endpoint': true
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'apikey': anonKey,
       },
@@ -183,26 +176,17 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '', ratin
 // Fetch driver details by ID
 export const fetchDriverDetails = async (driverId) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-driver-details?driver_id=${driverId}`;
     
     console.log('🚀 FETCH DRIVER DETAILS REQUEST:', {
       '🔗 URL': url,
       '🆔 Driver ID': driverId,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -226,19 +210,23 @@ export const fetchDriverDetails = async (driverId) => {
     // Try multiple possible response structures
     let driverData = null;
     
-    // Structure 1: data.data.driver (most common)
-    if (data.success && data.data && data.data.driver) {
+    // Structure 1: data.data.driver (admin driver details)
+    if (data.success && data.data?.driver?.id) {
       driverData = data.data.driver;
     }
-    // Structure 2: data.data (driver at top level of data)
+    // Structure 2: data.data.user (legacy/alternate payload with reviews)
+    else if (data.success && data.data?.user?.id) {
+      driverData = data.data.user;
+    }
+    // Structure 3: data.data (driver at top level of data)
     else if (data.success && data.data && data.data.id) {
       driverData = data.data;
     }
-    // Structure 3: data.driver (driver directly in response)
+    // Structure 4: data.driver (driver directly in response)
     else if (data.success && data.driver && data.driver.id) {
       driverData = data.driver;
     }
-    // Structure 4: data is the driver object itself
+    // Structure 5: data is the driver object itself
     else if (data.id && (data.full_name || data.name)) {
       driverData = data;
     }
@@ -284,29 +272,120 @@ export const fetchDriverDetails = async (driverId) => {
   }
 };
 
+export const parsePercentageRate = (rate) => {
+  if (rate == null) return null;
+  if (typeof rate === 'number' && !Number.isNaN(rate)) return rate;
+  if (typeof rate === 'object' && rate.percentage != null) {
+    const value = Number(rate.percentage);
+    return Number.isNaN(value) ? null : value;
+  }
+  return null;
+};
+
+export const mapAcceptanceRate = (rate) => {
+  if (rate == null) return null;
+
+  if (typeof rate === 'object') {
+    const percentage = parsePercentageRate(rate);
+    if (percentage == null && rate.accepted_responses == null && rate.total_responses == null) {
+      return null;
+    }
+
+    return {
+      percentage,
+      accepted: rate.accepted_responses ?? rate.accepted ?? null,
+      declined: rate.declined_responses ?? rate.declined ?? null,
+      total: rate.total_responses ?? rate.total ?? null,
+    };
+  }
+
+  const percentage = parsePercentageRate(rate);
+  return percentage == null ? null : { percentage, accepted: null, declined: null, total: null };
+};
+
+export const mapCancellationRate = (rate) => {
+  if (rate == null) return null;
+
+  if (typeof rate === 'object') {
+    const percentage = parsePercentageRate(rate);
+    if (percentage == null && rate.cancelled_rides == null && rate.total_assigned_rides == null) {
+      return null;
+    }
+
+    return {
+      percentage,
+      cancelled: rate.cancelled_rides ?? rate.cancelled ?? null,
+      completed: rate.completed_rides ?? rate.completed ?? null,
+      totalAssigned: rate.total_assigned_rides ?? rate.total_assigned ?? null,
+    };
+  }
+
+  const percentage = parsePercentageRate(rate);
+  return percentage == null ? null : { percentage, cancelled: null, completed: null, totalAssigned: null };
+};
+
+export const formatDocumentLabel = (value = '') => (
+  String(value || 'Document')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+);
+
+export const mapDriverReview = (review = {}) => ({
+  id: review.id || '',
+  rideId: review.ride_id || review.rideId || '',
+  rating: Number(review.rating) || 0,
+  comment: review.comment || '',
+  createdAt: review.created_at || review.createdAt || null,
+});
+
+export const getDriverReviewsFromPayload = (apiDriver = {}) => {
+  if (Array.isArray(apiDriver.driver_reviews) && apiDriver.driver_reviews.length > 0) {
+    return apiDriver.driver_reviews.map(mapDriverReview);
+  }
+
+  return (apiDriver.recent_rides || [])
+    .filter((ride) => ride?.driver_review)
+    .map((ride) => mapDriverReview({
+      ...ride.driver_review,
+      ride_id: ride.driver_review.ride_id || ride.id,
+    }));
+};
+
+export const mapDriverRecentRide = (ride = {}, index = 0) => {
+  const rider = ride.rider;
+  const riderName = typeof rider === 'string'
+    ? rider
+    : rider?.full_name || rider?.name || ride.rider_name || '';
+
+  return {
+    id: ride.id || `ride-${index + 1}`,
+    rider: riderName,
+    pickupAddress: ride.pickup_address || ride.pickup || '',
+    dropoffAddress: ride.dropoff_address || ride.dropoff || '',
+    date: ride.completed_at || ride.created_at || ride.date || null,
+    fare: parseFloat(ride.fare || 0),
+    status: ride.status || 'pending',
+    review: ride.driver_review ? mapDriverReview({
+      ...ride.driver_review,
+      ride_id: ride.driver_review.ride_id || ride.id,
+    }) : null,
+  };
+};
+
 // Approve driver by ID
 export const approveDriver = async (driverId) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/approve-driver`;
     
     console.log('🚀 APPROVE DRIVER REQUEST:', {
       '🔗 URL': url,
       '🆔 Driver ID': driverId,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ driver_id: driverId })
@@ -347,31 +426,23 @@ export const approveDriver = async (driverId) => {
 // Unsuspend driver by ID with optional reason
 export const unsuspendDriver = async (driverId, reason = '') => {
   try {
-    const token = getAuthToken();
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-unsuspend-driver`;
     
     console.log('🚀 UNSUSPEND DRIVER REQUEST:', {
       '🔗 URL': url,
       '🆔 Driver ID': driverId,
       '📝 Reason': reason,
-      '🔑 Has Token': !!token,
       '🔑 Has Anon Key': !!anonKey,
       '⏰ Timestamp': new Date().toISOString()
     });
 
     const headers = {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'apikey': anonKey,
     };
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -407,27 +478,18 @@ export const unsuspendDriver = async (driverId, reason = '') => {
 // Suspend driver by ID with reason
 export const suspendDriver = async (driverId, reason) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-update-driver-status`;
     
     console.log('🚀 SUSPEND DRIVER REQUEST:', {
       '🔗 URL': url,
       '🆔 Driver ID': driverId,
       '📝 Reason': reason,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
@@ -472,27 +534,18 @@ export const suspendDriver = async (driverId, reason) => {
 // Update driver details
 export const updateDriver = async (driverId, updateData) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-update-driver`;
     
     console.log('🚀 UPDATE DRIVER REQUEST:', {
       '🔗 URL': url,
       '🆔 Driver ID': driverId,
       '📝 Update Data': updateData,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
@@ -536,27 +589,18 @@ export const updateDriver = async (driverId, updateData) => {
 // Delete driver by ID with reason
 export const deleteDriver = async (driverId, reason) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-delete-driver`;
     
     console.log('🚀 DELETE DRIVER REQUEST:', {
       '🔗 URL': url,
       '🆔 Driver ID': driverId,
       '📝 Reason': reason,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
@@ -600,12 +644,6 @@ export const deleteDriver = async (driverId, reason) => {
 // Export drivers to CSV
 export const exportDriversToCSV = async (status = '', minRating = '', startDate = '', endDate = '') => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     
     // Build URL with required parameters
@@ -641,16 +679,13 @@ export const exportDriversToCSV = async (status = '', minRating = '', startDate 
       '🔗 URL': url,
       '📊 Status Filter': status,
       '⭐ Min Rating': minRating,
-      '🔑 Has Token': !!token,
       '🔑 Has Anon Key': !!anonKey,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json',
       },
@@ -920,22 +955,15 @@ export const transformDriverWithoutDocsData = (apiDriver) => {
 
 export const fetchDriversWithoutDocs = async (previewLimit = 50) => {
   try {
-    const token = getAuthToken();
-
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const params = new URLSearchParams({
       preview_limit: String(previewLimit),
     });
     const url = `${API_BASE_URL}/admin-bulk-email-missing-vehicle-docs?${params.toString()}`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'apikey': anonKey,
       },
@@ -973,19 +1001,12 @@ export const fetchDriversWithoutDocs = async (previewLimit = 50) => {
 
 export const sendDocumentReminderEmails = async ({ subject = '', bodyText = '' } = {}) => {
   try {
-    const token = getAuthToken();
-
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const url = `${API_BASE_URL}/admin-bulk-email-missing-vehicle-docs`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'apikey': anonKey,
       },

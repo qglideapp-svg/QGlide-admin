@@ -313,3 +313,20 @@ body {
   background: #334155;
   border-color: var(--gold);
 }
+
+/* RTL layout support */
+body.rtl-mode .side {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+body.rtl-mode .titles,
+body.rtl-mode .acts,
+body.rtl-mode .filters-row,
+body.rtl-mode .user-info {
+  direction: rtl;
+}
+
+body.rtl-mode .search input {
+  text-align: right;
+}

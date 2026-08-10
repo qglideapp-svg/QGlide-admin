@@ -1,3 +1,5 @@
+import { authenticatedFetch } from './apiClient';
+
 // Financial Service with Real APIs
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
@@ -100,12 +102,9 @@ const mockFinancialOverview = {
 
 export const fetchFinancialOverview = async () => {
   try {
-    const token = localStorage.getItem('authToken');
-    
-    const response = await fetch(`${API_BASE_URL}/admin-financial-overview`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-financial-overview`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -221,20 +220,12 @@ export const fetchTransactions = async (filters = {}) => {
     if (filters.end_date) {
       params.append('end_date', filters.end_date);
     }
-    
-    const token = localStorage.getItem('authToken');
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-    
     const url = `${API_BASE_URL}/admin-transactions-list?${params.toString()}`;
     
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json',
       },
@@ -264,13 +255,7 @@ export const fetchTransactions = async (filters = {}) => {
 // Fetch cash rides using dedicated cash-ride-transactions endpoint
 export const fetchCashRides = async (filters = {}) => {
   try {
-    const token = localStorage.getItem('authToken');
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-    
     const params = new URLSearchParams();
     
     // Add pagination if provided
@@ -305,15 +290,13 @@ export const fetchCashRides = async (filters = {}) => {
     console.log('🚀 FETCH CASH RIDES REQUEST:', {
       '🔗 URL': url,
       '📊 Filters': filters,
-      '🔑 Has Token': !!token,
-      '🔑 Has Anon Key': !!anonKey,
+            '🔑 Has Anon Key': !!anonKey,
       '⏰ Timestamp': new Date().toISOString()
     });
     
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'apikey': anonKey,
         'Content-Type': 'application/json',
       },
@@ -362,7 +345,6 @@ export const fetchCashRides = async (filters = {}) => {
 
 export const fetchPayoutRequests = async (status = 'pending') => {
   try {
-    const token = localStorage.getItem('authToken');
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     
     const params = new URLSearchParams();
@@ -376,12 +358,11 @@ export const fetchPayoutRequests = async (status = 'pending') => {
     const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
     
     const headers = {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'apikey': anonKey,
     };
     
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: headers,
     });
@@ -454,7 +435,7 @@ export const approvePayoutRequest = async (requestId) => {
 
 export const exportTransactionsCSV = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin-transactions-export-csv`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-transactions-export-csv`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
@@ -485,7 +466,7 @@ export const searchTransactions = async (query, limit = 10) => {
       limit: limit.toString()
     });
     
-    const response = await fetch(`${API_BASE_URL}/admin-search-transactions?${params}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-search-transactions?${params}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
@@ -515,7 +496,6 @@ export const searchTransactions = async (query, limit = 10) => {
 // Withdrawal Management Functions
 export const fetchWithdrawals = async (filters = {}) => {
   try {
-    const token = localStorage.getItem('authToken');
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     
     const params = new URLSearchParams();
@@ -539,12 +519,11 @@ export const fetchWithdrawals = async (filters = {}) => {
     const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
     
     const headers = {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'apikey': anonKey,
     };
     
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: headers,
     });
@@ -673,11 +652,9 @@ export const fetchWithdrawals = async (filters = {}) => {
 
 export const approveWithdrawal = async (payoutRequestId, adminNotes = '') => {
   try {
-    const token = localStorage.getItem('authToken');
     const anonKey = localStorage.getItem('anonKey') || '';
     
     const headers = {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
     
@@ -696,7 +673,7 @@ export const approveWithdrawal = async (payoutRequestId, adminNotes = '') => {
       requestBody.admin_notes = adminNotes.trim();
     }
     
-    const response = await fetch(`${API_BASE_URL}/admin-payout-action`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-payout-action`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(requestBody)
@@ -735,11 +712,9 @@ export const approveWithdrawal = async (payoutRequestId, adminNotes = '') => {
 
 export const rejectWithdrawal = async (payoutRequestId, reason = '') => {
   try {
-    const token = localStorage.getItem('authToken');
     const anonKey = localStorage.getItem('anonKey') || '';
     
     const headers = {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
     
@@ -748,7 +723,7 @@ export const rejectWithdrawal = async (payoutRequestId, reason = '') => {
       headers['apikey'] = anonKey;
     }
     
-    const response = await fetch(`${API_BASE_URL}/admin-payout-action`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-payout-action`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({

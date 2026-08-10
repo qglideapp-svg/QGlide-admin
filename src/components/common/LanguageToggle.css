@@ -1,0 +1,40 @@
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.language-toggle .chip {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: inherit;
+  border: 1px solid var(--border, #e5e7eb);
+  cursor: pointer;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.language-toggle .chip.on,
+.language-toggle .chip.active {
+  background: var(--accent, #f5e6b8);
+  border-color: #eddca0;
+}
+
+.language-toggle--login .chip {
+  padding: 10px 14px;
+}
+
+.dark-mode .language-toggle .chip {
+  background: var(--card, #1e293b);
+  border-color: var(--border, #334155);
+  color: var(--text-dark, #f1f5f9);
+}
+
+.dark-mode .language-toggle .chip.on,
+.dark-mode .language-toggle .chip.active {
+  background: var(--accent, #fbbf24);
+  border-color: var(--gold, #fbbf24);
+  color: #000;
+}

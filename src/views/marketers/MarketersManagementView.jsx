@@ -5,6 +5,8 @@ import { logoutUser } from '../../services/authService';
 import { createMarketer, deleteMarketer, fetchMarketersList, updateMarketer } from '../../services/marketerService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import AddMarketerModal from '../../components/modals/AddMarketerModal';
 import EditMarketerModal from '../../components/modals/EditMarketerModal';
 import DeleteMarketerModal from '../../components/modals/DeleteMarketerModal';
@@ -23,7 +25,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export default function MarketersManagementView() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatDateTime, formatApiDateTime, translateApiLabel, formatCurrency } = useLanguage();
   const { theme } = useTheme();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [marketers, setMarketers] = useState([]);
@@ -217,12 +219,7 @@ export default function MarketersManagementView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder={t('common.search')} readOnly aria-hidden />
             </div>
-            <button type="button" className="chip on">
-              EN
-            </button>
-            <button type="button" className="chip">
-              AR
-            </button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" type="button" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
@@ -265,10 +262,7 @@ export default function MarketersManagementView() {
 
           <div className="marketers-card">
             {isLoading ? (
-              <div className="marketers-panel-state">
-                <div className="marketers-loading-spinner" aria-hidden />
-                <p className="marketers-panel-message">{t('marketers.loading')}</p>
-              </div>
+              <LazyLoader variant="table" rows={6} columns={5} message={t('marketers.loading')} />
             ) : loadError ? (
               <div className="marketers-panel-state marketers-panel-state-error">
                 <span className="material-symbols-outlined marketers-panel-icon">error</span>
@@ -312,7 +306,7 @@ export default function MarketersManagementView() {
                         <td className="marketers-cell marketers-cell-date">
                           {(() => {
                             const d = new Date(m.createdAt);
-                            return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+                            return Number.isNaN(d.getTime()) ? '—' : formatDateTime(d);
                           })()}
                         </td>
                         <td className="marketers-cell marketers-cell-actions">

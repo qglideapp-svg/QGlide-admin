@@ -4,6 +4,8 @@ import './CourierManagementView.css';
 import { logoutUser } from '../../services/authService';
 import Toast from '../../components/common/Toast';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -16,6 +18,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'courier-status-pending';
     switch (status.toLowerCase()) {
@@ -32,7 +35,7 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`courier-status-badge ${getStatusClass(status)}`}>{status || 'pending'}</span>;
+  return <span className={`courier-status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 export default function CourierManagementView() {
@@ -249,8 +252,7 @@ export default function CourierManagementView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder="Search..." />
             </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
             </button>
@@ -347,10 +349,7 @@ export default function CourierManagementView() {
             {/* Table */}
             <div className="table-container">
               {isLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading courier orders...</p>
-                </div>
+                <LazyLoader variant="table" rows={8} columns={6} message={t('common.loading')} />
               ) : filteredCouriers.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">

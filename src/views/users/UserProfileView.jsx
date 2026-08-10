@@ -8,6 +8,8 @@ import EditUserModal from '../../components/modals/EditUserModal';
 import DeleteUserModal from '../../components/modals/DeleteUserModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
@@ -22,6 +24,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'user-profile-status-inactive';
     switch (status.toLowerCase()) {
@@ -31,7 +34,7 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`user-profile-status-badge ${getStatusClass(status)}`}>{status}</span>;
+  return <span className={`user-profile-status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 const RideStatusBadge = ({ status }) => {
@@ -45,13 +48,13 @@ const RideStatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`ride-status-badge ${getStatusClass(status)}`}>{status}</span>;
+  return <span className={`ride-status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 export default function UserProfileView() {
   const navigate = useNavigate();
   const { userId } = useParams();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatDate, formatDateTime, translateApiLabel } = useLanguage();
 
   // API-related state
   const [userData, setUserData] = useState(null);
@@ -115,11 +118,7 @@ export default function UserProfileView() {
           status: apiUser.status || 'Active',
           email: apiUser.email || 'No email provided',
           phone: apiUser.phone || 'No phone provided',
-          joinedDate: apiUser.created_at ? new Date(apiUser.created_at).toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-          }) : 'Unknown',
+          joinedDate: apiUser.created_at || null,
           walletBalance: parseFloat(apiUser.earnings?.total || 0),
           lastTopUp: 'N/A', // Not in API response
           totalRides: parseInt(apiUser.total_rides || 0),
@@ -183,13 +182,7 @@ export default function UserProfileView() {
         // Transform API ride data to match UI structure
         const transformedRides = apiRides.map((ride, index) => ({
           id: ride.id || ride.ride_id || `RD-${index + 1}`,
-          date: ride.created_at || ride.ride_date ? new Date(ride.created_at || ride.ride_date).toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }) : 'N/A',
+          date: ride.created_at || ride.ride_date || null,
           route: {
             from: ride.pickup_location || ride.from_address || ride.pickup_address || 'Unknown',
             to: ride.dropoff_location || ride.to_address || ride.dropoff_address || 'Unknown'
@@ -515,6 +508,8 @@ export default function UserProfileView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder={t('common.search')} />
             </div>
+            <LanguageToggle />
+
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.notifications')}>
               <img src={notificationsIcon} alt="notifications" className="kimg" />
@@ -531,10 +526,7 @@ export default function UserProfileView() {
 
         <div className="container">
           {isLoading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <div className="loading-text">{t('users.loadingUserDetails')}</div>
-            </div>
+            <LazyLoader variant="content" lines={6} message={t('users.loadingUserDetails')} />
           ) : error ? (
             <div className="error-container">
               <div className="error-icon">⚠️</div>
@@ -586,7 +578,7 @@ export default function UserProfileView() {
                     </div>
                     <div className="info-item">
                       <span className="material-symbols-outlined info-icon">calendar_today</span>
-                      <span className="info-text">{t('users.dateJoined')}: {userData.joinedDate}</span>
+                      <span className="info-text">{t('users.dateJoined')}: {formatDate(userData.joinedDate)}</span>
                     </div>
                   </div>
                 </div>
@@ -647,8 +639,7 @@ export default function UserProfileView() {
                       {isLoadingRides ? (
                         <tr>
                           <td colSpan="6" className="loading-cell">
-                            <div className="loading-spinner"></div>
-                            {t('users.loadingRideHistory')}
+                            <LazyLoader variant="inline" message={t('users.loadingRideHistory')} />
                           </td>
                         </tr>
                       ) : ridesError ? (
@@ -673,7 +664,7 @@ export default function UserProfileView() {
                         rideHistory.map((ride) => (
                         <tr key={ride.id}>
                           <td className="ride-id">#{ride.id}</td>
-                          <td className="ride-date">{ride.date}</td>
+                          <td className="ride-date">{ride.date ? formatDateTime(ride.date) : t('common.notAvailable')}</td>
                           <td className="ride-route">
                             <span>{ride.route.from}</span>
                             <span className="material-symbols-outlined route-arrow">arrow_forward</span>

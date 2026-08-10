@@ -1,15 +1,10 @@
-import { getAuthToken } from './authService';
+import { authenticatedFetch } from './apiClient';
+
 
 const RIDES_API_BASE = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
 export const fetchRidesList = async (filters = {}) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     // Build query parameters
     const params = new URLSearchParams();
     
@@ -35,10 +30,9 @@ export const fetchRidesList = async (filters = {}) => {
 
     const url = `${RIDES_API_BASE}/admin-rides-list?${params.toString()}`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -58,21 +52,14 @@ export const fetchRidesList = async (filters = {}) => {
 
 export const fetchRideDetails = async (rideId) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     const params = new URLSearchParams();
     params.append('ride_id', rideId);
 
     const url = `${RIDES_API_BASE}/admin-ride-details?${params.toString()}`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });

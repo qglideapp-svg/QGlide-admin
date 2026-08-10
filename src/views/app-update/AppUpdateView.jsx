@@ -9,6 +9,8 @@ import {
 } from '../../services/appUpdateService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/images/logo.webp';
@@ -204,6 +206,8 @@ export default function AppUpdateView() {
             </div>
           </div>
           <div className="acts">
+            <LanguageToggle />
+
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
@@ -223,10 +227,7 @@ export default function AppUpdateView() {
 
         <div className="container">
           {isLoading ? (
-            <div className="app-update-card loading-card">
-              <span className="material-symbols-outlined spin">hourglass_empty</span>
-              <p>{t('appUpdate.loading')}</p>
-            </div>
+            <LazyLoader variant="form" lines={4} message={t('appUpdate.loading')} />
           ) : (
             <>
               <div className="app-update-card force-update-card">

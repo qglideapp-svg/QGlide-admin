@@ -4,6 +4,7 @@ import './RideDetailsView.css';
 import { fetchRideDetails } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
 import MapRoute from '../../components/common/MapRoute';
 import UserAvatar from '../../components/common/UserAvatar';
 import logo from '../../assets/images/logo.webp';
@@ -11,6 +12,7 @@ import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
 import { logoutUser } from '../../services/authService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -21,7 +23,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export default function RideDetailsView() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatDateTime, translateApiLabel } = useLanguage();
   const { rideId } = useParams();
   const [rideData, setRideData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -240,58 +242,15 @@ export default function RideDetailsView() {
     setError(null);
   };
 
-  // Fallback data structure for when API data is not available
-  const defaultRideData = {
-    id: rideId || 'QG-8D3F7B1C',
-    status: 'Completed',
-    pickupLocation: 'The Pearl-Qatar, Doha',
-    dropoffLocation: 'Hamad International Airport',
-    rider: {
-      name: 'Jassim Al-Kuwari',
-      avatar: '',
-      rating: 4.92,
-      totalRides: 128
-    },
-    driver: {
-      name: 'Farhan Khan',
-      avatar: '',
-      rating: 4.88,
-      totalRides: 512,
-      vehicle: 'Toyota Camry (2023)',
-      licensePlate: '654321'
-    },
-    fare: {
-      base: 10.00,
-      distance: 36.40,
-      distanceKm: 18.2,
-      time: 12.50,
-      timeMinutes: 25,
-      airportSurcharge: 5.00,
-      promoCode: {
-        code: 'QATAR2025',
-        discount: 10.00
-      },
-      total: 53.90
-    },
-    payment: {
-      method: 'Visa',
-      lastFour: '4242'
-    },
-    timeline: {
-      completed: '2025-10-07T14:34:00'
-    }
-  };
+  // Use API data once loaded
+  const currentRideData = rideData;
 
-  // Use API data if available, otherwise fallback to default
-  const currentRideData = rideData || defaultRideData;
-  
-  // Add safety check for rideData structure
-  if (!currentRideData) {
-    console.error('❌ No ride data available');
+  if (!isLoading && !currentRideData) {
     return (
       <div style={{ padding: '20px', fontFamily: 'Poppins' }}>
-        <h1>Error: No ride data available</h1>
-        <button onClick={() => navigate('/ride-management')}>Back to Rides</button>
+        <h1>{t('rides.errorLoadingRide')}</h1>
+        <p>{error || t('rides.noRideData')}</p>
+        <button onClick={() => navigate('/ride-management')}>{t('rides.backToRides')}</button>
       </div>
     );
   }
@@ -368,21 +327,6 @@ export default function RideDetailsView() {
     }
   };
 
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    const time = date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
-    const dateFormatted = date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: '2-digit', 
-      year: 'numeric' 
-    });
-    return `${time}, ${dateFormatted}`;
-  };
-
   const getStatusClass = (status) => {
     if (!status) return 'status-pending';
     switch (status.toLowerCase()) {
@@ -438,16 +382,19 @@ export default function RideDetailsView() {
       <main className="main">
         <header className="top">
           <div className="titles">
-            <h1>Ride Details</h1>
-            <p className="sub">Ride ID: {currentRideData.id || 'Unknown'}</p>
+            <h1>{t('rides.rideDetails')}</h1>
+            <p className="sub">
+              {isLoading
+                ? t('rides.loadingRideDetails')
+                : `${t('rides.rideId')}: ${currentRideData?.id || rideId || t('common.notAvailable')}`}
+            </p>
           </div>
           <div className="acts">
             <div className="search">
               <span className="material-symbols-outlined">search</span>
               <input placeholder="Search..." />
             </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
@@ -462,10 +409,7 @@ export default function RideDetailsView() {
 
         <div className="container">
           {isLoading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading ride details...</p>
-            </div>
+            <LazyLoader variant="ride-details" message={t('rides.loadingRideDetails')} />
           ) : (
             <>
               {/* Back Link and Status */}

@@ -9,9 +9,10 @@ import {
   LineAreaChart,
   VerticalBarChart,
   DonutChart,
-  formatNumber,
 } from '../../components/influencers/InfluencerAnalyticsDashboard';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/images/logo.webp';
@@ -35,7 +36,7 @@ function statusClass(status) {
 export default function InfluencerDetailView() {
   const { influencerId } = useParams();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatDateTime, formatDate, translateApiLabel } = useLanguage();
   const { theme } = useTheme();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [influencer, setInfluencer] = useState(null);
@@ -221,6 +222,8 @@ export default function InfluencerDetailView() {
             </div>
           </div>
           <div className="acts">
+            <LanguageToggle />
+
             <ThemeToggle />
             <button className="ibtn" type="button" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
@@ -245,10 +248,7 @@ export default function InfluencerDetailView() {
           </button>
 
           {isLoading ? (
-            <div className="inf-analytics-loading">
-              <div className="influencers-loading-spinner" aria-hidden />
-              <p>{t('influencers.analyticsLoading')}</p>
-            </div>
+            <LazyLoader variant="cards" count={4} message={t('influencers.analyticsLoading')} />
           ) : loadError ? (
             <div className="inf-analytics-empty">{loadError}</div>
           ) : (
@@ -262,7 +262,7 @@ export default function InfluencerDetailView() {
                     {influencer?.phone && influencer.phone !== '—' ? <p>{influencer.phone}</p> : null}
                     {summary?.lastLogin ? (
                       <p>
-                        {t('influencers.lastLogin')}: {new Date(summary.lastLogin).toLocaleString()}
+                        {t('influencers.lastLogin')}: {formatDateTime(summary.lastLogin)}
                       </p>
                     ) : null}
                   </div>
@@ -368,8 +368,8 @@ export default function InfluencerDetailView() {
                         {analytics.recentReferrals.map((ref) => (
                           <tr key={ref.id}>
                             <td>{ref.user}</td>
-                            <td className={statusClass(ref.status)}>{ref.status}</td>
-                            <td>{ref.date ? new Date(ref.date).toLocaleDateString() : '—'}</td>
+                            <td className={statusClass(ref.status)}>{translateApiLabel(ref.status)}</td>
+                            <td>{ref.date ? formatDate(ref.date) : '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -395,7 +395,7 @@ export default function InfluencerDetailView() {
                       <tbody>
                         {analytics.loginHistory.map((entry) => (
                           <tr key={entry.id}>
-                            <td>{entry.date ? new Date(entry.date).toLocaleString() : '—'}</td>
+                            <td>{entry.date ? formatDateTime(entry.date) : '—'}</td>
                             <td>{entry.device}</td>
                           </tr>
                         ))}

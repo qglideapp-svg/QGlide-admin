@@ -1,4 +1,5 @@
-import { getAuthToken } from './authService';
+import { authenticatedFetch } from './apiClient';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
@@ -6,12 +7,6 @@ const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 // Fetch users list with filters
 export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingFilter = '', page = 1, limit = 20, startDate = '', endDate = '') => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const params = new URLSearchParams();
     
@@ -49,15 +44,13 @@ export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingF
       '📅 End Date': endDate,
       '📄 Page': page,
       '📏 Limit': limit,
-      '🔑 Has Token': !!token,
       '🔑 Has Anon Key': !!anonKey,
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'apikey': anonKey,
       },
@@ -153,26 +146,17 @@ export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingF
 // Fetch user details by ID
 export const fetchUserDetails = async (userId) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-user-details?user_id=${userId}`;
     
     console.log('🚀 FETCH USER DETAILS REQUEST:', {
       '🔗 URL': url,
       '🆔 User ID': userId,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
@@ -233,27 +217,18 @@ export const fetchUserDetails = async (userId) => {
 // Update user profile
 export const updateUser = async (userId, userData) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-update-user`;
     
     console.log('🚀 UPDATE USER PROFILE REQUEST:', {
       '🔗 URL': url,
       '🆔 User ID': userId,
       '📝 User Data': userData,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
@@ -299,27 +274,18 @@ export const updateUser = async (userId, userData) => {
 // Delete user account
 export const deleteUser = async (userId, reason) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-delete-user`;
     
     console.log('🚀 DELETE USER REQUEST:', {
       '🔗 URL': url,
       '🆔 User ID': userId,
       '📝 Reason': reason,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
@@ -363,12 +329,6 @@ export const deleteUser = async (userId, reason) => {
 // Update user status (deactivate/activate)
 export const updateUserStatus = async (userId, status, reason) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-update-user-status`;
     
     console.log('🚀 UPDATE USER STATUS REQUEST:', {
@@ -376,15 +336,12 @@ export const updateUserStatus = async (userId, status, reason) => {
       '🆔 User ID': userId,
       '📊 Status': status,
       '📝 Reason': reason,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
@@ -429,26 +386,17 @@ export const updateUserStatus = async (userId, status, reason) => {
 // Create new user
 export const createUser = async (userData) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-create-user`;
     
     console.log('🚀 CREATE USER REQUEST:', {
       '🔗 URL': url,
       '📝 User Data': userData,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
@@ -494,12 +442,6 @@ export const createUser = async (userData) => {
 // Export users to CSV
 export const exportUsersToCSV = async (status = '', startDate = '', endDate = '') => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const params = new URLSearchParams();
 
@@ -523,15 +465,12 @@ export const exportUsersToCSV = async (status = '', startDate = '', endDate = ''
       '📊 Status Filter': status,
       '📅 Start Date': startDate,
       '📅 End Date': endDate,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'apikey': anonKey,
       },
@@ -603,26 +542,17 @@ export const exportUsersToCSV = async (status = '', startDate = '', endDate = ''
 // Fetch user ride history
 export const fetchUserRideHistory = async (userId) => {
   try {
-    const token = getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-ride-history?user_id=${userId}`;
     
     console.log('🚀 FETCH USER RIDE HISTORY REQUEST:', {
       '🔗 URL': url,
       '🆔 User ID': userId,
-      '🔑 Has Token': !!token,
-      '🔑 Token Preview': token ? `${token.substring(0, 20)}...` : 'No token',
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });

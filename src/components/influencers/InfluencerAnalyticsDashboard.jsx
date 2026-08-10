@@ -1,10 +1,7 @@
 import React, { useMemo } from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LazyLoader from '../common/LazyLoader.jsx';
 import './InfluencerAnalytics.css';
-
-function formatNumber(n) {
-  if (typeof n !== 'number') return '0';
-  return n.toLocaleString();
-}
 
 function createPieSlice(startAngle, endAngle, radius = 80) {
   const centerX = 100;
@@ -184,14 +181,12 @@ export default function InfluencerAnalyticsDashboard({
   showDemoBanner = false,
   compact = false,
 }) {
+  const { formatNumber, formatDateTime } = useLanguage();
   const summary = data?.summary;
 
   if (isLoading) {
     return (
-      <div className="inf-analytics-loading">
-        <div className="influencers-loading-spinner" aria-hidden />
-        <p>{t('influencers.analyticsLoading')}</p>
-      </div>
+      <LazyLoader variant="cards" count={4} message={t('influencers.analyticsLoading')} />
     );
   }
 
@@ -388,7 +383,7 @@ export default function InfluencerAnalyticsDashboard({
                       <strong>{act.influencer}</strong>
                       <span>{act.description}</span>
                       <time dateTime={act.timestamp}>
-                        {new Date(act.timestamp).toLocaleString()}
+                        {formatDateTime(act.timestamp)}
                       </time>
                     </div>
                   </li>
@@ -402,4 +397,4 @@ export default function InfluencerAnalyticsDashboard({
   );
 }
 
-export { LineAreaChart, VerticalBarChart, HorizontalBarChart, DonutChart, MetricCard, formatNumber };
+export { LineAreaChart, VerticalBarChart, HorizontalBarChart, DonutChart, MetricCard };

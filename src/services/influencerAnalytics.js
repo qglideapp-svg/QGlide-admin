@@ -1,7 +1,9 @@
+import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
+
 /**
  * Deterministic hash for stable demo metrics per influencer id.
  */
-import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
@@ -506,11 +508,6 @@ export async function fetchInfluencerAnalyticsOverview(opts = {}) {
   const activityLimit = Math.max(1, parseInt(String(opts.activityLimit ?? 20), 10) || 20);
 
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
     const params = new URLSearchParams({
       period_days: String(periodDays),
       page: String(page),
@@ -521,10 +518,9 @@ export async function fetchInfluencerAnalyticsOverview(opts = {}) {
 
     const url = `${API_BASE_URL}/admin-influencers-overview?${params.toString()}`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
       },
     });
@@ -572,11 +568,6 @@ export async function fetchInfluencerDetailAnalytics(influencerId, influencer, o
   const loginsLimit = Math.max(1, parseInt(String(opts.loginsLimit ?? 20), 10) || 20);
 
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return { success: false, error: 'No authentication token found. Please login first.' };
-    }
-
     const params = new URLSearchParams({
       influencer_id: influencerId,
       period_days: String(periodDays),
@@ -586,10 +577,9 @@ export async function fetchInfluencerDetailAnalytics(influencerId, influencer, o
 
     const url = `${API_BASE_URL}/admin-influencer-analytics?${params.toString()}`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
       },
     });

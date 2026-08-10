@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriverDetails, approveDriver, suspendDriver, unsuspendDriver, updateDriver } from '../../services/driverService';
+import { fetchDriverDetails, approveDriver, suspendDriver, unsuspendDriver, updateDriver, getDriverReviewsFromPayload, mapDriverRecentRide, mapAcceptanceRate, mapCancellationRate, formatDocumentLabel } from '../../services/driverService';
 import Toast from '../../components/common/Toast';
 import SuspendDriverModal from '../../components/modals/SuspendDriverModal';
 import UnsuspendDriverModal from '../../components/modals/UnsuspendDriverModal';
 import EditDriverModal from '../../components/modals/EditDriverModal';
 import DocumentViewModal from '../../components/modals/DocumentViewModal';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
@@ -23,6 +25,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'driver-profile-status-offline';
     const statusLower = status.toLowerCase();
@@ -38,13 +41,13 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`driver-profile-status-badge ${getStatusClass(status)}`}>{status}</span>;
+  return <span className={`driver-profile-status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 export default function DriverProfileView() {
   const navigate = useNavigate();
   const { driverId } = useParams();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatCurrency, formatDate, formatDateTime, translateApiLabel } = useLanguage();
   const [activeTab, setActiveTab] = useState('personal');
 
   // API state
@@ -128,6 +131,8 @@ export default function DriverProfileView() {
           });
           
           // Transform API data to match existing UI structure
+          const driverProfile = apiDriver.driver_profile || {};
+
           // Determine status: check for suspended first, then pending/awaiting verification, then online/offline
           let driverStatus = 'Offline';
           if (apiDriver.status?.toLowerCase() === 'suspended' || 
@@ -135,52 +140,60 @@ export default function DriverProfileView() {
               apiDriver.is_suspended === true ||
               apiDriver.driver_profile?.is_suspended === true) {
             driverStatus = 'Suspended';
-          } else if (apiDriver.status?.toLowerCase() === 'pending' || 
-                     apiDriver.status?.toLowerCase() === 'awaiting verification' ||
-                     apiDriver.driver_profile?.status?.toLowerCase() === 'pending' ||
-                     apiDriver.driver_profile?.status?.toLowerCase() === 'awaiting verification' ||
-                     apiDriver.is_verified === false ||
-                     (apiDriver.driver_profile && apiDriver.driver_profile.is_verified === false)) {
+          } else if (
+            apiDriver.is_verified === false ||
+            driverProfile.is_approved === false ||
+            (driverProfile.background_check_status &&
+              driverProfile.background_check_status !== 'approved')
+          ) {
             driverStatus = 'Pending Verification';
-          } else if (apiDriver.driver_profile?.is_online) {
+          } else if (apiDriver.is_active === false) {
+            driverStatus = 'Offline';
+          } else if (driverProfile.is_online) {
             driverStatus = 'Active';
+          } else if (apiDriver.is_verified && driverProfile.is_approved !== false) {
+            driverStatus = 'Offline';
           }
           
           console.log('✅ DETERMINED DRIVER STATUS:', driverStatus);
-          
-          // Handle driver_profile - it might be null for unverified drivers
-          const driverProfile = apiDriver.driver_profile || {};
-          
+
+          const driverReviews = getDriverReviewsFromPayload(apiDriver);
+
           const transformedData = {
             id: apiDriver.id || driverId,
             name: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
             avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || '',
             status: driverStatus,
             rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
-            totalReviews: Math.floor(Math.random() * 1000) + 100, // Mock reviews count
-            acceptanceRate: Math.floor(Math.random() * 20) + 80, // Mock acceptance rate
-            totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0),
-            ridesThisMonth: Math.floor(Math.random() * 100) + 20, // Mock monthly rides
+            totalReviews: Number(
+              apiDriver.total_reviews ?? apiDriver.reviews_count ?? driverReviews.length
+            ) || 0,
+            driverReviews,
+            acceptanceRate: mapAcceptanceRate(apiDriver.acceptance_rate),
+            totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0, 10),
+            ridesThisMonth: apiDriver.rides_this_month ?? null,
             totalEarnings: parseFloat(apiDriver.earnings?.total || apiDriver.total_earnings || 0),
             earningsThisMonth: parseFloat(apiDriver.earnings?.this_month || apiDriver.earnings_this_month || 0),
-            cancellationRate: Math.floor(Math.random() * 5) + 1, // Mock cancellation rate
+            earningsLastMonth: parseFloat(apiDriver.earnings?.last_month || 0) || null,
+            cancellationRate: mapCancellationRate(apiDriver.cancellation_rate),
     personalDetails: {
               fullName: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
               email: apiDriver.email || 'No email provided',
               phone: apiDriver.phone || apiDriver.phone_number || 'No phone provided',
               address: apiDriver.address || driverProfile.address || 'Address not available',
-              dateJoined: apiDriver.created_at ? new Date(apiDriver.created_at).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-              }) : 'Unknown'
+              dateJoined: apiDriver.created_at || null,
     },
     vehicleDetails: {
               model: driverProfile.vehicle_model || apiDriver.vehicle_model || 'Not provided yet',
+              type: driverProfile.vehicle_type || apiDriver.vehicle_type || 'Not provided yet',
               year: driverProfile.vehicle_year || apiDriver.vehicle_year || new Date().getFullYear(),
               licensePlate: driverProfile.vehicle_plate || apiDriver.vehicle_plate || apiDriver.license_plate || 'Not provided yet',
               color: driverProfile.vehicle_color || apiDriver.vehicle_color || 'Not provided yet',
-              vin: driverProfile.vin || apiDriver.vin || 'Not available' // Not in API response
+              licenseNumber: driverProfile.license_number || apiDriver.license_number || 'Not provided yet',
+              licenseExpiry: driverProfile.license_expiry || apiDriver.license_expiry || null,
+              insuranceProvider: driverProfile.insurance_provider || apiDriver.insurance_provider || 'Not provided yet',
+              insuranceExpiry: driverProfile.insurance_expiry || apiDriver.insurance_expiry || null,
+              vin: driverProfile.vin || apiDriver.vin || 'Not available',
     },
     documents: (() => {
               // Try to get documents from API first - check multiple possible locations
@@ -220,10 +233,13 @@ export default function DriverProfileView() {
               if (apiDocuments && Array.isArray(apiDocuments) && apiDocuments.length > 0) {
                 // Use actual API document data
                 const mappedDocuments = apiDocuments.map(doc => {
-                  const docName = doc.document_name || doc.name || doc.type || doc.title || doc.document_type || 'Unknown Document';
-                  const docStatus = doc.status || doc.verification_status || doc.approval_status || 'Pending';
-                  // Try multiple possible URL field names
-                  const docUrl = doc.document_url || 
+                  const docName = doc.document_name || doc.name || doc.type || doc.title
+                    ? formatDocumentLabel(doc.document_name || doc.name || doc.type || doc.title)
+                    : formatDocumentLabel(doc.document_type || 'Unknown Document');
+                  const docStatus = doc.status || doc.verification_status || doc.approval_status || 'pending';
+                  const docUrl = doc.accessible_url ||
+                                doc.signed_url ||
+                                doc.document_url || 
                                 doc.url || 
                                 doc.file_url || 
                                 doc.file_path || 
@@ -233,7 +249,7 @@ export default function DriverProfileView() {
                                 doc.upload_url ||
                                 doc.preview_url ||
                                 doc.download_url ||
-                                (typeof doc === 'string' ? doc : null) || // In case the doc itself is a URL
+                                (typeof doc === 'string' ? doc : null) ||
                                 null;
                   
                   // Also check if URL might be in a nested object
@@ -336,15 +352,7 @@ export default function DriverProfileView() {
                 ];
               }
             })(),
-            recentRides: (apiDriver.recent_rides || []).map((ride, index) => ({
-              id: ride.id || `R${index + 1}`,
-              rider: `Rider ${index + 1}`, // Not in API response
-              date: ride.completed_at ? new Date(ride.completed_at).toLocaleDateString('en-US') : 'N/A',
-              fare: parseFloat(ride.fare || 0),
-              status: ride.status === 'completed' ? 'Completed' : 
-                     ride.status === 'cancelled' ? 'Cancelled' : 
-                     ride.status === 'in_progress' ? 'In Progress' : 'Pending'
-            }))
+            recentRides: (apiDriver.recent_rides || []).map(mapDriverRecentRide),
           };
 
           setDriverData(transformedData);
@@ -728,6 +736,8 @@ export default function DriverProfileView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder={t('common.search')} />
             </div>
+            <LanguageToggle />
+
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.notifications')}>
               <img src={notificationsIcon} alt="notifications" className="kimg" />
@@ -744,10 +754,7 @@ export default function DriverProfileView() {
 
         <div className="container">
           {isLoading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <div className="loading-text">{t('drivers.loadingDriverDetails')}</div>
-            </div>
+            <LazyLoader variant="content" lines={6} message={t('drivers.loadingDriverDetails')} />
           ) : error ? (
             <div className="error-container">
               <div className="error-icon">⚠️</div>
@@ -784,7 +791,7 @@ export default function DriverProfileView() {
                 <div className="driver-rating">
                   <span className="star-icon-large">★</span>
                   <span className="rating-value">{driverData.rating.toFixed(2)}</span>
-                  <span className="rating-reviews">({driverData.totalReviews.toLocaleString()} {t('drivers.reviews')})</span>
+                  <span className="rating-reviews">({formatNumber(driverData.totalReviews)} {t('drivers.reviews')})</span>
                 </div>
               </div>
             </div>
@@ -827,22 +834,61 @@ export default function DriverProfileView() {
           <div className="kpi-grid">
             <div className="kpi-card">
               <div className="kpi-label">{t('drivers.acceptanceRate')}</div>
-              <div className="kpi-value">{driverData.acceptanceRate}%</div>
+              <div className="kpi-value">
+                {driverData.acceptanceRate?.percentage != null
+                  ? `${formatNumber(driverData.acceptanceRate.percentage)}%`
+                  : t('common.notAvailable')}
+              </div>
+              {driverData.acceptanceRate?.total != null && (
+                <div className="kpi-subtitle">
+                  {t('drivers.acceptanceBreakdown', {
+                    accepted: formatNumber(driverData.acceptanceRate.accepted ?? 0),
+                    declined: formatNumber(driverData.acceptanceRate.declined ?? 0),
+                    total: formatNumber(driverData.acceptanceRate.total),
+                  })}
+                </div>
+              )}
             </div>
             <div className="kpi-card">
               <div className="kpi-label">{t('drivers.totalRides')}</div>
-              <div className="kpi-value">{driverData.totalRides.toLocaleString()}</div>
-              <div className="kpi-subtitle">{t('dashboard.ridesThisMonth')}: {driverData.ridesThisMonth}</div>
+              <div className="kpi-value">{formatNumber(driverData.totalRides)}</div>
+              {driverData.cancellationRate?.completed != null && (
+                <div className="kpi-subtitle">
+                  {t('drivers.completedRidesCount', {
+                    count: formatNumber(driverData.cancellationRate.completed),
+                  })}
+                </div>
+              )}
             </div>
             <div className="kpi-card">
               <div className="kpi-label">{t('drivers.totalEarnings')}</div>
-              <div className="kpi-value">QAR {driverData.totalEarnings.toLocaleString()}</div>
-              <div className="kpi-subtitle earnings">QAR {driverData.earningsThisMonth.toLocaleString()} {t('drivers.earningsThisMonth')}</div>
+              <div className="kpi-value">{formatCurrency(driverData.totalEarnings)}</div>
+              <div className="kpi-subtitle earnings">
+                {formatCurrency(driverData.earningsThisMonth)} {t('drivers.earningsThisMonth')}
+              </div>
+              {driverData.earningsLastMonth != null && (
+                <div className="kpi-subtitle">
+                  {t('drivers.lastMonth')}: {formatCurrency(driverData.earningsLastMonth)}
+                </div>
+              )}
             </div>
             <div className="kpi-card">
               <div className="kpi-label">{t('drivers.cancellationRate')}</div>
-              <div className="kpi-value cancellation">{driverData.cancellationRate}%</div>
-              <div className="kpi-subtitle">{t('drivers.belowTarget')}</div>
+              <div className="kpi-value cancellation">
+                {driverData.cancellationRate?.percentage != null
+                  ? `${formatNumber(driverData.cancellationRate.percentage)}%`
+                  : t('common.notAvailable')}
+              </div>
+              {driverData.cancellationRate?.totalAssigned != null ? (
+                <div className="kpi-subtitle">
+                  {t('drivers.cancellationBreakdown', {
+                    cancelled: formatNumber(driverData.cancellationRate.cancelled ?? 0),
+                    assigned: formatNumber(driverData.cancellationRate.totalAssigned),
+                  })}
+                </div>
+              ) : (
+                <div className="kpi-subtitle">{t('drivers.belowTarget')}</div>
+              )}
             </div>
           </div>
 
@@ -869,6 +915,12 @@ export default function DriverProfileView() {
                 >
                   {t('drivers.rideHistory')}
                 </button>
+                <button 
+                  className={`tab ${activeTab === 'reviews' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('reviews')}
+                >
+                  {t('drivers.driverReviews')} ({formatNumber(driverData.totalReviews)})
+                </button>
               </div>
 
               <div className="tab-content">
@@ -892,7 +944,7 @@ export default function DriverProfileView() {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">{t('drivers.dateJoined')}</span>
-                      <span className="detail-value">{driverData.personalDetails.dateJoined}</span>
+                      <span className="detail-value">{formatDate(driverData.personalDetails.dateJoined)}</span>
                     </div>
                   </div>
                 )}
@@ -902,6 +954,10 @@ export default function DriverProfileView() {
                     <div className="detail-item">
                       <span className="detail-label">{t('drivers.vehicleModel')}</span>
                       <span className="detail-value">{driverData.vehicleDetails.model}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('drivers.vehicleType')}</span>
+                      <span className="detail-value">{translateApiLabel(driverData.vehicleDetails.type)}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">{t('drivers.year')}</span>
@@ -916,36 +972,109 @@ export default function DriverProfileView() {
                       <span className="detail-value">{driverData.vehicleDetails.color}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">{t('drivers.vin')}</span>
-                      <span className="detail-value">{driverData.vehicleDetails.vin}</span>
+                      <span className="detail-label">{t('drivers.licenseNumber')}</span>
+                      <span className="detail-value">{driverData.vehicleDetails.licenseNumber}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('drivers.licenseExpiry')}</span>
+                      <span className="detail-value">{formatDate(driverData.vehicleDetails.licenseExpiry)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('drivers.insuranceProvider')}</span>
+                      <span className="detail-value">{driverData.vehicleDetails.insuranceProvider}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('drivers.insuranceExpiry')}</span>
+                      <span className="detail-value">{formatDate(driverData.vehicleDetails.insuranceExpiry)}</span>
                     </div>
                   </div>
                 )}
 
                 {activeTab === 'history' && (
                   <div className="ride-history-table">
+                    {driverData.recentRides.length === 0 ? (
+                      <div className="driver-reviews-empty">{t('drivers.noRideHistory')}</div>
+                    ) : (
                     <table>
                       <thead>
                         <tr>
                           <th>{t('drivers.rideId')}</th>
                           <th>{t('drivers.rider')}</th>
+                          <th>{t('drivers.route')}</th>
                           <th>{t('drivers.date')}</th>
                           <th>{t('drivers.fare')}</th>
                           <th>{t('common.status')}</th>
+                          <th>{t('drivers.review')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {driverData.recentRides.map(ride => (
+                        {driverData.recentRides.map((ride) => (
                           <tr key={ride.id}>
-                            <td>#{ride.id}</td>
-                            <td>{ride.rider}</td>
-                            <td>{ride.date}</td>
-                            <td>QAR {ride.fare.toFixed(2)}</td>
-                            <td><span className="status-completed">{ride.status}</span></td>
+                            <td>#{String(ride.id).substring(0, 8)}</td>
+                            <td>{ride.rider || t('common.notAvailable')}</td>
+                            <td className="ride-route-cell">
+                              {ride.pickupAddress || ride.dropoffAddress ? (
+                                <>
+                                  <span>{ride.pickupAddress || t('common.notAvailable')}</span>
+                                  <span className="ride-route-arrow">→</span>
+                                  <span>{ride.dropoffAddress || t('common.notAvailable')}</span>
+                                </>
+                              ) : (
+                                t('common.notAvailable')
+                              )}
+                            </td>
+                            <td>{ride.date ? formatDate(ride.date) : t('common.notAvailable')}</td>
+                            <td>{formatCurrency(ride.fare)}</td>
+                            <td><span className="status-completed">{translateApiLabel(ride.status)}</span></td>
+                            <td className="ride-review-cell">
+                              {ride.review ? (
+                                <div className="ride-inline-review">
+                                  <span className="ride-inline-review-rating">★ {ride.review.rating.toFixed(1)}</span>
+                                  {ride.review.comment && (
+                                    <span className="ride-inline-review-comment">{ride.review.comment}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                t('drivers.noReview')
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'reviews' && (
+                  <div className="driver-reviews-list">
+                    {driverData.driverReviews.length === 0 ? (
+                      <div className="driver-reviews-empty">{t('drivers.noReviews')}</div>
+                    ) : (
+                      driverData.driverReviews.map((review) => (
+                        <div key={review.id || `${review.rideId}-${review.createdAt}`} className="driver-review-card">
+                          <div className="driver-review-header">
+                            <div className="driver-review-rating">
+                              <span className="star-icon-large">★</span>
+                              <span>{review.rating.toFixed(1)}</span>
+                            </div>
+                            <span className="driver-review-date">
+                              {review.createdAt ? formatDateTime(review.createdAt) : t('common.notAvailable')}
+                            </span>
+                          </div>
+                          {review.comment ? (
+                            <p className="driver-review-comment">{review.comment}</p>
+                          ) : (
+                            <p className="driver-review-comment muted">{t('drivers.noReviewComment')}</p>
+                          )}
+                          {review.rideId && (
+                            <span className="driver-review-ride">
+                              {t('drivers.rideId')}: #{String(review.rideId).substring(0, 8)}
+                            </span>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
@@ -967,8 +1096,8 @@ export default function DriverProfileView() {
                             </span>
                           )}
                         </div>
-                        <div className={`document-status ${doc.status.toLowerCase()}`}>
-                          {doc.status}
+                        <div className={`document-status ${String(doc.status).toLowerCase()}`}>
+                          {translateApiLabel(doc.status)}
                         </div>
                       </div>
                       <button 

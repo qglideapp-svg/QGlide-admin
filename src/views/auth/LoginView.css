@@ -107,6 +107,17 @@ body { margin: 0; font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Ro
   box-shadow: none;
 }
 
+.primary .lazy-loader-label {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.primary .lazy-loader-spinner {
+  border-color: rgba(17, 24, 39, 0.25);
+  border-top-color: #111827;
+}
+
 .loading-spinner {
   width: 16px;
   height: 16px;

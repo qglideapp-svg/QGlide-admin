@@ -13,8 +13,10 @@ import { logoutUser } from '../../services/authService';
 import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV, fetchCashRides } from '../../services/financialService';
 import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved, markAsPending } from '../../services/supportService';
 import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
 import UserAvatar from '../../components/common/UserAvatar';
 import AdminWithdrawModal from '../../components/modals/AdminWithdrawModal';
 import DriversWithoutDocsModal from '../../components/modals/DriversWithoutDocsModal';
@@ -32,7 +34,7 @@ export default function DashboardView() {
   // v2.1 - Fix menu responsiveness after navigation
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useLanguage();
+  const { t, formatNumber, formatCurrency, formatPercentage, formatApiDateTime, formatTime, translateApiLabel, formatDate } = useLanguage();
   const [activeSection, setActiveSection] = useState('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
@@ -406,14 +408,6 @@ export default function DashboardView() {
     // Convert dates to the expected format
     const startDate = new Date(tempStartDate);
     const endDate = new Date(tempEndDate);
-    
-    const formatDate = (date) => {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      });
-    };
     
     const newDateRange = `${formatDate(startDate)} - ${formatDate(endDate)}`;
     setDateRange(newDateRange);
@@ -870,40 +864,6 @@ export default function DashboardView() {
     }
   };
 
-  // Format numbers with commas
-  const formatNumber = (num) => {
-    if (typeof num !== 'number') return num;
-    return num.toLocaleString();
-  };
-
-  // Format currency
-  const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return 'QAR 0';
-    // Handle object with value property
-    if (typeof amount === 'object' && amount.value !== undefined) {
-      const numValue = typeof amount.value === 'number' ? amount.value : parseFloat(amount.value);
-      if (isNaN(numValue)) return 'QAR 0';
-      return `QAR ${numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    // Handle number
-    if (typeof amount === 'number') {
-      return `QAR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    // Handle string
-    if (typeof amount === 'string') {
-      const numValue = parseFloat(amount);
-      if (isNaN(numValue)) return 'QAR 0';
-      return `QAR ${numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    return 'QAR 0';
-  };
-
-  // Format percentage
-  const formatPercentage = (value) => {
-    if (typeof value !== 'number') return value;
-    return `${value}%`;
-  };
-
   // Helper function to create SVG pie chart path
   const createPieSlice = (startAngle, endAngle, radius = 80) => {
     const centerX = 100;
@@ -980,8 +940,7 @@ export default function DashboardView() {
               <span className="material-symbols-outlined">search</span>
               <input placeholder={t('common.search')} />
             </div>
-            <button className="chip on">EN</button>
-            <button className="chip">AR</button>
+            <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
             <button className="ibtn" aria-label={t('common.notifications')}><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
@@ -996,10 +955,7 @@ export default function DashboardView() {
 
         <div className="container">
           {isLoading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>{t('common.loading')}</p>
-            </div>
+            <LazyLoader variant="cards" count={4} message={t('common.loading')} />
           ) : (
             <section className="kpis">
               <div className="kcard">
@@ -1082,10 +1038,7 @@ export default function DashboardView() {
               </div>
               <div className="pbody">
                 {isAnalyticsLoading ? (
-                  <div className="analytics-loading">
-                    <div className="loading-spinner"></div>
-                    <p>{t('common.loading')}</p>
-                  </div>
+                  <LazyLoader variant="content" lines={3} message={t('common.loading')} />
                 ) : analyticsData ? (
                   <div className="analytics-content">
                     {analyticsData.chartData && analyticsData.chartData.length > 0 ? (
@@ -1146,8 +1099,7 @@ export default function DashboardView() {
                   <span className="material-symbols-outlined">search</span>
                   <input placeholder={t('financial.searchTransactions')} />
                 </div>
-                <button className="chip on">EN</button>
-                <button className="chip">AR</button>
+            <LanguageToggle />
                 <button className="ibtn" aria-label="dark-mode">
                   <span className="material-symbols-outlined">dark_mode</span>
                 </button>
@@ -1160,10 +1112,7 @@ export default function DashboardView() {
 
             <div className="container financial-section">
               {isFinancialLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>{t('common.loading')}</p>
-                </div>
+                <LazyLoader variant="cards" count={3} message={t('common.loading')} />
               ) : (
                 <>
                   <section className="metric-cards">
@@ -1303,11 +1252,11 @@ export default function DashboardView() {
                               transactions.map((transaction) => (
                                 <tr key={transaction.id}>
                                   <td className="transaction-id">{transaction.id}</td>
-                                  <td>{transaction.date}</td>
+                                  <td>{formatApiDateTime(transaction.date || transaction.created_at || transaction.createdAt)}</td>
                                   <td>{transaction.user}</td>
                                   <td>
                                     <span className={`type-pill ${transaction.type.toLowerCase()}`}>
-                                      {transaction.type}
+                                      {translateApiLabel(transaction.type)}
                                     </span>
                                   </td>
                                   <td className="amount">{formatCurrency(transaction.amount)}</td>
@@ -1316,7 +1265,7 @@ export default function DashboardView() {
                                       <span className="material-symbols-outlined">
                                         {transaction.status === 'Completed' ? 'check_circle' : 'schedule'}
                                       </span>
-                                      {transaction.status}
+                                      {translateApiLabel(transaction.status)}
                                     </span>
                                   </td>
                                 </tr>
@@ -1372,7 +1321,7 @@ export default function DashboardView() {
                                   <div className="payout-amount">{formatCurrency(payout.amount)}</div>
                                   <div className="payout-status">
                                     <span className={`status-badge ${statusClass}`}>
-                                      {payout.status || 'Pending'}
+                                      {translateApiLabel(payout.status || 'pending')}
                                     </span>
                                   </div>
                                 </div>
@@ -1404,8 +1353,7 @@ export default function DashboardView() {
                   <span className="material-symbols-outlined">search</span>
                   <input placeholder={t('support.searchTickets')} />
                 </div>
-                <button className="chip on">EN</button>
-                <button className="chip">AR</button>
+            <LanguageToggle />
                 <button className="ibtn" aria-label={t('common.notifications')}>
                   <img src={notificationsIcon} alt="notifications" className="kimg" />
                   <i className="dot" />
@@ -1415,10 +1363,7 @@ export default function DashboardView() {
 
             <div className="container support-section">
               {isSupportLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>{t('support.loadingSupportTickets')}</p>
-                </div>
+                <LazyLoader variant="table" rows={6} columns={4} message={t('support.loadingSupportTickets')} />
               ) : (
                 <div className="support-layout">
                   {/* Left Sidebar - Ticket List */}
@@ -1478,7 +1423,7 @@ export default function DashboardView() {
                             {typeof ticket.requester === 'string' && ticket.requester.trim() && ticket.requester.trim().toLowerCase() !== 'unknown' ? (
                               <span className="requester">{ticket.requester}</span>
                             ) : null}
-                            <span className="date">{ticket.date}</span>
+                            <span className="date">{formatApiDateTime(ticket.createdAt || ticket.created_at || ticket.date)}</span>
                           </div>
                         </div>
                       ))}
@@ -1488,10 +1433,7 @@ export default function DashboardView() {
                   {/* Right Panel - Ticket Details & Conversation */}
                   <div className="ticket-details">
                     {isLoadingTicketDetails ? (
-                      <div className="ticket-loading-container">
-                        <div className="loading-spinner"></div>
-                        <p>{t('support.loadingTicketDetails') || 'Loading ticket details...'}</p>
-                      </div>
+                      <LazyLoader variant="content" lines={5} message={t('support.loadingTicketDetails') || 'Loading ticket details...'} />
                     ) : selectedTicket ? (
                       <>
                         <div className="ticket-details-header">
@@ -1499,7 +1441,7 @@ export default function DashboardView() {
                             <h2>{selectedTicket.title}</h2>
                             <div className="ticket-status-container">
                               <span className={`status-badge ${selectedTicket.status}`}>
-                                {selectedTicket.status}
+                                {translateApiLabel(selectedTicket.status)}
                               </span>
                               {pollingInterval && (
                                 <span className="polling-indicator" title="Auto-refreshing messages">
@@ -1544,12 +1486,12 @@ export default function DashboardView() {
                           <div className="info-item">
                             <span className="label">Priority:</span>
                             <span className={`priority-badge ${selectedTicket.priority}`}>
-                              {selectedTicket.priority}
+                              {translateApiLabel(selectedTicket.priority)}
                             </span>
                           </div>
                           <div className="info-item">
                             <span className="label">Date:</span>
-                            <span className="value">{selectedTicket.date}</span>
+                            <span className="value">{formatApiDateTime(selectedTicket.createdAt || selectedTicket.created_at || selectedTicket.date)}</span>
                           </div>
                         </div>
 
@@ -1560,7 +1502,7 @@ export default function DashboardView() {
                                 <div className="message-header">
                                   <span className="sender-name">{msg.senderName}</span>
                                   <span className="message-time">
-                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {formatTime(msg.timestamp)}
                                   </span>
                                 </div>
                                 <div className="message-content">{msg.message}</div>
@@ -1733,10 +1675,7 @@ export default function DashboardView() {
 
             <div className="container analytics-section">
               {isAnalyticsDataLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>{t('common.loading')}</p>
-                </div>
+                <LazyLoader variant="cards" count={5} message={t('common.loading')} />
               ) : (
                 <>
                   {/* Top 5 Metric Cards */}

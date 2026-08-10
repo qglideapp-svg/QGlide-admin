@@ -6,6 +6,8 @@ import { fetchReports, generateReport, deleteReport, retryReport, downloadReport
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
 import notificationsIcon from '../../assets/icons/notifications.png';
@@ -19,6 +21,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'status-ready';
     switch (status.toLowerCase()) {
@@ -29,13 +32,13 @@ const StatusBadge = ({ status }) => {
     }
   };
 
-  return <span className={`status-badge ${getStatusClass(status)}`}>{status}</span>;
+  return <span className={`status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
 export default function ReportsGeneratorView() {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, formatDateTime, formatDate, formatApiDateTime, translateApiLabel } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // State for reports data
@@ -340,6 +343,8 @@ export default function ReportsGeneratorView() {
                 <span className="material-symbols-outlined">search</span>
               </button>
             </div>
+            <LanguageToggle />
+
             <ThemeToggle />
             <button className="notifications-btn" aria-label="notifications">
               <img src={notificationsIcon} alt="notifications" className="kimg" />
@@ -471,10 +476,7 @@ export default function ReportsGeneratorView() {
             </div>
             <div className="card-content">
               {isLoading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading reports...</p>
-                </div>
+                <LazyLoader variant="table" rows={6} columns={5} message={t('common.loading')} />
               ) : (
                 <div className="reports-table-container">
                   <table className="reports-table">
@@ -496,8 +498,12 @@ export default function ReportsGeneratorView() {
                       reports.map((report) => (
                         <tr key={report.id}>
                           <td className="report-name">{report.name}</td>
-                          <td className="date-range">{report.dateRange}</td>
-                          <td className="generated-on">{report.generatedOn}</td>
+                          <td className="date-range">
+                            {report.dateRangeStart && report.dateRangeEnd
+                              ? `${formatDate(report.dateRangeStart)} - ${formatDate(report.dateRangeEnd)}`
+                              : report.dateRangeText || report.dateRange}
+                          </td>
+                          <td className="generated-on">{formatApiDateTime(report.generatedOnAt || report.generatedOn)}</td>
                           <td><StatusBadge status={report.status} /></td>
                           <td className="actions-cell">
                             <div className="action-buttons">

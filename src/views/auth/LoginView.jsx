@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginView.css';
 import logoSrc from '../../assets/images/logo.png';
-import { loginUser, storeAuthToken } from '../../services/authService';
+import { loginUser, storeAuthSession } from '../../services/authService';
 import Toast from '../../components/common/Toast';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 
 export default function LoginView() {
   const navigate = useNavigate();
@@ -31,30 +33,15 @@ export default function LoginView() {
       const result = await loginUser(email, password);
       
       if (result.success) {
-        // Store the access token from the response
         if (result.data.access_token) {
-          console.log('🚀 LOGIN SUCCESS - STORING TOKEN:', {
-            '✅ Login Successful': true,
-            '🔑 Access Token': result.data.access_token,
-            '📏 Token Length': result.data.access_token?.length,
-            '🔍 Token Preview': result.data.access_token ? `${result.data.access_token.substring(0, 20)}...${result.data.access_token.substring(result.data.access_token.length - 10)}` : 'No token',
-            '📧 Email': email,
-            '⏰ Login Time': new Date().toISOString()
-          });
-          
-          // Terminal logging for debugging
-          console.log('\n' + '='.repeat(80));
-          console.log('🚀 LOGIN SUCCESS - BEARER TOKEN:');
-          console.log('='.repeat(80));
-          console.log('Email:', email);
-          console.log('Token:', result.data.access_token);
-          console.log('='.repeat(80) + '\n');
-          
-          storeAuthToken(result.data.access_token);
+          storeAuthSession(result.data);
         }
         navigate('/dashboard');
       } else {
-        setToastMessage(result.error || t('auth.loginFailed'));
+        const message = result.error || t('auth.loginFailed');
+        setToastMessage(
+          message.includes('Admin credentials only') ? t('auth.adminAccessOnly') : message
+        );
         setShowToast(true);
       }
     } catch (error) {
@@ -85,8 +72,7 @@ export default function LoginView() {
 
       <div className="right-panel">
         <div className="lang-theme">
-          <button className="chip active">EN</button>
-          <button className="chip">AR</button>
+            <LanguageToggle variant="login" />
           <button className="icon-btn" aria-label="toggle theme">☾</button>
         </div>
 
@@ -140,10 +126,7 @@ export default function LoginView() {
 
           <button className="primary" type="submit" disabled={isLoading}>
             {isLoading ? (
-              <>
-                <span className="loading-spinner"></span>
-                {t('auth.signingIn')}
-              </>
+              <LazyLoader variant="inline" size="sm" message={t('auth.signingIn')} />
             ) : (
               t('auth.login')
             )}

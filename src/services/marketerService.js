@@ -1,4 +1,6 @@
-import { getAuthToken, SUPABASE_ANON_KEY } from './authService';
+import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
+
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 
@@ -47,14 +49,6 @@ function extractMarketersArray(data) {
  */
 export async function fetchMarketersList(opts = {}) {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      return {
-        success: false,
-        error: 'No authentication token found. Please login first.',
-      };
-    }
-
     const page = Math.max(1, parseInt(String(opts.page), 10) || 1);
     const limit = Math.max(1, parseInt(String(opts.limit), 10) || 50);
 
@@ -64,10 +58,9 @@ export async function fetchMarketersList(opts = {}) {
     });
     const url = `${API_BASE_URL}/admin-marketers-list?${params.toString()}`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
       },
     });
@@ -131,18 +124,11 @@ export async function fetchMarketersList(opts = {}) {
  */
 export async function createMarketer({ displayName, email, password, confirmPassword }) {
   try {
-    const token = getAuthToken();
-
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-create-marketer`;
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
@@ -186,11 +172,6 @@ export async function createMarketer({ displayName, email, password, confirmPass
  */
 export async function updateMarketer(marketerId, { displayName, email, password, confirmPassword }) {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-update-marketer`;
     const hasNewPassword =
       typeof password === 'string' &&
@@ -205,10 +186,9 @@ export async function updateMarketer(marketerId, { displayName, email, password,
       password: hasNewPassword ? password : '',
     };
 
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
@@ -237,16 +217,10 @@ export async function updateMarketer(marketerId, { displayName, email, password,
  */
 export async function deleteMarketer(marketerId, reason) {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
     const url = `${API_BASE_URL}/admin-delete-marketer`;
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
