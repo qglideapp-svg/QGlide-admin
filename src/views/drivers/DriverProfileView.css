@@ -253,6 +253,37 @@
   font-size: 18px;
 }
 
+.btn-delete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #DC2626;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #DC2626;
+  color: white;
+  border-color: #DC2626;
+}
+
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-delete .material-symbols-outlined {
+  font-size: 18px;
+}
+
 /* KPI Cards */
 .kpi-grid {
   display: grid;
@@ -423,6 +454,65 @@
   color: #16A34A;
 }
 
+/* Side Column */
+.profile-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.driver-wallet-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+}
+
+.driver-wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.driver-wallet-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 12px 0;
+}
+
+.driver-wallet-balance {
+  font-size: 32px;
+  font-weight: 700;
+  color: #D97706;
+}
+
+.btn-update-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #1E40AF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btn-update-balance:hover {
+  background: #1E3A8A;
+}
+
+.btn-update-balance .material-symbols-outlined {
+  font-size: 18px;
+}
+
 /* Documents Panel */
 .documents-panel {
   background: white;
@@ -567,7 +657,8 @@
   .btn-edit-profile,
   .btn-approve,
   .btn-suspend,
-  .btn-unsuspend {
+  .btn-unsuspend,
+  .btn-delete {
     width: 100%;
     justify-content: center;
   }
@@ -768,6 +859,7 @@
 .dark-mode .driver-header-card,
 .dark-mode .kpi-card,
 .dark-mode .details-panel,
+.dark-mode .driver-wallet-card,
 .dark-mode .documents-panel {
   background: var(--card, #1e293b);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -779,6 +871,7 @@
 .dark-mode .detail-value,
 .dark-mode .breadcrumb-current,
 .dark-mode .documents-panel h3,
+.dark-mode .driver-wallet-card h3,
 .dark-mode .document-name {
   color: var(--text-dark, #f1f5f9);
 }

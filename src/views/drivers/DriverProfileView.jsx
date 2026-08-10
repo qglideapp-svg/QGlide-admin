@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriverDetails, approveDriver, suspendDriver, unsuspendDriver, updateDriver, getDriverReviewsFromPayload, mapDriverRecentRide, mapAcceptanceRate, mapCancellationRate, formatDocumentLabel } from '../../services/driverService';
+import { fetchDriverDetails, approveDriver, suspendDriver, unsuspendDriver, updateDriver, updateDriverBalance, deleteDriver, getDriverReviewsFromPayload, mapDriverRecentRide, mapAcceptanceRate, mapCancellationRate, formatDocumentLabel, resolveDriverProfileStatus, isDriverOnline, parseDriverBalance } from '../../services/driverService';
+import { detectNewlyOnlineDrivers } from '../../utils/driverOnlineState';
 import Toast from '../../components/common/Toast';
 import SuspendDriverModal from '../../components/modals/SuspendDriverModal';
 import UnsuspendDriverModal from '../../components/modals/UnsuspendDriverModal';
 import EditDriverModal from '../../components/modals/EditDriverModal';
+import DeleteDriverModal from '../../components/modals/DeleteDriverModal';
+import UpdateDriverBalanceModal from '../../components/modals/UpdateDriverBalanceModal';
 import DocumentViewModal from '../../components/modals/DocumentViewModal';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import LanguageToggle from '../../components/common/LanguageToggle';
@@ -30,7 +33,9 @@ const StatusBadge = ({ status }) => {
     if (!status) return 'driver-profile-status-offline';
     const statusLower = status.toLowerCase();
     switch (statusLower) {
-      case 'active': return 'driver-profile-status-active';
+      case 'active':
+      case 'online':
+        return 'driver-profile-status-active';
       case 'offline': return 'driver-profile-status-offline';
       case 'suspended': return 'driver-profile-status-suspended';
       case 'pending verification':
@@ -72,313 +77,263 @@ export default function DriverProfileView() {
   // Edit modal and loading states
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Balance modal and loading states
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
+
+  // Delete modal and loading states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Document viewer modal state
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const driverStatusRef = useRef(null);
+  const pollRequestIdRef = useRef(0);
 
-  // Load driver data from API
-  useEffect(() => {
-    const loadDriverData = async () => {
-      if (!driverId) {
+  const applyDriverApiData = useCallback((apiDriver) => {
+    const driverProfile = apiDriver.driver_profile || {};
+    const driverStatus = resolveDriverProfileStatus(apiDriver);
+    driverStatusRef.current = driverStatus;
+
+    const driverReviews = getDriverReviewsFromPayload(apiDriver);
+
+    const transformedData = {
+      id: apiDriver.id || driverId,
+      name: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
+      avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || '',
+      status: driverStatus,
+      rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
+      totalReviews: Number(
+        apiDriver.total_reviews ?? apiDriver.reviews_count ?? driverReviews.length
+      ) || 0,
+      driverReviews,
+      acceptanceRate: mapAcceptanceRate(apiDriver.acceptance_rate),
+      totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0, 10),
+      ridesThisMonth: apiDriver.rides_this_month ?? null,
+      totalEarnings: parseFloat(apiDriver.earnings?.total || apiDriver.total_earnings || 0),
+      earningsThisMonth: parseFloat(apiDriver.earnings?.this_month || apiDriver.earnings_this_month || 0),
+      earningsLastMonth: parseFloat(apiDriver.earnings?.last_month || 0) || null,
+      walletBalance: parseDriverBalance(apiDriver),
+      cancellationRate: mapCancellationRate(apiDriver.cancellation_rate),
+      personalDetails: {
+        fullName: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
+        email: apiDriver.email || 'No email provided',
+        phone: apiDriver.phone || apiDriver.phone_number || 'No phone provided',
+        address: apiDriver.address || driverProfile.address || 'Address not available',
+        dateJoined: apiDriver.created_at || null,
+      },
+      vehicleDetails: {
+        model: driverProfile.vehicle_model || apiDriver.vehicle_model || 'Not provided yet',
+        type: driverProfile.vehicle_type || apiDriver.vehicle_type || 'Not provided yet',
+        year: driverProfile.vehicle_year || apiDriver.vehicle_year || new Date().getFullYear(),
+        licensePlate: driverProfile.vehicle_plate || apiDriver.vehicle_plate || apiDriver.license_plate || 'Not provided yet',
+        color: driverProfile.vehicle_color || apiDriver.vehicle_color || 'Not provided yet',
+        licenseNumber: driverProfile.license_number || apiDriver.license_number || 'Not provided yet',
+        licenseExpiry: driverProfile.license_expiry || apiDriver.license_expiry || null,
+        insuranceProvider: driverProfile.insurance_provider || apiDriver.insurance_provider || 'Not provided yet',
+        insuranceExpiry: driverProfile.insurance_expiry || apiDriver.insurance_expiry || null,
+        vin: driverProfile.vin || apiDriver.vin || 'Not available',
+      },
+      documents: (() => {
+        let apiDocuments = null;
+
+        if (apiDriver.documents && Array.isArray(apiDriver.documents) && apiDriver.documents.length > 0) {
+          apiDocuments = apiDriver.documents;
+        } else if (driverProfile.documents && Array.isArray(driverProfile.documents) && driverProfile.documents.length > 0) {
+          apiDocuments = driverProfile.documents;
+        } else if (apiDriver.uploaded_documents && Array.isArray(apiDriver.uploaded_documents) && apiDriver.uploaded_documents.length > 0) {
+          apiDocuments = apiDriver.uploaded_documents;
+        } else if (apiDriver.driver_documents && Array.isArray(apiDriver.driver_documents) && apiDriver.driver_documents.length > 0) {
+          apiDocuments = apiDriver.driver_documents;
+        } else if (apiDriver.document_urls && typeof apiDriver.document_urls === 'object') {
+          apiDocuments = Object.entries(apiDriver.document_urls).map(([key, url]) => ({
+            document_type: key,
+            document_url: url,
+            status: 'Verified'
+          }));
+        } else if (driverProfile.document_urls && typeof driverProfile.document_urls === 'object') {
+          apiDocuments = Object.entries(driverProfile.document_urls).map(([key, url]) => ({
+            document_type: key,
+            document_url: url,
+            status: 'Verified'
+          }));
+        }
+
+        if (apiDocuments && Array.isArray(apiDocuments) && apiDocuments.length > 0) {
+          return apiDocuments.map(doc => {
+            const docName = doc.document_name || doc.name || doc.type || doc.title
+              ? formatDocumentLabel(doc.document_name || doc.name || doc.type || doc.title)
+              : formatDocumentLabel(doc.document_type || 'Unknown Document');
+            const docStatus = doc.status || doc.verification_status || doc.approval_status || 'pending';
+            const docUrl = doc.accessible_url ||
+              doc.signed_url ||
+              doc.document_url ||
+              doc.url ||
+              doc.file_url ||
+              doc.file_path ||
+              doc.image_url ||
+              doc.file ||
+              doc.document_file_url ||
+              doc.upload_url ||
+              doc.preview_url ||
+              doc.download_url ||
+              (typeof doc === 'string' ? doc : null) ||
+              null;
+
+            let nestedUrl = null;
+            if (doc.file && typeof doc.file === 'object') {
+              nestedUrl = doc.file.url || doc.file.path || doc.file.file_url || null;
+            }
+            if (doc.document && typeof doc.document === 'object') {
+              nestedUrl = nestedUrl || doc.document.url || doc.document.path || doc.document.file_url || null;
+            }
+
+            return {
+              name: docName,
+              status: docStatus,
+              uploadDate: doc.upload_date || doc.uploaded_at || doc.created_at || null,
+              url: docUrl || nestedUrl
+            };
+          });
+        }
+
+        const isVerified = apiDriver.is_verified === true || driverProfile.is_verified === true;
+        const hasLicense = !!(driverProfile.license_number || apiDriver.license_number);
+        const hasVehiclePlate = !!(driverProfile.vehicle_plate || apiDriver.vehicle_plate);
+        const backgroundCheckStatus = driverProfile.background_check_status || apiDriver.background_check_status;
+
+        const idDocUrl = apiDriver.id_document_url ||
+          driverProfile.id_document_url ||
+          apiDriver.id_document ||
+          driverProfile.id_document ||
+          apiDriver.qatari_id_url ||
+          driverProfile.qatari_id_url ||
+          null;
+
+        const licenseDocUrl = apiDriver.license_document_url ||
+          driverProfile.license_document_url ||
+          apiDriver.license_document ||
+          driverProfile.license_document ||
+          apiDriver.driver_license_url ||
+          driverProfile.driver_license_url ||
+          null;
+
+        const vehicleDocUrl = apiDriver.vehicle_registration_url ||
+          driverProfile.vehicle_registration_url ||
+          apiDriver.vehicle_registration ||
+          driverProfile.vehicle_registration ||
+          apiDriver.vehicle_registration_document ||
+          driverProfile.vehicle_registration_document ||
+          null;
+
+        const bgCheckUrl = apiDriver.background_check_url ||
+          driverProfile.background_check_url ||
+          apiDriver.background_check_document ||
+          driverProfile.background_check_document ||
+          null;
+
+        return [
+          { name: 'Qatari ID', status: isVerified ? 'Verified' : 'Pending', url: idDocUrl },
+          { name: "Driver's License", status: hasLicense ? 'Verified' : 'Pending', url: licenseDocUrl },
+          { name: 'Vehicle Registration', status: hasVehiclePlate ? 'Verified' : 'Pending', url: vehicleDocUrl },
+          { name: 'Background Check', status: backgroundCheckStatus === 'approved' ? 'Verified' : 'Pending', url: bgCheckUrl }
+        ];
+      })(),
+      recentRides: (apiDriver.recent_rides || []).map(mapDriverRecentRide),
+    };
+
+    setDriverData(transformedData);
+    return driverStatus;
+  }, [driverId]);
+
+  const loadDriverData = useCallback(async ({ silent = false } = {}) => {
+    if (!driverId) {
+      if (!silent) {
         setError('No driver ID provided');
         setIsLoading(false);
+      }
+      return;
+    }
+
+    if (!silent) {
+      setIsLoading(true);
+      setError(null);
+    }
+
+    try {
+      const result = await fetchDriverDetails(driverId);
+
+      if (result.success && result.data) {
+        applyDriverApiData(result.data);
+      } else if (!silent) {
+        setError(result.error || 'Failed to load driver details');
+      }
+    } catch (error) {
+      if (!silent) {
+        setError(error.message || 'An unexpected error occurred');
+      }
+    } finally {
+      if (!silent) {
+        setIsLoading(false);
+      }
+    }
+  }, [driverId, applyDriverApiData]);
+
+  useEffect(() => {
+    driverStatusRef.current = null;
+    loadDriverData();
+  }, [loadDriverData]);
+
+  useEffect(() => {
+    if (!driverId) {
+      return undefined;
+    }
+
+    const pollDriverStatus = async () => {
+      if (document.hidden) {
         return;
       }
 
-      console.log('🔄 LOADING DRIVER DETAILS:', {
-        '🆔 Driver ID': driverId,
-        '⏰ Timestamp': new Date().toISOString()
-      });
-
-      setIsLoading(true);
-      setError(null);
+      const requestId = ++pollRequestIdRef.current;
 
       try {
         const result = await fetchDriverDetails(driverId);
-
-        console.log('📡 DRIVER DETAILS API RESULT:', {
-          '✅ Success': result.success,
-          '📊 Has Data': !!result.data,
-          '📝 Error': result.error,
-          '🔍 Full Result': result
-        });
-
-        if (result.success && result.data) {
-          const apiDriver = result.data;
-          
-          // Log document data structure for debugging
-          console.log('📄 DOCUMENTS DATA:', {
-            'Raw Documents': apiDriver.documents,
-            'Driver Profile Documents': apiDriver.driver_profile?.documents,
-            'Uploaded Documents': apiDriver.uploaded_documents,
-            'Driver Documents': apiDriver.driver_documents,
-            'All API Keys': Object.keys(apiDriver),
-            'Driver Profile Keys': apiDriver.driver_profile ? Object.keys(apiDriver.driver_profile) : 'No driver_profile',
-            'Driver Profile Full': apiDriver.driver_profile,
-            'Is Verified': apiDriver.is_verified,
-            'Full API Driver': apiDriver
-          });
-          
-          // Log status fields for debugging
-          console.log('🔍 DRIVER STATUS FIELDS:', {
-            'apiDriver.status': apiDriver.status,
-            'apiDriver.driver_profile?.status': apiDriver.driver_profile?.status,
-            'apiDriver.is_suspended': apiDriver.is_suspended,
-            'apiDriver.driver_profile?.is_suspended': apiDriver.driver_profile?.is_suspended,
-            'apiDriver.driver_profile?.is_online': apiDriver.driver_profile?.is_online,
-            'All API Keys': Object.keys(apiDriver)
-          });
-          
-          // Transform API data to match existing UI structure
-          const driverProfile = apiDriver.driver_profile || {};
-
-          // Determine status: check for suspended first, then pending/awaiting verification, then online/offline
-          let driverStatus = 'Offline';
-          if (apiDriver.status?.toLowerCase() === 'suspended' || 
-              apiDriver.driver_profile?.status?.toLowerCase() === 'suspended' ||
-              apiDriver.is_suspended === true ||
-              apiDriver.driver_profile?.is_suspended === true) {
-            driverStatus = 'Suspended';
-          } else if (
-            apiDriver.is_verified === false ||
-            driverProfile.is_approved === false ||
-            (driverProfile.background_check_status &&
-              driverProfile.background_check_status !== 'approved')
-          ) {
-            driverStatus = 'Pending Verification';
-          } else if (apiDriver.is_active === false) {
-            driverStatus = 'Offline';
-          } else if (driverProfile.is_online) {
-            driverStatus = 'Active';
-          } else if (apiDriver.is_verified && driverProfile.is_approved !== false) {
-            driverStatus = 'Offline';
-          }
-          
-          console.log('✅ DETERMINED DRIVER STATUS:', driverStatus);
-
-          const driverReviews = getDriverReviewsFromPayload(apiDriver);
-
-          const transformedData = {
-            id: apiDriver.id || driverId,
-            name: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
-            avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || '',
-            status: driverStatus,
-            rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
-            totalReviews: Number(
-              apiDriver.total_reviews ?? apiDriver.reviews_count ?? driverReviews.length
-            ) || 0,
-            driverReviews,
-            acceptanceRate: mapAcceptanceRate(apiDriver.acceptance_rate),
-            totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0, 10),
-            ridesThisMonth: apiDriver.rides_this_month ?? null,
-            totalEarnings: parseFloat(apiDriver.earnings?.total || apiDriver.total_earnings || 0),
-            earningsThisMonth: parseFloat(apiDriver.earnings?.this_month || apiDriver.earnings_this_month || 0),
-            earningsLastMonth: parseFloat(apiDriver.earnings?.last_month || 0) || null,
-            cancellationRate: mapCancellationRate(apiDriver.cancellation_rate),
-    personalDetails: {
-              fullName: apiDriver.full_name || apiDriver.name || 'Unknown Driver',
-              email: apiDriver.email || 'No email provided',
-              phone: apiDriver.phone || apiDriver.phone_number || 'No phone provided',
-              address: apiDriver.address || driverProfile.address || 'Address not available',
-              dateJoined: apiDriver.created_at || null,
-    },
-    vehicleDetails: {
-              model: driverProfile.vehicle_model || apiDriver.vehicle_model || 'Not provided yet',
-              type: driverProfile.vehicle_type || apiDriver.vehicle_type || 'Not provided yet',
-              year: driverProfile.vehicle_year || apiDriver.vehicle_year || new Date().getFullYear(),
-              licensePlate: driverProfile.vehicle_plate || apiDriver.vehicle_plate || apiDriver.license_plate || 'Not provided yet',
-              color: driverProfile.vehicle_color || apiDriver.vehicle_color || 'Not provided yet',
-              licenseNumber: driverProfile.license_number || apiDriver.license_number || 'Not provided yet',
-              licenseExpiry: driverProfile.license_expiry || apiDriver.license_expiry || null,
-              insuranceProvider: driverProfile.insurance_provider || apiDriver.insurance_provider || 'Not provided yet',
-              insuranceExpiry: driverProfile.insurance_expiry || apiDriver.insurance_expiry || null,
-              vin: driverProfile.vin || apiDriver.vin || 'Not available',
-    },
-    documents: (() => {
-              // Try to get documents from API first - check multiple possible locations
-              let apiDocuments = null;
-              
-              // Check various possible locations for documents
-              if (apiDriver.documents && Array.isArray(apiDriver.documents) && apiDriver.documents.length > 0) {
-                apiDocuments = apiDriver.documents;
-              } else if (driverProfile.documents && Array.isArray(driverProfile.documents) && driverProfile.documents.length > 0) {
-                apiDocuments = driverProfile.documents;
-              } else if (apiDriver.uploaded_documents && Array.isArray(apiDriver.uploaded_documents) && apiDriver.uploaded_documents.length > 0) {
-                apiDocuments = apiDriver.uploaded_documents;
-              } else if (apiDriver.driver_documents && Array.isArray(apiDriver.driver_documents) && apiDriver.driver_documents.length > 0) {
-                apiDocuments = apiDriver.driver_documents;
-              } else if (apiDriver.document_urls && typeof apiDriver.document_urls === 'object') {
-                // Handle case where documents are stored as an object with keys
-                apiDocuments = Object.entries(apiDriver.document_urls).map(([key, url]) => ({
-                  document_type: key,
-                  document_url: url,
-                  status: 'Verified'
-                }));
-              } else if (driverProfile.document_urls && typeof driverProfile.document_urls === 'object') {
-                // Handle case where documents are in driver_profile as object
-                apiDocuments = Object.entries(driverProfile.document_urls).map(([key, url]) => ({
-                  document_type: key,
-                  document_url: url,
-                  status: 'Verified'
-                }));
-              }
-              
-              console.log('📄 DOCUMENT EXTRACTION:', {
-                'Found Documents': !!apiDocuments,
-                'Documents Count': apiDocuments ? apiDocuments.length : 0,
-                'Documents': apiDocuments
-              });
-              
-              if (apiDocuments && Array.isArray(apiDocuments) && apiDocuments.length > 0) {
-                // Use actual API document data
-                const mappedDocuments = apiDocuments.map(doc => {
-                  const docName = doc.document_name || doc.name || doc.type || doc.title
-                    ? formatDocumentLabel(doc.document_name || doc.name || doc.type || doc.title)
-                    : formatDocumentLabel(doc.document_type || 'Unknown Document');
-                  const docStatus = doc.status || doc.verification_status || doc.approval_status || 'pending';
-                  const docUrl = doc.accessible_url ||
-                                doc.signed_url ||
-                                doc.document_url || 
-                                doc.url || 
-                                doc.file_url || 
-                                doc.file_path || 
-                                doc.image_url || 
-                                doc.file ||
-                                doc.document_file_url ||
-                                doc.upload_url ||
-                                doc.preview_url ||
-                                doc.download_url ||
-                                (typeof doc === 'string' ? doc : null) ||
-                                null;
-                  
-                  // Also check if URL might be in a nested object
-                  let nestedUrl = null;
-                  if (doc.file && typeof doc.file === 'object') {
-                    nestedUrl = doc.file.url || doc.file.path || doc.file.file_url || null;
-                  }
-                  if (doc.document && typeof doc.document === 'object') {
-                    nestedUrl = nestedUrl || doc.document.url || doc.document.path || doc.document.file_url || null;
-                  }
-                  
-                  const finalUrl = docUrl || nestedUrl;
-                  
-                  console.log('📄 Mapping Document:', {
-                    'Name': docName,
-                    'Status': docStatus,
-                    'Doc URL (direct)': docUrl,
-                    'Nested URL': nestedUrl,
-                    'Final URL': finalUrl,
-                    'Raw Doc': doc
-                  });
-                  
-                  return {
-                    name: docName,
-                    status: docStatus,
-                    uploadDate: doc.upload_date || doc.uploaded_at || doc.created_at || null,
-                    url: finalUrl
-                  };
-                });
-                
-                console.log('✅ MAPPED DOCUMENTS:', mappedDocuments);
-                return mappedDocuments;
-              } else {
-                // For verified drivers, try to extract document URLs from individual fields
-                console.log('📄 Using fallback document data - checking individual document URL fields');
-                const isVerified = apiDriver.is_verified === true || driverProfile.is_verified === true;
-                const hasLicense = !!(driverProfile.license_number || apiDriver.license_number);
-                const hasVehiclePlate = !!(driverProfile.vehicle_plate || apiDriver.vehicle_plate);
-                const backgroundCheckStatus = driverProfile.background_check_status || apiDriver.background_check_status;
-                
-                // Check for document URLs in various possible field names
-                const idDocUrl = apiDriver.id_document_url || 
-                                driverProfile.id_document_url || 
-                                apiDriver.id_document || 
-                                driverProfile.id_document ||
-                                apiDriver.qatari_id_url ||
-                                driverProfile.qatari_id_url ||
-                                null;
-                
-                const licenseDocUrl = apiDriver.license_document_url || 
-                                     driverProfile.license_document_url || 
-                                     apiDriver.license_document || 
-                                     driverProfile.license_document ||
-                                     apiDriver.driver_license_url ||
-                                     driverProfile.driver_license_url ||
-                                     null;
-                
-                const vehicleDocUrl = apiDriver.vehicle_registration_url || 
-                                    driverProfile.vehicle_registration_url || 
-                                    apiDriver.vehicle_registration || 
-                                    driverProfile.vehicle_registration ||
-                                    apiDriver.vehicle_registration_document ||
-                                    driverProfile.vehicle_registration_document ||
-                                    null;
-                
-                const bgCheckUrl = apiDriver.background_check_url || 
-                                  driverProfile.background_check_url || 
-                                  apiDriver.background_check_document || 
-                                  driverProfile.background_check_document ||
-                                  null;
-                
-                console.log('📄 Document URLs Found:', {
-                  'ID Document': idDocUrl,
-                  'License Document': licenseDocUrl,
-                  'Vehicle Registration': vehicleDocUrl,
-                  'Background Check': bgCheckUrl
-                });
-                
-                return [
-                  { 
-                    name: 'Qatari ID', 
-                    status: isVerified ? 'Verified' : 'Pending',
-                    url: idDocUrl
-                  },
-                  { 
-                    name: "Driver's License", 
-                    status: hasLicense ? 'Verified' : 'Pending',
-                    url: licenseDocUrl
-                  },
-                  { 
-                    name: 'Vehicle Registration', 
-                    status: hasVehiclePlate ? 'Verified' : 'Pending',
-                    url: vehicleDocUrl
-                  },
-                  { 
-                    name: 'Background Check', 
-                    status: backgroundCheckStatus === 'approved' ? 'Verified' : 'Pending',
-                    url: bgCheckUrl
-                  }
-                ];
-              }
-            })(),
-            recentRides: (apiDriver.recent_rides || []).map(mapDriverRecentRide),
-          };
-
-          setDriverData(transformedData);
-          
-          console.log('✅ DRIVER DATA TRANSFORMED SUCCESSFULLY:', {
-            '📊 Transformed Data': transformedData,
-            '👤 Driver Name': transformedData.name,
-            '📱 Phone': transformedData.personalDetails.phone,
-            '🚗 Vehicle': transformedData.vehicleDetails.model,
-            '💰 Total Earnings': transformedData.totalEarnings,
-            '🚕 Total Rides': transformedData.totalRides
-          });
-        } else {
-          setError(result.error || 'Failed to load driver details');
-          console.error('❌ Failed to load driver details:', result.error);
+        if (requestId !== pollRequestIdRef.current || !result.success || !result.data) {
+          return;
         }
-      } catch (error) {
-        setError(error.message || 'An unexpected error occurred');
-        console.error('❌ Load driver details error:', error);
-      } finally {
-        setIsLoading(false);
+
+        const apiDriver = result.data;
+        const newStatus = resolveDriverProfileStatus(apiDriver);
+        const previousStatus = driverStatusRef.current;
+
+        detectNewlyOnlineDrivers([{
+          id: apiDriver.id || driverId,
+          name: apiDriver.full_name || apiDriver.name || 'Driver',
+          isOnline: isDriverOnline(apiDriver),
+        }]);
+
+        if (previousStatus !== null && previousStatus !== newStatus) {
+          driverStatusRef.current = newStatus;
+
+          if (newStatus === 'Online' || previousStatus === 'Online') {
+            setDriverData((prev) => (prev && prev.status !== newStatus ? { ...prev, status: newStatus } : prev));
+          }
+        } else if (previousStatus === null) {
+          driverStatusRef.current = newStatus;
+        }
+      } catch {
+        // Ignore background poll errors
       }
     };
 
-    loadDriverData();
-  }, [driverId]);
+    const intervalId = setInterval(pollDriverStatus, 2000);
+    return () => {
+      pollRequestIdRef.current += 1;
+      clearInterval(intervalId);
+    };
+  }, [driverId, t]);
 
   // Handle approve driver
   const handleApprove = async () => {
@@ -553,6 +508,49 @@ export default function DriverProfileView() {
     }
   };
 
+  const handleBalanceClick = () => {
+    setShowBalanceModal(true);
+  };
+
+  const handleBalanceConfirm = async ({ balance, reason }) => {
+    if (!driverId) {
+      setToast({
+        type: 'error',
+        message: 'No driver ID available',
+      });
+      return;
+    }
+
+    setIsUpdatingBalance(true);
+
+    try {
+      const result = await updateDriverBalance(driverId, balance, reason);
+
+      if (result.success) {
+        setDriverData((prev) => (prev ? { ...prev, walletBalance: balance } : prev));
+        setShowBalanceModal(false);
+        setToast({
+          type: 'success',
+          message: t('toast.driverBalanceUpdated'),
+        });
+        loadDriverData({ silent: true });
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || t('toast.failedToUpdate'),
+        });
+      }
+    } catch (error) {
+      console.error('❌ Update driver balance error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred',
+      });
+    } finally {
+      setIsUpdatingBalance(false);
+    }
+  };
+
   // Handle unsuspend driver click - opens modal
   const handleUnsuspendClick = () => {
     setShowUnsuspendModal(true);
@@ -610,6 +608,49 @@ export default function DriverProfileView() {
       });
     } finally {
       setIsUnsuspending(false);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async (reason) => {
+    if (!driverId) {
+      setToast({
+        type: 'error',
+        message: 'No driver ID available'
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const result = await deleteDriver(driverId, reason);
+
+      if (result.success) {
+        setShowDeleteModal(false);
+        setToast({
+          type: 'success',
+          message: t('toast.driverDeleted')
+        });
+        setTimeout(() => {
+          navigate('/driver-management');
+        }, 1200);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || t('toast.failedToDelete')
+        });
+      }
+    } catch (error) {
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -826,6 +867,16 @@ export default function DriverProfileView() {
                   {isUnsuspending ? 'hourglass_empty' : 'check_circle'}
                 </span>
                 {isUnsuspending ? t('drivers.unsuspending') : t('drivers.unsuspend')}
+              </button>
+              <button
+                className="btn-delete"
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+              >
+                <span className="material-symbols-outlined">
+                  {isDeleting ? 'hourglass_empty' : 'delete'}
+                </span>
+                {isDeleting ? t('modals.deleting') : t('drivers.delete')}
               </button>
             </div>
           </div>
@@ -1080,8 +1131,22 @@ export default function DriverProfileView() {
               </div>
             </div>
 
-            {/* Right Panel - Uploaded Documents */}
-            <div className="documents-panel">
+            {/* Right Panel */}
+            <div className="profile-side-column">
+              <div className="driver-wallet-card">
+                <div className="driver-wallet-header">
+                  <div>
+                    <h3>{t('drivers.walletBalance')}</h3>
+                    <div className="driver-wallet-balance">{formatCurrency(driverData.walletBalance || 0)}</div>
+                  </div>
+                  <button className="btn-update-balance" onClick={handleBalanceClick}>
+                    <span className="material-symbols-outlined">account_balance_wallet</span>
+                    {t('drivers.updateBalance')}
+                  </button>
+                </div>
+              </div>
+
+              <div className="documents-panel">
               <h3>{t('drivers.uploadedDocuments')}</h3>
               {driverData.documents && driverData.documents.length > 0 ? (
                 <div className="documents-list">
@@ -1117,6 +1182,7 @@ export default function DriverProfileView() {
                   <p>No documents available</p>
                 </div>
               )}
+              </div>
             </div>
           </div>
             </>
@@ -1124,6 +1190,16 @@ export default function DriverProfileView() {
         </div>
       </main>
       
+          {/* Update Driver Balance Modal */}
+          <UpdateDriverBalanceModal
+            isOpen={showBalanceModal}
+            onClose={() => setShowBalanceModal(false)}
+            onConfirm={handleBalanceConfirm}
+            driverName={driverData?.name || 'Unknown Driver'}
+            currentBalance={driverData?.walletBalance ?? 0}
+            isLoading={isUpdatingBalance}
+          />
+
           {/* Edit Driver Modal */}
           <EditDriverModal
             isOpen={showEditModal}
@@ -1149,6 +1225,15 @@ export default function DriverProfileView() {
             onConfirm={handleUnsuspendConfirm}
             driverName={driverData?.name || 'Unknown Driver'}
             isLoading={isUnsuspending}
+          />
+
+          {/* Delete Driver Modal */}
+          <DeleteDriverModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={handleDeleteConfirm}
+            driverName={driverData?.name || 'Unknown Driver'}
+            isLoading={isDeleting}
           />
           
           {/* Document Viewer Modal */}

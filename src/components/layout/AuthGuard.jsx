@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ensureValidSession } from '../../services/authService';
+import DriverOnlineMonitor from './DriverOnlineMonitor';
 
 const SESSION_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -46,7 +47,12 @@ const AuthGuard = ({ children }) => {
     return null;
   }
 
-  return children;
+  return (
+    <>
+      {children}
+      <DriverOnlineMonitor />
+    </>
+  );
 };
 
 export default AuthGuard;

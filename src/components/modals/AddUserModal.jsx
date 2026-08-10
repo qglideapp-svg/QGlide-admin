@@ -101,7 +101,7 @@ const AddUserModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleInputChange}
-                placeholder={t('modals.enterFullName')}
+                placeholder={t('modals.enterRiderFullName')}
                 required
                 className={errors.full_name ? 'error' : ''}
               />

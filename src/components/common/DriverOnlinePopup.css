@@ -1,0 +1,144 @@
+.driver-online-popup-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+}
+
+.driver-online-popup {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 32px 28px 24px;
+  border-radius: 16px;
+  background: var(--card, #fff);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  text-align: center;
+  animation: driverOnlinePopupIn 0.28s ease-out;
+}
+
+@keyframes driverOnlinePopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.driver-online-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.driver-online-popup-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.driver-online-popup-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.driver-online-popup-icon .material-symbols-outlined {
+  font-size: 32px;
+}
+
+.driver-online-popup h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.driver-online-popup p {
+  margin: 0 0 24px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.driver-online-popup-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.driver-online-popup-dismiss,
+.driver-online-popup-view {
+  min-width: 120px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.driver-online-popup-dismiss {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+}
+
+.driver-online-popup-view {
+  border: none;
+  background: #059669;
+  color: #fff;
+}
+
+.driver-online-popup-dismiss:hover {
+  background: #f9fafb;
+}
+
+.driver-online-popup-view:hover {
+  background: #047857;
+}
+
+.dark-mode .driver-online-popup {
+  background: var(--card, #1e293b);
+}
+
+.dark-mode .driver-online-popup h2 {
+  color: #f8fafc;
+}
+
+.dark-mode .driver-online-popup p {
+  color: #cbd5e1;
+}
+
+.dark-mode .driver-online-popup-close:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: #f8fafc;
+}
+
+.dark-mode .driver-online-popup-dismiss {
+  background: transparent;
+  border-color: #475569;
+  color: #e2e8f0;
+}

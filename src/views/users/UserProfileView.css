@@ -187,6 +187,11 @@
   color: #6B7280;
 }
 
+.user-profile-status-badge.user-profile-status-suspended {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
 /* Info Section */
 .info-section {
   padding-bottom: 24px;
@@ -350,24 +355,6 @@
   border-color: #9CA3AF;
 }
 
-.btn-add-funds {
-  padding: 10px 20px;
-  background: #1E40AF;
-  border: 1px solid #1E40AF;
-  border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-add-funds:hover {
-  background: #1E3A8A;
-  border-color: #1E3A8A;
-}
-
 /* Ride History Card */
 .ride-history-card {
   background: white;
@@ -431,6 +418,14 @@
 
 .ride-history-table tbody tr:hover {
   background: #F9FAFB;
+}
+
+.ride-history-table tbody tr.ride-history-row {
+  cursor: pointer;
+}
+
+.ride-history-table tbody tr.ride-history-row:hover {
+  background: #F3F4F6;
 }
 
 .ride-id {
@@ -501,8 +496,7 @@
     width: 100%;
   }
   
-  .btn-view-history,
-  .btn-add-funds {
+  .btn-view-history {
     flex: 1;
   }
 }
@@ -512,8 +506,7 @@
     flex-direction: column;
   }
   
-  .btn-view-history,
-  .btn-add-funds {
+  .btn-view-history {
     width: 100%;
   }
 }
@@ -552,8 +545,8 @@
   color: var(--error-color);
 }
 
-.error-message .material-icons,
-.empty-message .material-icons {
+.error-message .material-symbols-outlined,
+.empty-message .material-symbols-outlined {
   font-size: 20px;
 }
 

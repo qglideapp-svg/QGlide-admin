@@ -261,7 +261,42 @@
 
 /* Table Container */
 .table-container {
+  position: relative;
   overflow-x: auto;
+}
+
+.table-container.is-searching {
+  min-height: 360px;
+}
+
+.table-container.is-searching .users-table {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.table-search-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.55);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.table-search-loader.lazy-loader-content {
+  min-height: auto;
+  padding: 0;
+  gap: 12px;
+}
+
+.search-icon-loading {
+  animation: spin 1s linear infinite;
+}
+
+.dark-mode .table-search-overlay {
+  background: rgba(15, 23, 42, 0.55);
 }
 
 .users-table {
@@ -285,11 +320,6 @@
   letter-spacing: 0.5px;
 }
 
-.users-table th.checkbox-col {
-  width: 48px;
-  padding-left: 24px;
-}
-
 .users-table td {
   padding: 16px 24px;
   border-bottom: 1px solid #E5E7EB;
@@ -299,13 +329,6 @@
 
 .users-table tbody tr:hover {
   background: #F9FAFB;
-}
-
-.checkbox-col input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: #FCD34D;
 }
 
 /* User Cell */
@@ -401,28 +424,6 @@
 .status-badge.status-suspended {
   background: #FEE2E2;
   color: #DC2626;
-}
-
-/* Actions Cell */
-.actions-cell {
-  text-align: center;
-}
-
-.action-menu-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: #6B7280;
-  transition: color 0.2s;
-}
-
-.action-menu-btn:hover {
-  color: #111827;
-}
-
-.action-menu-btn .material-symbols-outlined {
-  font-size: 20px;
 }
 
 /* Responsive */

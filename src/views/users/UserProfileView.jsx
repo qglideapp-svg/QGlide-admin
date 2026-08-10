@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './UserProfileView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchUserDetails, updateUserStatus, updateUser, deleteUser, fetchUserRideHistory } from '../../services/userService';
+import { fetchUserDetails, updateUserStatus, updateUser, deleteUser, fetchUserRideHistory, normalizeUserStatus, parseLastTopUp } from '../../services/userService';
+import { mapRideDetailsSummary } from '../../services/ridesService';
 import DeactivateUserModal from '../../components/modals/DeactivateUserModal';
 import EditUserModal from '../../components/modals/EditUserModal';
 import DeleteUserModal from '../../components/modals/DeleteUserModal';
+import UserRideDetailsModal from '../../components/modals/UserRideDetailsModal';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import LanguageToggle from '../../components/common/LanguageToggle';
@@ -38,6 +40,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const RideStatusBadge = ({ status }) => {
+  const { translateApiLabel } = useLanguage();
   const getStatusClass = (status) => {
     if (!status) return 'ride-status-completed';
     switch (status.toLowerCase()) {
@@ -51,10 +54,24 @@ const RideStatusBadge = ({ status }) => {
   return <span className={`ride-status-badge ${getStatusClass(status)}`}>{translateApiLabel(status || 'pending')}</span>;
 };
 
+const mapApiUserToProfile = (apiUser, userId) => ({
+  id: apiUser.id || userId,
+  name: apiUser.full_name || 'Unknown User',
+  avatar: apiUser.avatar_url || apiUser.profile_picture || apiUser.avatar || '',
+  status: normalizeUserStatus(apiUser),
+  email: apiUser.email || 'No email provided',
+  phone: apiUser.phone || 'No phone provided',
+  joinedDate: apiUser.created_at || null,
+  walletBalance: parseFloat(apiUser.earnings?.total || 0),
+  lastTopUp: parseLastTopUp(apiUser.last_top_up || apiUser.lastTopUp),
+  totalRides: parseInt(apiUser.total_rides || 0, 10),
+  rideHistory: [],
+});
+
 export default function UserProfileView() {
   const navigate = useNavigate();
   const { userId } = useParams();
-  const { t, formatNumber, formatDate, formatDateTime, translateApiLabel } = useLanguage();
+  const { t, formatNumber, formatDate, formatDateTime, formatCurrency, translateApiLabel } = useLanguage();
 
   // API-related state
   const [userData, setUserData] = useState(null);
@@ -65,6 +82,8 @@ export default function UserProfileView() {
   const [rideHistory, setRideHistory] = useState([]);
   const [isLoadingRides, setIsLoadingRides] = useState(false);
   const [ridesError, setRidesError] = useState(null);
+  const [selectedRide, setSelectedRide] = useState(null);
+  const [showRideDetailsModal, setShowRideDetailsModal] = useState(false);
   
   // Deactivate modal state
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -82,7 +101,7 @@ export default function UserProfileView() {
   const [toast, setToast] = useState(null);
 
   // Load user data from API
-  const loadUserData = useCallback(async () => {
+  const loadUserData = useCallback(async ({ silent = false } = {}) => {
     if (!userId) {
       setError('No user ID provided');
       setIsLoading(false);
@@ -91,11 +110,14 @@ export default function UserProfileView() {
 
     console.log('🔄 LOADING USER DETAILS:', {
       '🆔 User ID': userId,
+      '🔇 Silent': silent,
       '⏰ Timestamp': new Date().toISOString()
     });
 
-    setIsLoading(true);
-    setError(null);
+    if (!silent) {
+      setIsLoading(true);
+      setError(null);
+    }
 
     try {
       const result = await fetchUserDetails(userId);
@@ -108,24 +130,13 @@ export default function UserProfileView() {
       });
 
       if (result.success && result.data) {
-        const apiUser = result.data;
-        
-        // Transform API data to match existing UI structure
-        const transformedData = {
-          id: apiUser.id || userId,
-          name: apiUser.full_name || 'Unknown User',
-          avatar: apiUser.avatar_url || apiUser.profile_picture || apiUser.avatar || '',
-          status: apiUser.status || 'Active',
-          email: apiUser.email || 'No email provided',
-          phone: apiUser.phone || 'No phone provided',
-          joinedDate: apiUser.created_at || null,
-          walletBalance: parseFloat(apiUser.earnings?.total || 0),
-          lastTopUp: 'N/A', // Not in API response
-          totalRides: parseInt(apiUser.total_rides || 0),
-          rideHistory: [] // Will be loaded separately from ride history API
-        };
+        const transformedData = mapApiUserToProfile(result.data, userId);
 
-        setUserData(transformedData);
+        setUserData((prev) => (
+          silent && prev
+            ? { ...prev, ...transformedData, rideHistory: prev.rideHistory }
+            : transformedData
+        ));
         
         console.log('✅ USER DATA TRANSFORMED SUCCESSFULLY:', {
           '📊 Transformed Data': transformedData,
@@ -134,15 +145,19 @@ export default function UserProfileView() {
           '💰 Wallet Balance': transformedData.walletBalance,
           '🚕 Total Rides': transformedData.totalRides
         });
-      } else {
+      } else if (!silent) {
         setError(result.error || 'Failed to load user details');
         console.error('❌ Failed to load user details:', result.error);
       }
     } catch (error) {
-      setError(error.message || 'An unexpected error occurred');
+      if (!silent) {
+        setError(error.message || 'An unexpected error occurred');
+      }
       console.error('❌ Load user details error:', error);
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, [userId]);
 
@@ -180,20 +195,26 @@ export default function UserProfileView() {
         const apiRides = result.data.rides || [];
         
         // Transform API ride data to match UI structure
-        const transformedRides = apiRides.map((ride, index) => ({
-          id: ride.id || ride.ride_id || `RD-${index + 1}`,
-          date: ride.created_at || ride.ride_date || null,
-          route: {
-            from: ride.pickup_location || ride.from_address || ride.pickup_address || 'Unknown',
-            to: ride.dropoff_location || ride.to_address || ride.dropoff_address || 'Unknown'
-          },
-          driver: ride.driver_name || ride.driver?.full_name || ride.driver?.name || 'Unknown Driver',
-          fare: parseFloat(ride.fare || ride.total_amount || ride.price || 0),
-          status: ride.status === 'completed' ? 'Completed' : 
-                 ride.status === 'cancelled' ? 'Cancelled' : 
-                 ride.status === 'in_progress' ? 'In Progress' :
-                 ride.status || 'Unknown'
-        }));
+        const transformedRides = apiRides.map((ride, index) => {
+          const rideId = ride.id || ride.ride_id || null;
+
+          return {
+            id: rideId || `RD-${index + 1}`,
+            rideId,
+            raw: ride,
+            date: ride.created_at || ride.ride_date || null,
+            route: {
+              from: ride.pickup_location || ride.from_address || ride.pickup_address || 'Unknown',
+              to: ride.dropoff_location || ride.to_address || ride.dropoff_address || 'Unknown'
+            },
+            driver: ride.driver_name || ride.driver?.full_name || ride.driver?.name || 'Unknown Driver',
+            fare: parseFloat(ride.fare || ride.total_amount || ride.price || 0),
+            status: ride.status === 'completed' ? 'Completed' :
+              ride.status === 'cancelled' || ride.status === 'canceled' ? 'Cancelled' :
+              ride.status === 'in_progress' ? 'In Progress' :
+              ride.status || 'Unknown'
+          };
+        });
         
         setRideHistory(transformedRides);
         
@@ -217,10 +238,10 @@ export default function UserProfileView() {
 
   // Load ride history when user ID is available
   useEffect(() => {
-    if (userId && userData) {
+    if (userId) {
       loadRideHistory();
     }
-  }, [userId, userData, loadRideHistory]);
+  }, [userId, loadRideHistory]);
 
   // Handle deactivate user click - opens modal
   const handleDeactivateClick = () => {
@@ -237,8 +258,35 @@ export default function UserProfileView() {
     setShowDeleteModal(true);
   };
 
+  const handleRideClick = (ride) => {
+    if (!ride.rideId) {
+      return;
+    }
+
+    setSelectedRide({
+      rideId: ride.rideId,
+      fallback: mapRideDetailsSummary(ride.raw) || {
+        id: ride.rideId,
+        status: ride.status,
+        date: ride.date,
+        route: ride.route,
+        driver: { name: ride.driver },
+        fare: { total: ride.fare },
+        cancellation: ['Cancelled', 'Canceled'].includes(ride.status)
+          ? { reason: null, cancelledBy: null, cancelledAt: null }
+          : null,
+      },
+    });
+    setShowRideDetailsModal(true);
+  };
+
+  const handleCloseRideDetailsModal = () => {
+    setShowRideDetailsModal(false);
+    setSelectedRide(null);
+  };
+
   // Handle deactivate user confirmation - calls API
-  const handleDeactivateConfirm = async (status, reason) => {
+  const handleDeactivateConfirm = async (reason) => {
     if (!userId) {
       setToast({
         type: 'error',
@@ -249,7 +297,6 @@ export default function UserProfileView() {
 
     console.log('🔄 DEACTIVATING USER:', {
       '🆔 User ID': userId,
-      '📊 Status': status,
       '📝 Reason': reason,
       '⏰ Timestamp': new Date().toISOString()
     });
@@ -257,7 +304,7 @@ export default function UserProfileView() {
     setIsDeactivating(true);
 
     try {
-      const result = await updateUserStatus(userId, status, reason);
+      const result = await updateUserStatus(userId, 'inactive', reason);
 
       console.log('📡 DEACTIVATE RESULT:', {
         '✅ Success': result.success,
@@ -268,7 +315,7 @@ export default function UserProfileView() {
       if (result.success) {
         setToast({
           type: 'success',
-          message: `User account ${status} successfully!`
+          message: t('users.riderSuspendedSuccess')
         });
         
         // Close modal and reload user data
@@ -279,7 +326,7 @@ export default function UserProfileView() {
       } else {
         setToast({
           type: 'error',
-          message: result.error || 'Failed to deactivate user account'
+          message: result.error || t('users.riderSuspendFailed')
         });
       }
     } catch (error) {
@@ -294,7 +341,7 @@ export default function UserProfileView() {
   };
 
   // Handle edit user confirmation - calls API
-  const handleEditConfirm = async (userData) => {
+  const handleEditConfirm = async (editedUser) => {
     if (!userId) {
       setToast({
         type: 'error',
@@ -305,14 +352,14 @@ export default function UserProfileView() {
 
     console.log('🔄 EDITING USER:', {
       '🆔 User ID': userId,
-      '📝 User Data': userData,
+      '📝 User Data': editedUser,
       '⏰ Timestamp': new Date().toISOString()
     });
 
     setIsUpdating(true);
 
     try {
-      const result = await updateUser(userId, userData);
+      const result = await updateUser(userId, editedUser);
 
       console.log('📡 EDIT USER RESULT:', {
         '✅ Success': result.success,
@@ -321,16 +368,22 @@ export default function UserProfileView() {
       });
 
       if (result.success) {
+        setUserData((prev) => (
+          prev
+            ? {
+                ...prev,
+                name: editedUser.full_name,
+                email: editedUser.email,
+                phone: editedUser.phone,
+              }
+            : prev
+        ));
+        setShowEditModal(false);
         setToast({
           type: 'success',
           message: 'User profile updated successfully!'
         });
-        
-        // Close modal and reload user data
-        setShowEditModal(false);
-        setTimeout(() => {
-          loadUserData(); // Reload to get updated data
-        }, 1500);
+        loadUserData({ silent: true });
       } else {
         setToast({
           type: 'error',
@@ -451,6 +504,19 @@ export default function UserProfileView() {
 
   const handleBackToUsers = () => {
     navigate('/user-management');
+  };
+
+  const formatLastTopUpLabel = (lastTopUp) => {
+    if (!lastTopUp) {
+      return t('common.notAvailable');
+    }
+
+    const amountLabel = formatCurrency(lastTopUp.amount, lastTopUp.currency);
+    if (!lastTopUp.createdAt) {
+      return amountLabel;
+    }
+
+    return `${amountLabel} · ${formatDateTime(lastTopUp.createdAt)}`;
   };
 
   return (
@@ -593,7 +659,7 @@ export default function UserProfileView() {
                     </button>
                     <button className="btn-deactivate" onClick={handleDeactivateClick}>
                       <span className="material-symbols-outlined">block</span>
-                      {t('users.changeStatus')}
+                      {t('users.suspendRider')}
                     </button>
                   </div>
                 </div>
@@ -608,11 +674,10 @@ export default function UserProfileView() {
                   <div>
                     <h3 className="wallet-title">{t('users.walletBalance')}</h3>
                     <div className="wallet-balance">QAR {userData.walletBalance.toFixed(2)}</div>
-                    <div className="wallet-subtitle">{t('users.lastTopUp')}: {userData.lastTopUp}</div>
+                    <div className="wallet-subtitle">{t('users.lastTopUp')}: {formatLastTopUpLabel(userData.lastTopUp)}</div>
                   </div>
                   <div className="wallet-actions">
                     <button className="btn-view-history" onClick={handleDeleteClick}>{t('users.deleteAccount')}</button>
-                    <button className="btn-add-funds">{t('common.export')} CSV</button>
                   </div>
                 </div>
               </div>
@@ -646,7 +711,7 @@ export default function UserProfileView() {
                         <tr>
                           <td colSpan="6" className="error-cell">
                             <div className="error-message">
-                              <span className="material-icons">error</span>
+                              <span className="material-symbols-outlined">error</span>
                               {ridesError}
                             </div>
                           </td>
@@ -655,14 +720,18 @@ export default function UserProfileView() {
                         <tr>
                           <td colSpan="6" className="empty-cell">
                             <div className="empty-message">
-                              <span className="material-icons">directions_car</span>
+                              <span className="material-symbols-outlined">directions_car</span>
                               {t('users.noRideHistory')}
                             </div>
                           </td>
                         </tr>
                       ) : (
                         rideHistory.map((ride) => (
-                        <tr key={ride.id}>
+                        <tr
+                          key={ride.id}
+                          className={ride.rideId ? 'ride-history-row' : undefined}
+                          onClick={() => handleRideClick(ride)}
+                        >
                           <td className="ride-id">#{ride.id}</td>
                           <td className="ride-date">{ride.date ? formatDateTime(ride.date) : t('common.notAvailable')}</td>
                           <td className="ride-route">
@@ -711,6 +780,13 @@ export default function UserProfileView() {
         onConfirm={handleDeleteConfirm}
         userName={userData?.name || 'Unknown User'}
         isLoading={isDeleting}
+      />
+
+      <UserRideDetailsModal
+        isOpen={showRideDetailsModal}
+        onClose={handleCloseRideDetailsModal}
+        rideId={selectedRide?.rideId}
+        fallbackRide={selectedRide?.fallback}
       />
       
       {/* Toast Notification */}

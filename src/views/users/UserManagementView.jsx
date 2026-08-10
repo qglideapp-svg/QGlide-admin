@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './UserManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchUsersList, transformUserData, exportUsersToCSV, createUser } from '../../services/userService';
+import { fetchUsersList, transformUserData, exportUsersToPDF, createUser } from '../../services/userService';
 import UserAvatar from '../../components/common/UserAvatar';
 import AddUserModal from '../../components/modals/AddUserModal';
 import Toast from '../../components/common/Toast';
@@ -28,7 +28,6 @@ const StatusBadge = ({ status }) => {
     switch (status.toLowerCase()) {
       case 'active': return 'status-active';
       case 'inactive': return 'status-inactive';
-      case 'suspended': return 'status-suspended';
       default: return 'status-inactive';
     }
   };
@@ -54,11 +53,12 @@ export default function UserManagementView() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [toast, setToast] = useState(null);
+  const [isSearchPending, setIsSearchPending] = useState(false);
+  const loadRequestIdRef = useRef(0);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -66,6 +66,8 @@ export default function UserManagementView() {
 
   // Fetch users from API with filters
   const loadUsers = useCallback(async (search = '', status = '', page = 1, start = '', end = '') => {
+    const requestId = ++loadRequestIdRef.current;
+
     console.log('🔄 LOADING USERS:', {
       '🔍 Search Term': search,
       '📊 Status Filter': status,
@@ -80,6 +82,10 @@ export default function UserManagementView() {
 
     try {
       const result = await fetchUsersList(search, status, '', page, limit, start, end);
+
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
 
       console.log('📡 API RESULT RECEIVED:', {
         '✅ Success': result.success,
@@ -115,20 +121,24 @@ export default function UserManagementView() {
         console.error('❌ Failed to load users:', result.error);
       }
     } catch (error) {
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+
       setError(error.message || 'An unexpected error occurred');
       console.error('❌ Load users error:', error);
     } finally {
-      setIsLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setIsLoading(false);
+        setIsSearchPending(false);
+      }
     }
   }, [limit]);
 
-  // Load users on mount
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
-
   // Debounced search and filter effect
   useEffect(() => {
+    setIsSearchPending(true);
+
     const timer = setTimeout(() => {
       console.log('🔍 SEARCH/FILTER TRIGGERED:', {
         '📝 Search Term': searchTerm,
@@ -138,8 +148,8 @@ export default function UserManagementView() {
         '⏰ Timestamp': new Date().toISOString()
       });
       loadUsers(searchTerm, statusFilter, 1, startDate, endDate);
-      setCurrentPage(1); // Reset to first page when filters change
-    }, 500); // 500ms debounce
+      setCurrentPage(1);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchTerm, statusFilter, startDate, endDate, loadUsers]);
@@ -200,23 +210,6 @@ export default function UserManagementView() {
     }
   };
 
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedUsers(filteredUsers.map(user => user.id));
-    } else {
-      setSelectedUsers([]);
-    }
-  };
-
-  const handleSelectUser = (userId) => {
-    setSelectedUsers(prev => {
-      if (prev.includes(userId)) {
-        return prev.filter(id => id !== userId);
-      } else {
-        return [...prev, userId];
-      }
-    });
-  };
 
   const handleClearFilters = () => {
     setSearchTerm('');
@@ -305,41 +298,28 @@ export default function UserManagementView() {
     }
   };
 
-  // Handle export users to CSV
-  const handleExportCSV = async () => {
-    console.log('🔄 EXPORTING USERS TO CSV:', {
-      '📊 Status Filter': statusFilter,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-
+  const handleExportPDF = async () => {
     setIsExporting(true);
 
     try {
-      const result = await exportUsersToCSV(statusFilter, startDate, endDate);
-
-      console.log('📡 EXPORT RESULT:', {
-        '✅ Success': result.success,
-        '📝 Error': result.error,
-        '📄 Filename': result.filename,
-        '📏 Size': result.size
-      });
+      const result = await exportUsersToPDF(statusFilter, startDate, endDate);
 
       if (result.success) {
         setToast({
           type: 'success',
-          message: `Users exported successfully! File: ${result.filename}`
+          message: `Users exported successfully! File: ${result.filename}`,
         });
       } else {
         setToast({
           type: 'error',
-          message: result.error || 'Failed to export users to CSV'
+          message: result.error || 'Failed to export users to PDF',
         });
       }
     } catch (error) {
       console.error('❌ Export error:', error);
       setToast({
         type: 'error',
-        message: error.message || 'An unexpected error occurred'
+        message: error.message || 'An unexpected error occurred',
       });
     } finally {
       setIsExporting(false);
@@ -366,9 +346,15 @@ export default function UserManagementView() {
     }
   };
 
-  // Use API data directly (no client-side filtering needed)
   const filteredUsers = users;
-  const isInitialLoading = isLoading && users.length === 0 && !error;
+  const hasActiveFilters = Boolean(
+    searchTerm ||
+    statusFilter !== 'All' ||
+    startDate ||
+    endDate
+  );
+  const isInitialLoading = isLoading && users.length === 0 && !error && !hasActiveFilters && !isSearchPending;
+  const isSearching = isSearchPending || (isLoading && !isInitialLoading);
 
   return (
     <div className={`user-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -452,13 +438,13 @@ export default function UserManagementView() {
               <div className="header-actions">
                 <button 
                   className={`btn-export ${isExporting ? 'disabled' : ''}`} 
-                  onClick={handleExportCSV}
+                  onClick={handleExportPDF}
                   disabled={isExporting}
                 >
                   <span className="material-symbols-outlined">
                     {isExporting ? 'hourglass_empty' : 'upload'}
                   </span>
-                  {isExporting ? t('users.exporting') : t('common.export')}
+                  {isExporting ? t('users.exporting') : t('users.exportPDF')}
                 </button>
                 <button className="btn-add-user" onClick={handleAddUserClick}>
                   <span className="material-symbols-outlined">add</span>
@@ -469,15 +455,14 @@ export default function UserManagementView() {
 
             <div className="filters-row">
               <div className="search-filter">
-                <span className="material-symbols-outlined">
-                  {isLoading ? 'hourglass_empty' : 'search'}
+                <span className={`material-symbols-outlined${isSearching ? ' search-icon-loading' : ''}`}>
+                  {isSearching ? 'hourglass_empty' : 'search'}
                 </span>
                 <input 
                   type="text" 
                   placeholder={t('users.searchUsers')} 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  disabled={isLoading}
                 />
               </div>
               <select 
@@ -488,7 +473,6 @@ export default function UserManagementView() {
                 <option value="All">{t('common.status')}: {t('common.all')}</option>
                 <option value="Active">{t('common.status')}: {t('common.active')}</option>
                 <option value="Inactive">{t('common.status')}: {t('common.inactive')}</option>
-                <option value="Suspended">{t('common.status')}: {t('common.suspended')}</option>
               </select>
               <input
                 type="date"
@@ -510,32 +494,34 @@ export default function UserManagementView() {
               </button>
             </div>
 
-            <div className="table-container">
+            <div className={`table-container${isSearching ? ' is-searching' : ''}`}>
+              {isSearching && (
+                <div className="table-search-overlay" role="status" aria-live="polite">
+                  <LazyLoader
+                    variant="content"
+                    lines={0}
+                    message={t('users.loadingUsers')}
+                    className="table-search-loader"
+                  />
+                </div>
+              )}
               {isInitialLoading ? (
-                <LazyLoader variant="table" rows={8} columns={7} message={t('users.loadingUsers')} />
+                <LazyLoader variant="table" rows={8} columns={5} message={t('users.loadingUsers')} />
               ) : (
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th className="checkbox-col">
-                      <input 
-                        type="checkbox" 
-                        onChange={handleSelectAll}
-                        checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                      />
-                    </th>
                     <th>{t('users.user')}</th>
                     <th>{t('users.contact')}</th>
                     <th>{t('users.totalRides')}</th>
                     <th>{t('users.lastRide')}</th>
                     <th>{t('users.status')}</th>
-                    <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {error ? (
+                  {error && !isSearching ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ef4444' }}>error</span>
                           <div style={{ color: '#ef4444', fontWeight: '500' }}>{t('common.error')}</div>
@@ -557,9 +543,9 @@ export default function UserManagementView() {
                         </div>
                       </td>
                     </tr>
-                  ) : filteredUsers.length === 0 ? (
+                  ) : filteredUsers.length === 0 && !isSearching ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
                           <div style={{ color: '#374151', fontWeight: '500' }}>{t('users.noUsersFound')}</div>
@@ -575,13 +561,6 @@ export default function UserManagementView() {
                   ) : (
                     filteredUsers.map((user) => (
                     <tr key={user.id} className="user-row" onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>
-                      <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
-                        <input 
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={() => handleSelectUser(user.id)}
-                        />
-                      </td>
                       <td className="user-cell">
                         <div className="user-info-cell">
                           <UserAvatar
@@ -599,11 +578,6 @@ export default function UserManagementView() {
                       <td className="rides-cell">{user.totalRides || 0}</td>
                       <td className="date-cell">{user.lastRide || 'N/A'}</td>
                       <td><StatusBadge status={user.status} /></td>
-                      <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                        <button className="action-menu-btn" aria-label="Actions">
-                          <span className="material-symbols-outlined">more_vert</span>
-                        </button>
-                      </td>
                     </tr>
                     ))
                   )}

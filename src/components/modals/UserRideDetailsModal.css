@@ -1,0 +1,125 @@
+.user-ride-modal-content {
+  width: min(640px, 92vw);
+}
+
+.user-ride-modal-body {
+  display: grid;
+  gap: 20px;
+}
+
+.user-ride-modal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.user-ride-modal-id {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.user-ride-modal-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.user-ride-modal-status-completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.user-ride-modal-status-cancelled,
+.user-ride-modal-status-canceled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.user-ride-modal-status-in_progress,
+.user-ride-modal-status-active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.user-ride-details-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.user-ride-detail-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.user-ride-detail-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.user-ride-detail-value {
+  font-size: 14px;
+  color: #111827;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.user-ride-cancellation-panel {
+  padding: 16px;
+  border-radius: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.user-ride-cancellation-panel h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.user-ride-cancellation-panel .user-ride-detail-row {
+  border-bottom-color: #fecaca;
+}
+
+.user-ride-cancellation-panel .user-ride-detail-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.user-ride-modal-error,
+.user-ride-modal-warning {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.user-ride-modal-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.user-ride-modal-warning {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.user-ride-modal-footer {
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .user-ride-detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriversList, transformDriverData, exportDriversToCSV, matchesDriverFilters } from '../../services/driverService';
+import { fetchDriversList, transformDriverData, exportDriversToPDF, matchesDriverFilters } from '../../services/driverService';
+import { detectNewlyOnlineDrivers } from '../../utils/driverOnlineState';
 import UserAvatar from '../../components/common/UserAvatar';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import LanguageToggle from '../../components/common/LanguageToggle';
@@ -24,7 +25,9 @@ const StatusBadge = ({ status }) => {
   const getStatusClass = (status) => {
     if (!status) return 'driver-status-offline';
     switch (status.toLowerCase()) {
-      case 'active': return 'driver-status-active';
+      case 'active':
+      case 'online':
+        return 'driver-status-active';
       case 'offline': return 'driver-status-offline';
       case 'suspended': return 'driver-status-suspended';
       default: return 'driver-status-offline';
@@ -54,32 +57,37 @@ export default function DriverManagementView() {
   const [ratingFilter, setRatingFilter] = useState('Any Rating');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedDrivers, setSelectedDrivers] = useState([]);
   
   // Export state
   const [isExporting, setIsExporting] = useState(false);
   const loadRequestIdRef = useRef(0);
+  const pollRequestIdRef = useRef(0);
+  const driverStatusMapRef = useRef(new Map());
+  const pollFiltersRef = useRef({});
+  const isLoadingRef = useRef(false);
+
+  isLoadingRef.current = isLoading;
+  pollFiltersRef.current = {
+    searchTerm,
+    statusFilter,
+    ratingFilter,
+    currentPage,
+    startDate,
+    endDate,
+  };
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   // Fetch drivers from API
-  const loadDrivers = useCallback(async (search = '', status = '', rating = '', page = 1, start = '', end = '') => {
+  const loadDrivers = useCallback(async (search = '', status = '', rating = '', page = 1, start = '', end = '', { silent = false } = {}) => {
     const requestId = ++loadRequestIdRef.current;
 
-    console.log('🔄 LOADING DRIVERS:', {
-      '🔍 Search Term': search,
-      '📊 Status Filter': status,
-      '⭐ Rating Filter': rating,
-      '📅 Start Date': start,
-      '📅 End Date': end,
-      '📄 Page': page,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-    
-    setIsLoading(true);
-    setError(null);
+    if (!silent) {
+      setIsLoading(true);
+      setError(null);
+    }
 
     try {
       const result = await fetchDriversList(search, status, rating, page, limit, start, end);
@@ -88,51 +96,41 @@ export default function DriverManagementView() {
         return;
       }
 
-      console.log('📡 API RESULT RECEIVED:', {
-        '✅ Success': result.success,
-        '📊 Has Data': !!result.data,
-        '📝 Error': result.error,
-        '🔍 Full Result': result,
-        '🔍 Result.data.drivers': result.data?.drivers,
-        '🔍 Result.data.drivers length': result.data?.drivers?.length,
-        '🔍 Is result.data.drivers array?': Array.isArray(result.data?.drivers)
-      });
+      if (!silent) {
+        console.log('📡 API RESULT RECEIVED:', {
+          '✅ Success': result.success,
+          '📊 Has Data': !!result.data,
+          '📝 Error': result.error,
+        });
+      }
 
       if (result.success && result.data) {
-        // Ensure drivers is an array before mapping
         const driversArray = Array.isArray(result.data.drivers) ? result.data.drivers : [];
-        
-        // Transform API data to UI format
         const transformedDrivers = driversArray.map(transformDriverData);
-        
+
         setDrivers(transformedDrivers);
         setTotalPages(result.data.totalPages || 1);
         setTotalCount(result.data.totalCount || 0);
         setCurrentPage(result.data.currentPage || page);
-        
-        console.log('✅ DRIVERS LOADED SUCCESSFULLY:', {
-          '📊 Transformed Count': transformedDrivers.length,
-          '📝 Total Count': result.data.totalCount,
-          '📄 Current Page': result.data.currentPage,
-          '📋 Total Pages': result.data.totalPages,
-          '🔍 Raw Drivers Array': driversArray,
-          '📋 Full Result Data': result.data,
-          '⚙️ Transformed Drivers': transformedDrivers,
-          '🎯 First Transformed Driver': transformedDrivers[0] || 'No drivers'
+
+        detectNewlyOnlineDrivers(transformedDrivers);
+
+        transformedDrivers.forEach((driver) => {
+          driverStatusMapRef.current.set(String(driver.id), driver.status);
         });
-      } else {
+      } else if (!silent) {
         setError(result.error || 'Failed to load drivers');
-        console.error('❌ Failed to load drivers:', result.error);
       }
     } catch (error) {
       if (requestId !== loadRequestIdRef.current) {
         return;
       }
 
-      setError(error.message || 'An unexpected error occurred');
-      console.error('❌ Load drivers error:', error);
+      if (!silent) {
+        setError(error.message || 'An unexpected error occurred');
+      }
     } finally {
-      if (requestId === loadRequestIdRef.current) {
+      if (requestId === loadRequestIdRef.current && !silent) {
         setIsLoading(false);
       }
     }
@@ -155,6 +153,68 @@ export default function DriverManagementView() {
 
     return () => clearTimeout(timer);
   }, [searchTerm, statusFilter, ratingFilter, startDate, endDate, loadDrivers]);
+
+  const pollDriverOnlineStatuses = useCallback(async () => {
+    if (document.hidden || isLoadingRef.current) {
+      return;
+    }
+
+    const {
+      searchTerm: search,
+      statusFilter: status,
+      ratingFilter: rating,
+      currentPage: page,
+      startDate: start,
+      endDate: end,
+    } = pollFiltersRef.current;
+
+    const requestId = ++pollRequestIdRef.current;
+
+    try {
+      const result = await fetchDriversList(search, status, rating, page, limit, start, end);
+      if (requestId !== pollRequestIdRef.current || !result.success || !result.data) {
+        return;
+      }
+
+      const driversArray = Array.isArray(result.data.drivers) ? result.data.drivers : [];
+      const freshDrivers = driversArray.map(transformDriverData);
+      const freshStatusById = new Map(freshDrivers.map((driver) => [driver.id, driver.status]));
+
+      freshDrivers.forEach((driver) => {
+        driverStatusMapRef.current.set(String(driver.id), driver.status);
+      });
+
+      detectNewlyOnlineDrivers(freshDrivers);
+
+      setDrivers((prev) => {
+        if (!prev.length) {
+          return prev;
+        }
+
+        let changed = false;
+        const next = prev.map((driver) => {
+          const freshStatus = freshStatusById.get(driver.id);
+          if (!freshStatus || freshStatus === driver.status) {
+            return driver;
+          }
+          changed = true;
+          return { ...driver, status: freshStatus };
+        });
+
+        return changed ? next : prev;
+      });
+    } catch {
+      // Ignore background poll errors
+    }
+  }, [limit]);
+
+  useEffect(() => {
+    const intervalId = setInterval(pollDriverOnlineStatuses, 2000);
+    return () => {
+      pollRequestIdRef.current += 1;
+      clearInterval(intervalId);
+    };
+  }, [pollDriverOnlineStatuses]);
 
   // Fallback: Initialize with empty array if no drivers loaded after 5 seconds
   useEffect(() => {
@@ -214,24 +274,6 @@ export default function DriverManagementView() {
     }
   };
 
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedDrivers(filteredDrivers.map(driver => driver.id));
-    } else {
-      setSelectedDrivers([]);
-    }
-  };
-
-  const handleSelectDriver = (driverId) => {
-    setSelectedDrivers(prev => {
-      if (prev.includes(driverId)) {
-        return prev.filter(id => id !== driverId);
-      } else {
-        return [...prev, driverId];
-      }
-    });
-  };
-
   const handleClearFilters = () => {
     setSearchTerm('');
     setStatusFilter('All Statuses');
@@ -241,40 +283,18 @@ export default function DriverManagementView() {
     setCurrentPage(1);
   };
 
-  // Handle CSV export
-  const handleExportCSV = async () => {
-    console.log('🔄 EXPORTING DRIVERS TO CSV:', {
-      '📊 Status Filter': statusFilter,
-      '⭐ Rating Filter': ratingFilter,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-
+  // Handle PDF export
+  const handleExportPDF = async () => {
     setIsExporting(true);
 
     try {
-      const result = await exportDriversToCSV(statusFilter, ratingFilter, startDate, endDate);
+      const result = await exportDriversToPDF(statusFilter, ratingFilter, startDate, endDate);
 
-      console.log('📡 EXPORT RESULT:', {
-        '✅ Success': result.success,
-        '📝 Error': result.error,
-        '📄 Filename': result.filename,
-        '📏 Size': result.size
-      });
-
-      if (result.success) {
-        // Show success message (you could add a toast notification here)
-        console.log('✅ CSV export completed successfully!');
-        // Optionally show a toast notification
-        // setToast({ type: 'success', message: `Export completed: ${result.filename}` });
-      } else {
+      if (!result.success) {
         console.error('❌ Export failed:', result.error);
-        // Optionally show error toast
-        // setToast({ type: 'error', message: result.error });
       }
     } catch (error) {
       console.error('❌ Export error:', error);
-      // Optionally show error toast
-      // setToast({ type: 'error', message: error.message });
     } finally {
       setIsExporting(false);
     }
@@ -318,8 +338,15 @@ export default function DriverManagementView() {
     })
   );
 
-  const isInitialLoading = isLoading && drivers.length === 0 && !error;
-  const isSearching = isLoading && drivers.length > 0;
+  const hasActiveFilters = Boolean(
+    searchTerm ||
+    statusFilter !== 'All Statuses' ||
+    ratingFilter !== 'Any Rating' ||
+    startDate ||
+    endDate
+  );
+  const isInitialLoading = isLoading && drivers.length === 0 && !error && !hasActiveFilters;
+  const isSearching = isLoading && !isInitialLoading;
 
   return (
     <div className={`driver-management grid-root ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -409,7 +436,7 @@ export default function DriverManagementView() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
                     <option value="All Statuses">{t('drivers.allStatuses')}</option>
-                    <option value="Active">{t('common.active')}</option>
+                    <option value="Online">{t('common.online')}</option>
                     <option value="Offline">{t('common.offline')}</option>
                     <option value="Suspended">{t('common.suspended')}</option>
                   </select>
@@ -446,49 +473,46 @@ export default function DriverManagementView() {
               <div className="header-actions">
                 <button 
                   className="btn-export" 
-                  onClick={handleExportCSV}
+                  onClick={handleExportPDF}
                   disabled={isExporting}
                 >
                   <span className="material-symbols-outlined">
-                    {isExporting ? 'hourglass_empty' : 'download'}
+                    {isExporting ? 'hourglass_empty' : 'picture_as_pdf'}
                   </span>
-                  {isExporting ? t('drivers.exporting') : t('drivers.exportCSV')}
+                  {isExporting ? t('drivers.exporting') : t('drivers.exportPDF')}
                 </button>
               </div>
             </div>
 
             <div className={`table-container${isSearching ? ' is-searching' : ''}`}>
               {isSearching && (
-                <div className="table-search-overlay" aria-hidden="true">
-                  <LazyLoader variant="inline" size="sm" message="" />
+                <div className="table-search-overlay" role="status" aria-live="polite">
+                  <LazyLoader
+                    variant="content"
+                    lines={0}
+                    message={t('drivers.loadingDrivers')}
+                    className="table-search-loader"
+                  />
                 </div>
               )}
               {isInitialLoading ? (
-                <LazyLoader variant="table" rows={8} columns={8} message={t('drivers.loadingDrivers')} />
+                <LazyLoader variant="table" rows={8} columns={6} message={t('drivers.loadingDrivers')} />
               ) : (
               <table className="drivers-table">
                 <thead>
                   <tr>
-                    <th className="checkbox-col">
-                      <input 
-                        type="checkbox" 
-                        onChange={handleSelectAll}
-                        checked={selectedDrivers.length === filteredDrivers.length && filteredDrivers.length > 0}
-                      />
-                    </th>
                     <th>{t('drivers.driverName')}</th>
                     <th>{t('drivers.vehicle')}</th>
                     <th>{t('common.status')}</th>
                     <th>{t('drivers.rating')}</th>
                     <th>{t('drivers.totalRides')}</th>
                     <th>{t('drivers.earnings')}</th>
-                    <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {error && drivers.length === 0 ? (
+                  {error && drivers.length === 0 && !isSearching ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ef4444' }}>error</span>
                           <div style={{ color: '#ef4444', fontWeight: '500' }}>{t('common.error')}</div>
@@ -510,9 +534,9 @@ export default function DriverManagementView() {
                         </div>
                       </td>
                     </tr>
-                  ) : filteredDrivers.length === 0 ? (
+                  ) : filteredDrivers.length === 0 && !isSearching ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
                           <div style={{ color: '#374151', fontWeight: '500' }}>{t('drivers.noDriversFound')}</div>
@@ -528,13 +552,6 @@ export default function DriverManagementView() {
                   ) : (
                     filteredDrivers.map((driver) => (
                     <tr key={driver.id} className="driver-row" onClick={() => handleDriverClick(driver.id)} style={{ cursor: 'pointer' }}>
-                      <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
-                        <input 
-                          type="checkbox"
-                          checked={selectedDrivers.includes(driver.id)}
-                          onChange={() => handleSelectDriver(driver.id)}
-                        />
-                      </td>
                       <td className="driver-cell">
                         <div className="driver-info-cell">
                           <UserAvatar
@@ -558,11 +575,6 @@ export default function DriverManagementView() {
                       </td>
                       <td className="rides-cell">{formatNumber(driver.totalRides)}</td>
                       <td className="earnings-cell">{formatCurrency(driver.earnings)}</td>
-                      <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                        <button className="action-menu-btn" aria-label="Actions">
-                          <span className="material-symbols-outlined">more_vert</span>
-                        </button>
-                      </td>
                     </tr>
                     ))
                   )}

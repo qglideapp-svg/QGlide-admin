@@ -4,6 +4,71 @@ import { authenticatedFetch } from './apiClient';
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
+// Riders use is_active only (no is_suspended). API response label is "inactive";
+// the list filter param for is_active=false is "suspended", not "inactive".
+export const mapUserStatusFilterToApiValue = (statusFilter = '') => {
+  if (!statusFilter || statusFilter === 'All' || statusFilter.toLowerCase() === 'all') {
+    return '';
+  }
+
+  const normalized = statusFilter.toLowerCase();
+
+  if (normalized === 'inactive') {
+    return 'suspended';
+  }
+
+  return normalized;
+};
+
+export const normalizeUserStatus = (apiUser) => {
+  if (!apiUser || typeof apiUser !== 'object') {
+    return 'Active';
+  }
+
+  if (apiUser.is_active === false) {
+    return 'Inactive';
+  }
+
+  if (apiUser.is_active === true) {
+    return 'Active';
+  }
+
+  const rawStatus = String(
+    apiUser.status || apiUser.account_status || apiUser.user_status || ''
+  ).trim().toLowerCase();
+
+  if (rawStatus === 'inactive' || rawStatus === 'deactivated') {
+    return 'Inactive';
+  }
+
+  if (rawStatus === 'active') {
+    return 'Active';
+  }
+
+  return 'Active';
+};
+
+export const parseLastTopUp = (value) => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const amount = Number(value.amount);
+  if (Number.isNaN(amount)) {
+    return null;
+  }
+
+  return {
+    id: value.id || '',
+    amount,
+    currency: value.currency || 'QAR',
+    status: value.status || '',
+    createdAt: value.created_at || null,
+    transactionRef: value.transaction_ref || '',
+    description: value.description || '',
+  };
+};
+
 // Fetch users list with filters
 export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingFilter = '', page = 1, limit = 20, startDate = '', endDate = '') => {
   try {
@@ -15,7 +80,10 @@ export const fetchUsersList = async (searchTerm = '', statusFilter = '', ratingF
     }
     
     if (statusFilter && statusFilter !== 'All' && statusFilter.toLowerCase() !== 'all') {
-      params.set('status', statusFilter.toLowerCase());
+      const apiStatus = mapUserStatusFilterToApiValue(statusFilter);
+      if (apiStatus) {
+        params.set('status', apiStatus);
+      }
     }
     
     if (ratingFilter && ratingFilter !== 'Any' && ratingFilter !== 'Any Rating') {
@@ -439,14 +507,18 @@ export const createUser = async (userData) => {
   }
 };
 
-// Export users to CSV
-export const exportUsersToCSV = async (status = '', startDate = '', endDate = '') => {
+// Export users (riders) to PDF
+export const exportUsersToPDF = async (status = '', startDate = '', endDate = '') => {
   try {
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const params = new URLSearchParams();
+    params.set('format', 'pdf');
 
     if (status && status !== 'All' && status.toLowerCase() !== 'all') {
-      params.set('status', status.toLowerCase());
+      const apiStatus = mapUserStatusFilterToApiValue(status);
+      if (apiStatus) {
+        params.set('status', apiStatus);
+      }
     }
 
     if (startDate) {
@@ -457,32 +529,13 @@ export const exportUsersToCSV = async (status = '', startDate = '', endDate = ''
       params.set('end_date', endDate);
     }
 
-    const queryString = params.toString();
-    const url = `${API_BASE_URL}/admin-users-export-csv${queryString ? `?${queryString}` : ''}`;
-
-    console.log('🚀 EXPORT USERS CSV REQUEST:', {
-      '🔗 URL': url,
-      '📊 Status Filter': status,
-      '📅 Start Date': startDate,
-      '📅 End Date': endDate,
-      '⏰ Timestamp': new Date().toISOString()
-    });
+    const url = `${API_BASE_URL}/admin-users-export-csv?${params.toString()}`;
 
     const response = await authenticatedFetch(url, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'apikey': anonKey,
       },
-    });
-
-    console.log('📡 EXPORT CSV HTTP RESPONSE:', {
-      '✅ Status': response.status,
-      '📝 Status Text': response.statusText,
-      '🔗 URL': response.url,
-      '✅ OK': response.ok,
-      '📋 Content Type': response.headers.get('content-type'),
-      '📏 Content Length': response.headers.get('content-length')
     });
 
     if (!response.ok) {
@@ -490,51 +543,41 @@ export const exportUsersToCSV = async (status = '', startDate = '', endDate = ''
       throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // Check if response is CSV content
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('text/csv')) {
-      const csvContent = await response.text();
-      
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const filename = `users_export_${timestamp}.csv`;
-      
-      // Create and trigger download
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url_blob = window.URL.createObjectURL(blob);
+    const contentType = response.headers.get('content-type') || '';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const disposition = response.headers.get('content-disposition') || '';
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+    const filename = filenameMatch?.[1] || `riders_export_${timestamp}.pdf`;
+
+    if (
+      contentType.includes('application/pdf') ||
+      contentType.includes('octet-stream') ||
+      filename.toLowerCase().endsWith('.pdf')
+    ) {
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url_blob;
+      link.href = blobUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url_blob);
-      
-      console.log('✅ CSV EXPORT SUCCESSFUL:', {
-        '📄 Filename': filename,
-        '📏 Content Length': csvContent.length,
-        '📊 Export Filter': { status }
-      });
-      
-      return { success: true, filename, size: csvContent.length };
-    } else {
-      // If not CSV, try to parse as JSON for error messages
-      const data = await response.json();
-      console.log('📡 EXPORT RESPONSE (JSON):', JSON.stringify(data, null, 2));
-      
-      return { success: true, data };
+      window.URL.revokeObjectURL(blobUrl);
+
+      return { success: true, filename, size: blob.size };
     }
+
+    const data = await response.json();
+    return {
+      success: false,
+      error: data.error || 'Unexpected export response. PDF format may not be supported yet.',
+    };
   } catch (error) {
-    console.error('❌ EXPORT CSV ERROR:', {
-      '🚨 Error Message': error.message,
-      '🔍 Error Type': error.constructor.name,
-      '📝 Error Stack': error.stack,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-    
-    return { 
-      success: false, 
-      error: error.message || 'Failed to export users to CSV' 
+    console.error('❌ EXPORT PDF ERROR:', error);
+
+    return {
+      success: false,
+      error: error.message || 'Failed to export users to PDF',
     };
   }
 };
@@ -719,7 +762,8 @@ export const transformUserData = (apiUser) => {
     totalRides: totalRidesValue,
     lastRide: lastRideValue,
     rating: getFloat(apiUser.rating || apiUser.average_rating || apiUser.avg_rating || apiUser.averageRating, 0),
-    status: getString(apiUser.status, 'Active')
+    status: normalizeUserStatus(apiUser),
+    lastTopUp: parseLastTopUp(apiUser.last_top_up || apiUser.lastTopUp),
   };
 
   // Log transformation for debugging

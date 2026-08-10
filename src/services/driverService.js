@@ -173,6 +173,35 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '', ratin
   }
 };
 
+export const fetchAllDriversForMonitoring = async (pageLimit = 200) => {
+  const allDrivers = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const result = await fetchDriversList('', 'All Statuses', 'Any Rating', page, pageLimit);
+
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        error: result.error || 'Failed to fetch drivers for monitoring',
+        drivers: allDrivers,
+      };
+    }
+
+    const driversArray = Array.isArray(result.data.drivers) ? result.data.drivers : [];
+    allDrivers.push(...driversArray);
+
+    totalPages = result.data.totalPages || 1;
+    page += 1;
+  }
+
+  return {
+    success: true,
+    drivers: allDrivers,
+  };
+};
+
 // Fetch driver details by ID
 export const fetchDriverDetails = async (driverId) => {
   try {
@@ -586,80 +615,115 @@ export const updateDriver = async (driverId, updateData) => {
   }
 };
 
-// Delete driver by ID with reason
-export const deleteDriver = async (driverId, reason) => {
+export const parseDriverBalance = (apiDriver) => {
+  if (!apiDriver || typeof apiDriver !== 'object') {
+    return 0;
+  }
+
+  const profile = apiDriver.driver_profile || {};
+  const rawBalance =
+    apiDriver.wallet_balance ??
+    apiDriver.balance ??
+    apiDriver.available_balance ??
+    profile.wallet_balance ??
+    profile.balance ??
+    apiDriver.earnings?.balance ??
+    apiDriver.earnings?.wallet_balance ??
+    0;
+
+  const parsed = Number(rawBalance);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+export const updateDriverBalance = async (driverId, balance, reason = '') => {
   try {
-    const url = `${API_BASE_URL}/admin-delete-driver`;
-    
-    console.log('🚀 DELETE DRIVER REQUEST:', {
-      '🔗 URL': url,
-      '🆔 Driver ID': driverId,
-      '📝 Reason': reason,
-      '⏰ Timestamp': new Date().toISOString()
-    });
+    const url = `${API_BASE_URL}/admin-update-driver-balance`;
 
     const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         driver_id: driverId,
-        reason: reason
-      })
-    });
-
-    console.log('📡 DELETE DRIVER HTTP RESPONSE:', {
-      '✅ Status': response.status,
-      '📝 Status Text': response.statusText,
-      '🔗 URL': response.url,
-      '✅ OK': response.ok
+        balance: Number(balance),
+        reason: reason.trim(),
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
-    
-    console.log('📡 DELETE DRIVER RESPONSE:', JSON.stringify(data, null, 2));
-    
     return { success: true, data };
   } catch (error) {
-    console.error('❌ DELETE DRIVER ERROR:', {
-      '🚨 Error Message': error.message,
-      '🔍 Error Type': error.constructor.name,
-      '📝 Error Stack': error.stack,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-    
-    return { 
-      success: false, 
-      error: error.message || 'Failed to delete driver' 
+    console.error('❌ UPDATE DRIVER BALANCE ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to update driver balance',
     };
   }
 };
 
-// Export drivers to CSV
-export const exportDriversToCSV = async (status = '', minRating = '', startDate = '', endDate = '') => {
+// Delete driver by ID with optional reason
+export const deleteDriver = async (driverId, reason = '') => {
   try {
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
-    
-    // Build URL with required parameters
+    const url = `${API_BASE_URL}/admin-delete-driver`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+      },
+      body: JSON.stringify({
+        driver_id: driverId,
+        reason: reason || '',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (data.success === false) {
+      throw new Error(data.error || data.message || 'Failed to delete driver');
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ DELETE DRIVER ERROR:', error);
+
+    return {
+      success: false,
+      error: error.message || 'Failed to delete driver',
+    };
+  }
+};
+
+// Export drivers to PDF
+export const exportDriversToPDF = async (status = '', minRating = '', startDate = '', endDate = '') => {
+  try {
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+
     const params = [];
-    params.push('type=drivers'); // Required parameter
-    params.push('format=csv'); // Required for CSV export
-    
+    params.push('type=drivers');
+    params.push('format=pdf');
+
     if (status && status !== 'All Statuses' && status.toLowerCase() !== 'all') {
       const apiStatus = mapStatusFilterToApiValue(status);
       if (apiStatus) {
         params.push(`status=${encodeURIComponent(apiStatus)}`);
       }
     }
-    
+
     if (minRating && minRating !== 'Any Rating') {
-      // Extract numeric value from rating filter (e.g., "4.5+" -> "4.5")
       const ratingValue = minRating.replace('+', '');
       params.push(`min_rating=${encodeURIComponent(ratingValue)}`);
     }
@@ -671,17 +735,9 @@ export const exportDriversToCSV = async (status = '', minRating = '', startDate 
     if (endDate) {
       params.push(`end_date=${encodeURIComponent(endDate)}`);
     }
-    
+
     const queryString = params.join('&');
     const url = `${API_BASE_URL}/admin-drivers-list?${queryString}`;
-
-    console.log('🚀 EXPORT DRIVERS CSV REQUEST:', {
-      '🔗 URL': url,
-      '📊 Status Filter': status,
-      '⭐ Min Rating': minRating,
-      '🔑 Has Anon Key': !!anonKey,
-      '⏰ Timestamp': new Date().toISOString()
-    });
 
     const response = await authenticatedFetch(url, {
       method: 'GET',
@@ -691,65 +747,46 @@ export const exportDriversToCSV = async (status = '', minRating = '', startDate 
       },
     });
 
-    console.log('📡 EXPORT CSV HTTP RESPONSE:', {
-      '✅ Status': response.status,
-      '📝 Status Text': response.statusText,
-      '🔗 URL': response.url,
-      '✅ OK': response.ok,
-      '📋 Content Type': response.headers.get('content-type'),
-      '📏 Content Length': response.headers.get('content-length')
-    });
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // Check if response is CSV content
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('text/csv')) {
-      const csvContent = await response.text();
-      
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const filename = `drivers_export_${timestamp}.csv`;
-      
-      // Create and trigger download
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url_blob = window.URL.createObjectURL(blob);
+    const contentType = response.headers.get('content-type') || '';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const disposition = response.headers.get('content-disposition') || '';
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+    const filename = filenameMatch?.[1] || `drivers_export_${timestamp}.pdf`;
+
+    if (
+      contentType.includes('application/pdf') ||
+      contentType.includes('octet-stream') ||
+      filename.toLowerCase().endsWith('.pdf')
+    ) {
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url_blob;
+      link.href = blobUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url_blob);
-      
-      console.log('✅ CSV EXPORT SUCCESSFUL:', {
-        '📄 Filename': filename,
-        '📏 Content Length': csvContent.length,
-        '📊 Export Filters': { status, minRating }
-      });
-      
-      return { success: true, filename, size: csvContent.length };
-    } else {
-      // If not CSV, try to parse as JSON for error messages
-      const data = await response.json();
-      console.log('📡 EXPORT RESPONSE (JSON):', JSON.stringify(data, null, 2));
-      
-      return { success: true, data };
+      window.URL.revokeObjectURL(blobUrl);
+
+      return { success: true, filename, size: blob.size };
     }
+
+    const data = await response.json();
+    return {
+      success: false,
+      error: data.error || 'Unexpected export response. PDF format may not be supported yet.',
+    };
   } catch (error) {
-    console.error('❌ EXPORT CSV ERROR:', {
-      '🚨 Error Message': error.message,
-      '🔍 Error Type': error.constructor.name,
-      '📝 Error Stack': error.stack,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-    
-    return { 
-      success: false, 
-      error: error.message || 'Failed to export drivers to CSV' 
+    console.error('❌ EXPORT PDF ERROR:', error);
+
+    return {
+      success: false,
+      error: error.message || 'Failed to export drivers to PDF',
     };
   }
 };
@@ -866,6 +903,75 @@ export const getDriverInitials = (name = '') => {
   return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
 };
 
+export const isDriverOnline = (apiDriver) => {
+  if (!apiDriver) {
+    return false;
+  }
+
+  const driverProfile = apiDriver.driver_profile || {};
+
+  if (
+    apiDriver.is_suspended === true ||
+    driverProfile.is_suspended === true ||
+    String(apiDriver.status || '').toLowerCase() === 'suspended' ||
+    String(driverProfile.status || '').toLowerCase() === 'suspended'
+  ) {
+    return false;
+  }
+
+  if (driverProfile.is_online === true || apiDriver.is_online === true) {
+    return true;
+  }
+
+  const rawStatus = String(
+    apiDriver.status || apiDriver.driver_status || driverProfile.status || ''
+  ).toLowerCase();
+
+  if (rawStatus === 'online' || rawStatus === 'active') {
+    return true;
+  }
+
+  if (rawStatus === 'offline') {
+    return false;
+  }
+
+  return false;
+};
+
+export const resolveDriverProfileStatus = (apiDriver) => {
+  const driverProfile = apiDriver?.driver_profile || {};
+
+  if (apiDriver.status?.toLowerCase() === 'suspended' ||
+      apiDriver.driver_profile?.status?.toLowerCase() === 'suspended' ||
+      apiDriver.is_suspended === true ||
+      apiDriver.driver_profile?.is_suspended === true) {
+    return 'Suspended';
+  }
+
+  if (
+    apiDriver.is_verified === false ||
+    driverProfile.is_approved === false ||
+    (driverProfile.background_check_status &&
+      driverProfile.background_check_status !== 'approved')
+  ) {
+    return 'Pending Verification';
+  }
+
+  if (apiDriver.is_active === false) {
+    return 'Offline';
+  }
+
+  if (driverProfile.is_online === true || apiDriver.is_online === true) {
+    return 'Online';
+  }
+
+  if (apiDriver.is_verified && driverProfile.is_approved !== false) {
+    return 'Offline';
+  }
+
+  return 'Offline';
+};
+
 export const normalizeDriverStatus = (apiDriver) => {
   const rawStatus = String(apiDriver.status || apiDriver.driver_status || '').toLowerCase();
 
@@ -884,15 +990,15 @@ export const normalizeDriverStatus = (apiDriver) => {
   }
 
   if (rawStatus === 'active' || rawStatus === 'online') {
-    return 'Active';
+    return 'Online';
   }
 
   if (rawStatus === 'offline') {
     return 'Offline';
   }
 
-  if (apiDriver.driver_profile?.is_online === true || apiDriver.is_online === true) {
-    return 'Active';
+  if (isDriverOnline(apiDriver)) {
+    return 'Online';
   }
 
   if (rawStatus) {
@@ -1058,6 +1164,7 @@ export const transformDriverData = (apiDriver) => {
       year: apiDriver.vehicle_year || apiDriver.vehicle?.year || apiDriver.car_year || new Date().getFullYear()
     },
     status: normalizeDriverStatus(apiDriver),
+    isOnline: isDriverOnline(apiDriver),
     rating: parseFloat(apiDriver.rating || apiDriver.average_rating || 0),
     totalRides: parseInt(apiDriver.total_rides || apiDriver.rides_count || 0),
     earnings: parseFloat(apiDriver.total_earnings || apiDriver.earnings || 0),

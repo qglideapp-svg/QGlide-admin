@@ -227,3 +227,11 @@
   height: 20px;
   object-fit: contain;
 }
+
+.grid-root .container {
+  padding: 16px 18px;
+}
+
+.grid-root .main.sidebar-collapsed {
+  margin-left: 64px;
+}
