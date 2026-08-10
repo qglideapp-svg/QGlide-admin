@@ -178,7 +178,6 @@ export default function DriverManagementView() {
 
       const driversArray = Array.isArray(result.data.drivers) ? result.data.drivers : [];
       const freshDrivers = driversArray.map(transformDriverData);
-      const freshStatusById = new Map(freshDrivers.map((driver) => [driver.id, driver.status]));
 
       freshDrivers.forEach((driver) => {
         driverStatusMapRef.current.set(String(driver.id), driver.status);
@@ -191,14 +190,28 @@ export default function DriverManagementView() {
           return prev;
         }
 
+        const freshDriverById = new Map(freshDrivers.map((driver) => [driver.id, driver]));
+
         let changed = false;
         const next = prev.map((driver) => {
-          const freshStatus = freshStatusById.get(driver.id);
-          if (!freshStatus || freshStatus === driver.status) {
+          const freshDriver = freshDriverById.get(driver.id);
+          if (!freshDriver) {
             return driver;
           }
+
+          if (
+            freshDriver.status === driver.status &&
+            freshDriver.isOnline === driver.isOnline
+          ) {
+            return driver;
+          }
+
           changed = true;
-          return { ...driver, status: freshStatus };
+          return {
+            ...driver,
+            status: freshDriver.status,
+            isOnline: freshDriver.isOnline,
+          };
         });
 
         return changed ? next : prev;
@@ -328,13 +341,13 @@ export default function DriverManagementView() {
     navigate(`/driver-profile/${driverId}`);
   };
 
-  // Apply client-side search/rating filters; status and dates are handled by the API
+  // Apply client-side filters; online/offline presence is validated via isOnline
   const filteredDrivers = drivers.filter((driver) =>
     matchesDriverFilters(driver, {
       searchTerm,
       statusFilter,
       ratingFilter,
-      applyStatusFilter: statusFilter === 'All Statuses',
+      applyStatusFilter: true,
     })
   );
 

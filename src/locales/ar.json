@@ -648,6 +648,8 @@
     "reasonRequired": "السبب مطلوب",
     "updatingBalance": "جاري التحديث...",
     "updateBalanceButton": "تحديث الرصيد",
+    "clearDriverDebt": "مسح ديون السائق",
+    "clearDriverDebtHelp": "إعادة تعيين أي ديون مستحقة عند تعيين الرصيد الجديد.",
     "unsuspendDriverButton": "إلغاء تعليق السائق",
     "editDriverProfile": "تعديل ملف السائق",
     "editUser": "تعديل المستخدم",

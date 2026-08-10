@@ -648,6 +648,8 @@
     "reasonRequired": "Reason is required",
     "updatingBalance": "Updating...",
     "updateBalanceButton": "Update Balance",
+    "clearDriverDebt": "Clear driver debt",
+    "clearDriverDebtHelp": "Also reset any outstanding debt when setting the new balance.",
     "unsuspendDriverButton": "Unsuspend Driver",
     "editDriverProfile": "Edit Driver Profile",
     "editUser": "Edit User",

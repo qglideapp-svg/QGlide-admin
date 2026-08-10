@@ -13,12 +13,14 @@ const UpdateDriverBalanceModal = ({
   const { t, formatCurrency } = useLanguage();
   const [balance, setBalance] = useState('');
   const [reason, setReason] = useState('');
+  const [clearDebt, setClearDebt] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (isOpen) {
       setBalance(currentBalance != null ? String(currentBalance) : '');
       setReason('');
+      setClearDebt(false);
       setErrors({});
     }
   }, [isOpen, currentBalance]);
@@ -47,6 +49,7 @@ const UpdateDriverBalanceModal = ({
     onConfirm({
       balance: parsedBalance,
       reason: reason.trim(),
+      clearDebt,
     });
   };
 
@@ -88,6 +91,19 @@ const UpdateDriverBalanceModal = ({
                 required
               />
               {errors.balance && <span className="error-message">{errors.balance}</span>}
+            </div>
+
+            <div className="form-group checkbox-group">
+              <label className="checkbox-label" htmlFor="clearDebt">
+                <input
+                  type="checkbox"
+                  id="clearDebt"
+                  checked={clearDebt}
+                  onChange={(e) => setClearDebt(e.target.checked)}
+                />
+                <span>{t('modals.clearDriverDebt')}</span>
+              </label>
+              <p className="checkbox-help">{t('modals.clearDriverDebtHelp')}</p>
             </div>
 
             <div className="form-group">

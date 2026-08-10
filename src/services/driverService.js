@@ -9,14 +9,33 @@ export const mapStatusFilterToApiValue = (statusFilter = '') => {
     return '';
   }
 
-  return statusFilter.toLowerCase();
+  const normalized = statusFilter.toLowerCase();
+  if (normalized === 'online' || normalized === 'offline') {
+    return '';
+  }
+
+  return normalized;
 };
 
-export const driverMatchesStatusFilter = (driverStatus = '', statusFilter = 'All Statuses') => {
+export const driverMatchesStatusFilter = (driver, statusFilter = 'All Statuses') => {
   if (statusFilter === 'All Statuses') return true;
 
-  const normalizedDriverStatus = String(driverStatus).toLowerCase();
+  const driverStatus = typeof driver === 'string' ? driver : driver?.status;
+  const isOnline = typeof driver === 'object' ? Boolean(driver?.isOnline) : false;
   const normalizedFilter = statusFilter.toLowerCase();
+  const normalizedDriverStatus = String(driverStatus || '').toLowerCase();
+
+  if (normalizedFilter === 'online') {
+    return isOnline;
+  }
+
+  if (normalizedFilter === 'offline') {
+    return !isOnline && normalizedDriverStatus !== 'suspended';
+  }
+
+  if (normalizedFilter === 'suspended') {
+    return normalizedDriverStatus === 'suspended';
+  }
 
   return normalizedDriverStatus === normalizedFilter;
 };
@@ -31,9 +50,16 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '', ratin
       params.set('search', searchTerm.trim());
     }
     
-    const apiStatus = mapStatusFilterToApiValue(statusFilter);
-    if (apiStatus) {
-      params.set('status', apiStatus);
+    const normalizedStatusFilter = statusFilter?.toLowerCase?.() || '';
+    if (normalizedStatusFilter === 'online') {
+      params.set('is_online', 'true');
+    } else if (normalizedStatusFilter === 'offline') {
+      params.set('is_online', 'false');
+    } else {
+      const apiStatus = mapStatusFilterToApiValue(statusFilter);
+      if (apiStatus) {
+        params.set('status', apiStatus);
+      }
     }
 
     if (ratingFilter && ratingFilter !== 'Any Rating' && ratingFilter !== 'Any') {
@@ -635,18 +661,25 @@ export const parseDriverBalance = (apiDriver) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
-export const updateDriverBalance = async (driverId, balance, reason = '') => {
+export const updateDriverBalance = async (
+  driverId,
+  { balance, reason = '', operation = 'set', clearDebt = false } = {}
+) => {
   try {
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const url = `${API_BASE_URL}/admin-update-driver-balance`;
 
     const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'apikey': anonKey,
       },
       body: JSON.stringify({
         driver_id: driverId,
+        operation,
         balance: Number(balance),
+        clear_debt: Boolean(clearDebt),
         reason: reason.trim(),
       }),
     });
@@ -657,7 +690,13 @@ export const updateDriverBalance = async (driverId, balance, reason = '') => {
     }
 
     const data = await response.json();
-    return { success: true, data };
+    const updatedBalance = parseDriverBalance(data?.data?.driver ?? data?.data ?? data);
+
+    return {
+      success: true,
+      data,
+      balance: updatedBalance ?? Number(balance),
+    };
   } catch (error) {
     console.error('❌ UPDATE DRIVER BALANCE ERROR:', error);
     return {
@@ -716,7 +755,12 @@ export const exportDriversToPDF = async (status = '', minRating = '', startDate 
     params.push('type=drivers');
     params.push('format=pdf');
 
-    if (status && status !== 'All Statuses' && status.toLowerCase() !== 'all') {
+    const normalizedStatus = status?.toLowerCase?.() || '';
+    if (normalizedStatus === 'online') {
+      params.push('is_online=true');
+    } else if (normalizedStatus === 'offline') {
+      params.push('is_online=false');
+    } else if (status && status !== 'All Statuses' && normalizedStatus !== 'all') {
       const apiStatus = mapStatusFilterToApiValue(status);
       if (apiStatus) {
         params.push(`status=${encodeURIComponent(apiStatus)}`);
@@ -927,12 +971,8 @@ export const isDriverOnline = (apiDriver) => {
     apiDriver.status || apiDriver.driver_status || driverProfile.status || ''
   ).toLowerCase();
 
-  if (rawStatus === 'online' || rawStatus === 'active') {
+  if (rawStatus === 'online') {
     return true;
-  }
-
-  if (rawStatus === 'offline') {
-    return false;
   }
 
   return false;
@@ -973,39 +1013,13 @@ export const resolveDriverProfileStatus = (apiDriver) => {
 };
 
 export const normalizeDriverStatus = (apiDriver) => {
-  const rawStatus = String(apiDriver.status || apiDriver.driver_status || '').toLowerCase();
+  const profileStatus = resolveDriverProfileStatus(apiDriver);
 
-  if (rawStatus === 'suspended' ||
-      apiDriver.driver_profile?.status?.toLowerCase() === 'suspended' ||
-      apiDriver.is_suspended === true ||
-      apiDriver.driver_profile?.is_suspended === true) {
-    return 'Suspended';
-  }
-
-  if (rawStatus === 'pending' ||
-      rawStatus === 'awaiting verification' ||
-      apiDriver.driver_profile?.status?.toLowerCase() === 'pending' ||
-      apiDriver.driver_profile?.status?.toLowerCase() === 'awaiting verification') {
+  if (profileStatus === 'Pending Verification') {
     return 'Pending';
   }
 
-  if (rawStatus === 'active' || rawStatus === 'online') {
-    return 'Online';
-  }
-
-  if (rawStatus === 'offline') {
-    return 'Offline';
-  }
-
-  if (isDriverOnline(apiDriver)) {
-    return 'Online';
-  }
-
-  if (rawStatus) {
-    return rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
-  }
-
-  return 'Offline';
+  return profileStatus;
 };
 
 export const matchesDriverFilters = (driver, { searchTerm = '', statusFilter = 'All Statuses', ratingFilter = 'Any Rating', applyStatusFilter = true } = {}) => {
@@ -1014,7 +1028,7 @@ export const matchesDriverFilters = (driver, { searchTerm = '', statusFilter = '
     driver.name.toLowerCase().includes(search) ||
     (driver.phone && driver.phone.toLowerCase().includes(search));
 
-  const matchesStatus = !applyStatusFilter || driverMatchesStatusFilter(driver.status, statusFilter);
+  const matchesStatus = !applyStatusFilter || driverMatchesStatusFilter(driver, statusFilter);
 
   const matchesRating = ratingFilter === 'Any Rating' ||
     (ratingFilter === '4.5+' && driver.rating >= 4.5) ||

@@ -512,7 +512,7 @@ export default function DriverProfileView() {
     setShowBalanceModal(true);
   };
 
-  const handleBalanceConfirm = async ({ balance, reason }) => {
+  const handleBalanceConfirm = async ({ balance, reason, clearDebt }) => {
     if (!driverId) {
       setToast({
         type: 'error',
@@ -524,10 +524,15 @@ export default function DriverProfileView() {
     setIsUpdatingBalance(true);
 
     try {
-      const result = await updateDriverBalance(driverId, balance, reason);
+      const result = await updateDriverBalance(driverId, {
+        balance,
+        reason,
+        operation: 'set',
+        clearDebt,
+      });
 
       if (result.success) {
-        setDriverData((prev) => (prev ? { ...prev, walletBalance: balance } : prev));
+        setDriverData((prev) => (prev ? { ...prev, walletBalance: result.balance ?? balance } : prev));
         setShowBalanceModal(false);
         setToast({
           type: 'success',

@@ -83,3 +83,29 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.update-driver-balance-modal .checkbox-group {
+  margin-bottom: 16px;
+}
+
+.update-driver-balance-modal .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.update-driver-balance-modal .checkbox-label input {
+  width: auto;
+  margin: 0;
+}
+
+.update-driver-balance-modal .checkbox-help {
+  margin: 0;
+  padding-left: 28px;
+  font-size: 12px;
+  color: #6B7280;
+  line-height: 1.4;
+}
