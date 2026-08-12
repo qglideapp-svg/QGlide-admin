@@ -1,0 +1,37 @@
+@import './UpdateDriverBalanceModal.css';
+
+.update-driver-main-wallet-modal .modal-header h2 {
+  color: #059669;
+}
+
+.update-driver-main-wallet-modal select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: white;
+}
+
+.btn-save-main-wallet {
+  padding: 10px 20px;
+  background: #059669;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-save-main-wallet:hover:not(:disabled) {
+  background: #047857;
+}
+
+.btn-save-main-wallet:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

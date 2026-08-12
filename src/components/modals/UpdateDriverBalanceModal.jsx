@@ -59,7 +59,7 @@ const UpdateDriverBalanceModal = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content update-driver-balance-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{t('modals.updateDriverBalance')}</h2>
+          <h2>{t('modals.updateCommissionBalance')}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -67,7 +67,7 @@ const UpdateDriverBalanceModal = ({
             <p>{t('modals.updatingBalanceFor')} <strong>{driverName}</strong></p>
 
             <div className="current-balance-info">
-              <span className="current-balance-label">{t('drivers.currentBalance')}</span>
+              <span className="current-balance-label">{t('drivers.commissionWallet')}</span>
               <span className="current-balance-value">{formatCurrency(currentBalance || 0)}</span>
             </div>
 
@@ -130,7 +130,7 @@ const UpdateDriverBalanceModal = ({
               {t('common.cancel')}
             </button>
             <button type="submit" className="btn-save-balance" disabled={isLoading}>
-              {isLoading ? t('modals.updatingBalance') : t('modals.updateBalanceButton')}
+              {isLoading ? t('modals.updatingBalance') : t('modals.updateCommissionBalanceButton')}
             </button>
           </div>
         </form>

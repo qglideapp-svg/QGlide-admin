@@ -473,6 +473,14 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.driver-wallet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 180px;
 }
 
 .driver-wallet-card h3 {
@@ -529,9 +537,9 @@
 .btn-update-balance {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
-  background: #1E40AF;
+  padding: 10px 14px;
   color: white;
   border: none;
   border-radius: 8px;
@@ -539,11 +547,23 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  width: 100%;
   transition: background 0.2s;
 }
 
-.btn-update-balance:hover {
+.btn-update-main {
+  background: #059669;
+}
+
+.btn-update-main:hover {
+  background: #047857;
+}
+
+.btn-update-commission {
+  background: #1E40AF;
+}
+
+.btn-update-commission:hover {
   background: #1E3A8A;
 }
 

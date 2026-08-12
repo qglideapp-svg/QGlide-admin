@@ -943,7 +943,7 @@ export const fetchDriverWalletsForIds = async (driverIds = [], options = {}) => 
   };
 };
 
-export const updateDriverBalance = async (
+export const updateDriverCommissionBalance = async (
   driverId,
   { balance, reason = '', operation = 'set', clearDebt = false } = {}
 ) => {
@@ -955,7 +955,7 @@ export const updateDriverBalance = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': anonKey,
+        apikey: anonKey,
       },
       body: JSON.stringify({
         driver_id: driverId,
@@ -974,7 +974,7 @@ export const updateDriverBalance = async (
     const data = await response.json();
     const walletResult = await fetchDriverWallet(driverId);
     const updatedBalance = walletResult.success
-      ? walletResult.balance
+      ? walletResult.wallet?.commissionBalance
       : parseDriverBalance(data?.data?.driver ?? data?.data ?? data);
 
     return {
@@ -984,10 +984,71 @@ export const updateDriverBalance = async (
       wallet: walletResult.wallet ?? null,
     };
   } catch (error) {
-    console.error('❌ UPDATE DRIVER BALANCE ERROR:', error);
+    console.error('❌ UPDATE DRIVER COMMISSION BALANCE ERROR:', error);
     return {
       success: false,
-      error: error.message || 'Failed to update driver balance',
+      error: error.message || 'Failed to update commission balance',
+    };
+  }
+};
+
+export const updateDriverBalance = updateDriverCommissionBalance;
+
+export const updateDriverMainWallet = async (
+  driverId,
+  { operation = 'credit', amount, reason = '' } = {}
+) => {
+  try {
+    if (!driverId) {
+      throw new Error('Driver ID is required');
+    }
+
+    const normalizedOperation = String(operation || 'credit').toLowerCase();
+    if (!['credit', 'debit'].includes(normalizedOperation)) {
+      throw new Error('Operation must be credit or debit');
+    }
+
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      throw new Error('Amount must be greater than 0');
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const url = `${API_BASE_URL}/admin-update-driver-main-wallet`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+      },
+      body: JSON.stringify({
+        driver_id: driverId,
+        operation: normalizedOperation,
+        amount: parsedAmount,
+        reason: reason.trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const walletResult = await fetchDriverWallet(driverId);
+
+    return {
+      success: true,
+      data,
+      wallet: walletResult.wallet ?? null,
+      balance: walletResult.wallet?.mainWalletBalance ?? null,
+    };
+  } catch (error) {
+    console.error('❌ UPDATE DRIVER MAIN WALLET ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to update main wallet balance',
     };
   }
 };

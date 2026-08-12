@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriverDetails, fetchDriverWallet, approveDriver, suspendDriver, unsuspendDriver, updateDriver, updateDriverBalance, deleteDriver, getDriverReviewsFromPayload, mapDriverRecentRide, mapAcceptanceRate, mapCancellationRate, formatDocumentLabel, resolveDriverProfileStatus, isDriverOnline, parseDriverBalance } from '../../services/driverService';
+import { fetchDriverDetails, fetchDriverWallet, approveDriver, suspendDriver, unsuspendDriver, updateDriver, updateDriverCommissionBalance, updateDriverMainWallet, deleteDriver, getDriverReviewsFromPayload, mapDriverRecentRide, mapAcceptanceRate, mapCancellationRate, formatDocumentLabel, resolveDriverProfileStatus, isDriverOnline, parseDriverBalance } from '../../services/driverService';
+import UpdateDriverMainWalletModal from '../../components/modals/UpdateDriverMainWalletModal';
 import { detectNewlyOnlineDrivers } from '../../utils/driverOnlineState';
 import Toast from '../../components/common/Toast';
 import SuspendDriverModal from '../../components/modals/SuspendDriverModal';
@@ -79,8 +80,10 @@ export default function DriverProfileView() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Balance modal and loading states
-  const [showBalanceModal, setShowBalanceModal] = useState(false);
-  const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
+  const [showCommissionBalanceModal, setShowCommissionBalanceModal] = useState(false);
+  const [showMainWalletModal, setShowMainWalletModal] = useState(false);
+  const [isUpdatingCommissionBalance, setIsUpdatingCommissionBalance] = useState(false);
+  const [isUpdatingMainWallet, setIsUpdatingMainWallet] = useState(false);
   const [driverWallet, setDriverWallet] = useState(null);
 
   // Delete modal and loading states
@@ -521,11 +524,21 @@ export default function DriverProfileView() {
     }
   };
 
-  const handleBalanceClick = () => {
-    setShowBalanceModal(true);
+  const handleCommissionBalanceClick = () => {
+    setShowCommissionBalanceModal(true);
   };
 
-  const handleBalanceConfirm = async ({ balance, reason, clearDebt }) => {
+  const handleMainWalletClick = () => {
+    setShowMainWalletModal(true);
+  };
+
+  const refreshDriverWalletState = (wallet) => {
+    if (!wallet) return;
+    setDriverWallet(wallet);
+    setDriverData((prev) => (prev ? { ...prev, walletBalance: wallet.totalBalance } : prev));
+  };
+
+  const handleCommissionBalanceConfirm = async ({ balance, reason, clearDebt }) => {
     if (!driverId) {
       setToast({
         type: 'error',
@@ -534,10 +547,10 @@ export default function DriverProfileView() {
       return;
     }
 
-    setIsUpdatingBalance(true);
+    setIsUpdatingCommissionBalance(true);
 
     try {
-      const result = await updateDriverBalance(driverId, {
+      const result = await updateDriverCommissionBalance(driverId, {
         balance,
         reason,
         operation: 'set',
@@ -545,14 +558,11 @@ export default function DriverProfileView() {
       });
 
       if (result.success) {
-        if (result.wallet) {
-          setDriverWallet(result.wallet);
-        }
-        setDriverData((prev) => (prev ? { ...prev, walletBalance: result.balance ?? balance } : prev));
-        setShowBalanceModal(false);
+        refreshDriverWalletState(result.wallet);
+        setShowCommissionBalanceModal(false);
         setToast({
           type: 'success',
-          message: t('toast.driverBalanceUpdated'),
+          message: t('toast.driverCommissionBalanceUpdated'),
         });
       } else {
         setToast({
@@ -561,13 +571,55 @@ export default function DriverProfileView() {
         });
       }
     } catch (error) {
-      console.error('❌ Update driver balance error:', error);
+      console.error('❌ Update driver commission balance error:', error);
       setToast({
         type: 'error',
         message: error.message || 'An unexpected error occurred',
       });
     } finally {
-      setIsUpdatingBalance(false);
+      setIsUpdatingCommissionBalance(false);
+    }
+  };
+
+  const handleMainWalletConfirm = async ({ operation, amount, reason }) => {
+    if (!driverId) {
+      setToast({
+        type: 'error',
+        message: 'No driver ID available',
+      });
+      return;
+    }
+
+    setIsUpdatingMainWallet(true);
+
+    try {
+      const result = await updateDriverMainWallet(driverId, {
+        operation,
+        amount,
+        reason,
+      });
+
+      if (result.success) {
+        refreshDriverWalletState(result.wallet);
+        setShowMainWalletModal(false);
+        setToast({
+          type: 'success',
+          message: t('toast.driverMainWalletUpdated'),
+        });
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || t('toast.failedToUpdate'),
+        });
+      }
+    } catch (error) {
+      console.error('❌ Update driver main wallet error:', error);
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred',
+      });
+    } finally {
+      setIsUpdatingMainWallet(false);
     }
   };
 
@@ -1155,10 +1207,24 @@ export default function DriverProfileView() {
                     </div>
                     <div className="driver-wallet-label">{t('drivers.totalBalance')}</div>
                   </div>
-                  <button className="btn-update-balance" onClick={handleBalanceClick}>
-                    <span className="material-symbols-outlined">account_balance_wallet</span>
-                    {t('drivers.updateBalance')}
-                  </button>
+                  <div className="driver-wallet-actions">
+                    <button
+                      type="button"
+                      className="btn-update-balance btn-update-main"
+                      onClick={handleMainWalletClick}
+                    >
+                      <span className="material-symbols-outlined">payments</span>
+                      {t('drivers.updateMainBalance')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-update-balance btn-update-commission"
+                      onClick={handleCommissionBalanceClick}
+                    >
+                      <span className="material-symbols-outlined">percent</span>
+                      {t('drivers.updateCommissionBalance')}
+                    </button>
+                  </div>
                 </div>
 
                 {driverWallet?.found && (
@@ -1245,12 +1311,21 @@ export default function DriverProfileView() {
       
           {/* Update Driver Balance Modal */}
           <UpdateDriverBalanceModal
-            isOpen={showBalanceModal}
-            onClose={() => setShowBalanceModal(false)}
-            onConfirm={handleBalanceConfirm}
+            isOpen={showCommissionBalanceModal}
+            onClose={() => setShowCommissionBalanceModal(false)}
+            onConfirm={handleCommissionBalanceConfirm}
             driverName={driverData?.name || 'Unknown Driver'}
-            currentBalance={driverWallet?.mainWalletBalance ?? driverData?.walletBalance ?? 0}
-            isLoading={isUpdatingBalance}
+            currentBalance={driverWallet?.commissionBalance ?? 0}
+            isLoading={isUpdatingCommissionBalance}
+          />
+
+          <UpdateDriverMainWalletModal
+            isOpen={showMainWalletModal}
+            onClose={() => setShowMainWalletModal(false)}
+            onConfirm={handleMainWalletConfirm}
+            driverName={driverData?.name || 'Unknown Driver'}
+            currentBalance={driverWallet?.mainWalletBalance ?? 0}
+            isLoading={isUpdatingMainWallet}
           />
 
           {/* Edit Driver Modal */}
