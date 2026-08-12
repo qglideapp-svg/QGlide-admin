@@ -18,7 +18,13 @@ const DriversWithoutDocsModal = ({
   const { t } = useLanguage();
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
+  const [selectedDriverIds, setSelectedDriverIds] = useState(() => new Set());
+
   const eligibleCount = totalCount > 0 ? totalCount : drivers.length;
+  const canSelectRecipients = drivers.length > 0;
+  const selectedCount = selectedDriverIds.size;
+  const allVisibleSelected = canSelectRecipients && selectedCount === drivers.length;
+  const someVisibleSelected = selectedCount > 0 && selectedCount < drivers.length;
 
   const defaultSubject = useMemo(
     () => t('dashboard.documentReminderDefaultSubject'),
@@ -34,16 +40,63 @@ const DriversWithoutDocsModal = ({
     if (isOpen) {
       setSubject('');
       setBodyText('');
+      setSelectedDriverIds(new Set(drivers.map((driver) => driver.id).filter(Boolean)));
     }
-  }, [isOpen]);
+  }, [isOpen, drivers]);
 
-  const handleSendAll = () => {
-    if (eligibleCount === 0 || isSending) return;
+  const toggleDriverSelection = (driverId) => {
+    setSelectedDriverIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(driverId)) {
+        next.delete(driverId);
+      } else {
+        next.add(driverId);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedDriverIds(new Set());
+      return;
+    }
+
+    setSelectedDriverIds(new Set(drivers.map((driver) => driver.id).filter(Boolean)));
+  };
+
+  const handleSendReminders = () => {
+    if (isSending) return;
+
+    if (canSelectRecipients) {
+      if (selectedCount === 0) return;
+      onSendReminders({
+        subject: subject.trim() || defaultSubject,
+        bodyText: bodyText.trim() || defaultBodyText,
+        driverIds: Array.from(selectedDriverIds),
+      });
+      return;
+    }
+
+    if (eligibleCount === 0) return;
+
     onSendReminders({
       subject: subject.trim() || defaultSubject,
       bodyText: bodyText.trim() || defaultBodyText,
     });
   };
+
+  const sendButtonLabel = canSelectRecipients
+    ? (isSending
+      ? t('dashboard.sendingDocumentReminders')
+      : t('dashboard.sendReminderToSelected', { count: selectedCount }))
+    : (isSending
+      ? t('dashboard.sendingDocumentReminders')
+      : t('dashboard.sendReminderToAll', { count: eligibleCount }));
+
+  const isSendDisabled = isSending
+    || isLoading
+    || (canSelectRecipients ? selectedCount === 0 : eligibleCount === 0);
 
   if (!isOpen) return null;
 
@@ -84,9 +137,34 @@ const DriversWithoutDocsModal = ({
           ) : (
             <>
               <div className="drivers-without-docs-summary">
-                <span className="summary-count">{eligibleCount}</span>
-                <span>{summaryMessage || t('dashboard.driversMissingDocuments')}</span>
+                <span className="summary-count">
+                  {canSelectRecipients ? selectedCount : eligibleCount}
+                </span>
+                <span>
+                  {canSelectRecipients
+                    ? t('dashboard.selectedDriversForReminder', {
+                      selected: selectedCount,
+                      total: drivers.length,
+                    })
+                    : (summaryMessage || t('dashboard.driversMissingDocuments'))}
+                </span>
               </div>
+
+              {canSelectRecipients && (
+                <div className="drivers-without-docs-selection-actions">
+                  <button
+                    type="button"
+                    className="selection-action-btn"
+                    onClick={handleToggleAllVisible}
+                    disabled={isSending || isLoading}
+                  >
+                    {allVisibleSelected
+                      ? t('dashboard.deselectAllDrivers')
+                      : t('dashboard.selectAllDrivers')}
+                  </button>
+                  <span className="selection-help">{t('dashboard.selectDriversReminderHelp')}</span>
+                </div>
+              )}
 
               <div className="drivers-without-docs-table-wrap">
                 {isLoading ? (
@@ -106,58 +184,89 @@ const DriversWithoutDocsModal = ({
                   <table className="drivers-without-docs-table">
                     <thead>
                       <tr>
+                        <th className="select-column">
+                          <input
+                            type="checkbox"
+                            checked={allVisibleSelected}
+                            ref={(input) => {
+                              if (input) {
+                                input.indeterminate = someVisibleSelected;
+                              }
+                            }}
+                            onChange={handleToggleAllVisible}
+                            disabled={isSending || isLoading}
+                            aria-label={t('dashboard.selectAllDrivers')}
+                          />
+                        </th>
                         <th>{t('drivers.driverName')}</th>
                         <th>{t('dashboard.contact')}</th>
                         <th>{t('dashboard.missingDocuments')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {drivers.map((driver) => (
-                        <tr key={driver.id}>
-                          <td>
-                            <div className="driver-info-cell">
-                              <UserAvatar
-                                src={driver.avatar}
-                                name={driver.name}
-                                className="driver-avatar"
+                      {drivers.map((driver) => {
+                        const isSelected = selectedDriverIds.has(driver.id);
+
+                        return (
+                          <tr
+                            key={driver.id}
+                            className={isSelected ? 'is-selected' : ''}
+                            onClick={() => toggleDriverSelection(driver.id)}
+                          >
+                            <td className="select-column" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleDriverSelection(driver.id)}
+                                disabled={isSending || isLoading}
+                                aria-label={t('dashboard.selectDriverForReminder', { name: driver.name })}
                               />
-                              <div>
-                                <div className="driver-name-text">{driver.name}</div>
-                                {driver.registeredAt && (
-                                  <div className="driver-meta">
-                                    {new Date(driver.registeredAt).toLocaleDateString()}
-                                  </div>
-                                )}
+                            </td>
+                            <td>
+                              <div className="driver-info-cell">
+                                <UserAvatar
+                                  src={driver.avatar}
+                                  name={driver.name}
+                                  className="driver-avatar"
+                                />
+                                <div>
+                                  <div className="driver-name-text">{driver.name}</div>
+                                  {driver.registeredAt && (
+                                    <div className="driver-meta">
+                                      {new Date(driver.registeredAt).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="contact-cell">
-                              {driver.email ? (
-                                <span className="contact-line">
-                                  <span className="material-symbols-outlined">mail</span>
-                                  {driver.email}
-                                </span>
-                              ) : null}
-                              {driver.phone ? (
-                                <span className="contact-line">
-                                  <span className="material-symbols-outlined">call</span>
-                                  {driver.phone}
-                                </span>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td>
-                            <div className="missing-docs-tags">
-                              {(driver.missingDocs?.length ? driver.missingDocs : [t('dashboard.documentsPending')]).map((doc) => (
-                                <span key={`${driver.id}-${doc}`} className="missing-doc-tag">
-                                  {doc}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td>
+                              <div className="contact-cell">
+                                {driver.email ? (
+                                  <span className="contact-line">
+                                    <span className="material-symbols-outlined">mail</span>
+                                    {driver.email}
+                                  </span>
+                                ) : null}
+                                {driver.phone ? (
+                                  <span className="contact-line">
+                                    <span className="material-symbols-outlined">call</span>
+                                    {driver.phone}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </td>
+                            <td>
+                              <div className="missing-docs-tags">
+                                {(driver.missingDocs?.length ? driver.missingDocs : [t('dashboard.documentsPending')]).map((doc) => (
+                                  <span key={`${driver.id}-${doc}`} className="missing-doc-tag">
+                                    {doc}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -174,7 +283,7 @@ const DriversWithoutDocsModal = ({
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder={defaultSubject}
-                    disabled={isSending || isLoading || eligibleCount === 0}
+                    disabled={isSending || isLoading}
                   />
                 </div>
 
@@ -188,7 +297,7 @@ const DriversWithoutDocsModal = ({
                     onChange={(e) => setBodyText(e.target.value)}
                     placeholder={defaultBodyText}
                     rows={6}
-                    disabled={isSending || isLoading || eligibleCount === 0}
+                    disabled={isSending || isLoading}
                   />
                   <p className="message-hint">{t('dashboard.documentReminderMessageHint')}</p>
                 </div>
@@ -210,13 +319,11 @@ const DriversWithoutDocsModal = ({
               <button
                 type="button"
                 className="btn-save"
-                onClick={handleSendAll}
-                disabled={isSending || isLoading || eligibleCount === 0}
+                onClick={handleSendReminders}
+                disabled={isSendDisabled}
               >
                 <span className="material-symbols-outlined">mail</span>
-                {isSending
-                  ? t('dashboard.sendingDocumentReminders')
-                  : t('dashboard.sendReminderToAll', { count: eligibleCount })}
+                {sendButtonLabel}
               </button>
             </>
           )}

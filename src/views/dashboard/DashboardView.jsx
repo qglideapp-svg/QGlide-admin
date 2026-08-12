@@ -805,23 +805,25 @@ export default function DashboardView() {
     setDocumentReminderResult(null);
   };
 
-  const handleSendDocumentReminders = async ({ subject, bodyText }) => {
+  const handleSendDocumentReminders = async ({ subject, bodyText, driverIds = null }) => {
     setIsSendingDocumentReminders(true);
 
     try {
       const result = await sendDocumentReminderEmails({
         subject,
         bodyText,
+        driverIds,
       });
 
       if (result.success) {
+        const sentCount = result.data?.sentCount ?? (driverIds?.length || driversWithoutDocsTotalCount);
         setDocumentReminderResult({
           success: true,
-          sentCount: result.data?.sentCount ?? driversWithoutDocsTotalCount,
+          sentCount,
         });
         showToastMessage(
           result.data?.message || t('dashboard.documentReminderSentToast', {
-            count: result.data?.sentCount ?? driversWithoutDocsTotalCount,
+            count: sentCount,
           }),
           'success'
         );

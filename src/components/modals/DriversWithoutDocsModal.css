@@ -110,17 +110,76 @@
 
 .drivers-without-docs-table th:nth-child(1),
 .drivers-without-docs-table td:nth-child(1) {
-  min-width: 220px;
+  min-width: 48px;
+  width: 48px;
 }
 
 .drivers-without-docs-table th:nth-child(2),
 .drivers-without-docs-table td:nth-child(2) {
-  min-width: 240px;
+  min-width: 220px;
 }
 
 .drivers-without-docs-table th:nth-child(3),
 .drivers-without-docs-table td:nth-child(3) {
+  min-width: 240px;
+}
+
+.drivers-without-docs-table th:nth-child(4),
+.drivers-without-docs-table td:nth-child(4) {
   min-width: 280px;
+}
+
+.drivers-without-docs-table tbody tr {
+  cursor: pointer;
+}
+
+.drivers-without-docs-table tbody tr.is-selected {
+  background: #eff6ff;
+}
+
+.drivers-without-docs-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.drivers-without-docs-table tbody tr.is-selected:hover {
+  background: #dbeafe;
+}
+
+.select-column {
+  text-align: center;
+}
+
+.drivers-without-docs-selection-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.selection-action-btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.selection-action-btn:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.selection-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.selection-help {
+  font-size: 13px;
+  color: #64748b;
 }
 
 .driver-info-cell {

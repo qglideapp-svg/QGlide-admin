@@ -199,6 +199,54 @@ export const fetchDriversList = async (searchTerm = '', statusFilter = '', ratin
   }
 };
 
+export const isPresenceStatusFilter = (statusFilter = '') => {
+  const normalized = String(statusFilter || '').toLowerCase();
+  return normalized === 'online' || normalized === 'offline';
+};
+
+export const fetchAllDriversList = async (
+  searchTerm = '',
+  statusFilter = '',
+  ratingFilter = '',
+  startDate = '',
+  endDate = '',
+  pageLimit = 200,
+) => {
+  const allDrivers = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const result = await fetchDriversList(
+      searchTerm,
+      statusFilter,
+      ratingFilter,
+      page,
+      pageLimit,
+      startDate,
+      endDate,
+    );
+
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        error: result.error || 'Failed to fetch drivers list',
+        drivers: allDrivers,
+      };
+    }
+
+    const driversArray = Array.isArray(result.data.drivers) ? result.data.drivers : [];
+    allDrivers.push(...driversArray);
+    totalPages = result.data.totalPages || 1;
+    page += 1;
+  }
+
+  return {
+    success: true,
+    drivers: allDrivers,
+  };
+};
+
 export const fetchAllDriversForMonitoring = async (pageLimit = 200) => {
   const allDrivers = [];
   let page = 1;
@@ -1466,22 +1514,32 @@ export const fetchDriversWithoutDocs = async (previewLimit = 50) => {
   }
 };
 
-export const sendDocumentReminderEmails = async ({ subject = '', bodyText = '' } = {}) => {
+export const sendDocumentReminderEmails = async ({
+  subject = '',
+  bodyText = '',
+  driverIds = null,
+} = {}) => {
   try {
     const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
     const url = `${API_BASE_URL}/admin-bulk-email-missing-vehicle-docs`;
+
+    const payload = {
+      confirmed: true,
+      subject: subject.trim(),
+      body_text: bodyText.trim(),
+    };
+
+    if (Array.isArray(driverIds) && driverIds.length > 0) {
+      payload.driver_ids = driverIds.map(String);
+    }
 
     const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': anonKey,
+        apikey: anonKey,
       },
-      body: JSON.stringify({
-        confirmed: true,
-        subject: subject.trim(),
-        body_text: bodyText.trim(),
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -1490,18 +1548,18 @@ export const sendDocumentReminderEmails = async ({ subject = '', bodyText = '' }
     }
 
     const data = await response.json();
-    const payload = data?.data ?? data;
+    const responsePayload = data?.data ?? data;
 
     return {
       success: true,
       data: {
-        sentCount: payload?.sent_count
-          ?? payload?.emails_sent
-          ?? payload?.recipient_count
-          ?? payload?.sent
+        sentCount: responsePayload?.sent_count
+          ?? responsePayload?.emails_sent
+          ?? responsePayload?.recipient_count
+          ?? responsePayload?.sent
           ?? 0,
-        failedCount: payload?.failed_count ?? payload?.failed ?? 0,
-        message: payload?.message || data?.message || 'Reminder emails sent successfully',
+        failedCount: responsePayload?.failed_count ?? responsePayload?.failed ?? 0,
+        message: responsePayload?.message || data?.message || 'Reminder emails sent successfully',
       },
     };
   } catch (error) {

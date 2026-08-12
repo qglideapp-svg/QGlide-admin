@@ -2,7 +2,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DriverManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriversList, fetchDriverWalletsForIds, transformDriverData, exportDriversToPDF, matchesDriverFilters } from '../../services/driverService';
+import {
+  fetchDriversList,
+  fetchAllDriversList,
+  fetchDriverWalletsForIds,
+  transformDriverData,
+  exportDriversToPDF,
+  matchesDriverFilters,
+  isPresenceStatusFilter,
+} from '../../services/driverService';
 import { detectNewlyOnlineDrivers } from '../../utils/driverOnlineState';
 import UserAvatar from '../../components/common/UserAvatar';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -66,6 +74,7 @@ export default function DriverManagementView() {
   const driverStatusMapRef = useRef(new Map());
   const pollFiltersRef = useRef({});
   const isLoadingRef = useRef(false);
+  const allFilteredDriversRef = useRef([]);
 
   isLoadingRef.current = isLoading;
   pollFiltersRef.current = {
@@ -81,9 +90,42 @@ export default function DriverManagementView() {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
+  const applyFilteredDriverPage = useCallback((filteredDrivers, page) => {
+    allFilteredDriversRef.current = filteredDrivers;
+
+    const total = filteredDrivers.length;
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(Math.max(page, 1), pages);
+
+    setTotalCount(total);
+    setTotalPages(pages);
+    setCurrentPage(safePage);
+    setDrivers(filteredDrivers.slice((safePage - 1) * limit, safePage * limit));
+
+    return filteredDrivers.slice((safePage - 1) * limit, safePage * limit);
+  }, [limit]);
+
+  const loadDriverWallets = useCallback(async (pageDrivers, requestId) => {
+    if (!pageDrivers.length) {
+      if (requestId === loadRequestIdRef.current) {
+        setDriverWallets({});
+      }
+      return;
+    }
+
+    const walletResult = await fetchDriverWalletsForIds(
+      pageDrivers.map((driver) => driver.id),
+    );
+
+    if (requestId === loadRequestIdRef.current && walletResult.success) {
+      setDriverWallets(walletResult.walletByDriverId);
+    }
+  }, []);
+
   // Fetch drivers from API
   const loadDrivers = useCallback(async (search = '', status = '', rating = '', page = 1, start = '', end = '', { silent = false } = {}) => {
     const requestId = ++loadRequestIdRef.current;
+    const usePresencePagination = isPresenceStatusFilter(status);
 
     if (!silent) {
       setIsLoading(true);
@@ -91,6 +133,41 @@ export default function DriverManagementView() {
     }
 
     try {
+      if (usePresencePagination) {
+        const result = await fetchAllDriversList(search, status, rating, start, end);
+
+        if (requestId !== loadRequestIdRef.current) {
+          return;
+        }
+
+        if (result.success) {
+          const filterOptions = {
+            searchTerm: search,
+            statusFilter: status,
+            ratingFilter: rating,
+            applyStatusFilter: true,
+          };
+          const filteredDrivers = result.drivers
+            .map(transformDriverData)
+            .filter((driver) => matchesDriverFilters(driver, filterOptions));
+
+          const pageDrivers = applyFilteredDriverPage(filteredDrivers, page);
+
+          detectNewlyOnlineDrivers(filteredDrivers);
+          pageDrivers.forEach((driver) => {
+            driverStatusMapRef.current.set(String(driver.id), driver.status);
+          });
+
+          await loadDriverWallets(pageDrivers, requestId);
+        } else if (!silent) {
+          setError(result.error || 'Failed to load drivers');
+        }
+
+        return;
+      }
+
+      allFilteredDriversRef.current = [];
+
       const result = await fetchDriversList(search, status, rating, page, limit, start, end);
 
       if (requestId !== loadRequestIdRef.current) {
@@ -120,12 +197,7 @@ export default function DriverManagementView() {
           driverStatusMapRef.current.set(String(driver.id), driver.status);
         });
 
-        const walletResult = await fetchDriverWalletsForIds(
-          transformedDrivers.map((driver) => driver.id),
-        );
-        if (requestId === loadRequestIdRef.current && walletResult.success) {
-          setDriverWallets(walletResult.walletByDriverId);
-        }
+        await loadDriverWallets(transformedDrivers, requestId);
       } else if (!silent) {
         setError(result.error || 'Failed to load drivers');
       }
@@ -142,7 +214,7 @@ export default function DriverManagementView() {
         setIsLoading(false);
       }
     }
-  }, [limit]);
+  }, [applyFilteredDriverPage, limit, loadDriverWallets]);
 
   // Debounced search and filter effect
   useEffect(() => {
@@ -177,8 +249,34 @@ export default function DriverManagementView() {
     } = pollFiltersRef.current;
 
     const requestId = ++pollRequestIdRef.current;
+    const usePresencePagination = isPresenceStatusFilter(status);
 
     try {
+      if (usePresencePagination) {
+        const result = await fetchAllDriversList(search, status, rating, start, end);
+        if (requestId !== pollRequestIdRef.current || !result.success) {
+          return;
+        }
+
+        const filterOptions = {
+          searchTerm: search,
+          statusFilter: status,
+          ratingFilter: rating,
+          applyStatusFilter: true,
+        };
+        const filteredDrivers = result.drivers
+          .map(transformDriverData)
+          .filter((driver) => matchesDriverFilters(driver, filterOptions));
+
+        filteredDrivers.forEach((driver) => {
+          driverStatusMapRef.current.set(String(driver.id), driver.status);
+        });
+
+        detectNewlyOnlineDrivers(filteredDrivers);
+        applyFilteredDriverPage(filteredDrivers, page);
+        return;
+      }
+
       const result = await fetchDriversList(search, status, rating, page, limit, start, end);
       if (requestId !== pollRequestIdRef.current || !result.success || !result.data) {
         return;
@@ -227,7 +325,7 @@ export default function DriverManagementView() {
     } catch {
       // Ignore background poll errors
     }
-  }, [limit]);
+  }, [applyFilteredDriverPage, limit]);
 
   useEffect(() => {
     const intervalId = setInterval(pollDriverOnlineStatuses, 2000);
@@ -302,7 +400,23 @@ export default function DriverManagementView() {
     setStartDate('');
     setEndDate('');
     setCurrentPage(1);
+    allFilteredDriversRef.current = [];
   };
+
+  const changePresenceFilterPage = useCallback(async (newPage) => {
+    const pageDrivers = applyFilteredDriverPage(allFilteredDriversRef.current, newPage);
+    const requestId = loadRequestIdRef.current;
+
+    setIsLoading(true);
+
+    try {
+      await loadDriverWallets(pageDrivers, requestId);
+    } finally {
+      if (requestId === loadRequestIdRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [applyFilteredDriverPage, loadDriverWallets]);
 
   // Handle PDF export
   const handleExportPDF = async () => {
@@ -324,6 +438,11 @@ export default function DriverManagementView() {
   // Pagination handlers
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
+      if (isPresenceStatusFilter(statusFilter)) {
+        changePresenceFilterPage(newPage);
+        return;
+      }
+
       setCurrentPage(newPage);
       loadDrivers(searchTerm, statusFilter, ratingFilter, newPage, startDate, endDate);
     }
@@ -332,6 +451,12 @@ export default function DriverManagementView() {
   const handlePrevPage = () => {
     if (currentPage > 1) {
       const newPage = currentPage - 1;
+
+      if (isPresenceStatusFilter(statusFilter)) {
+        changePresenceFilterPage(newPage);
+        return;
+      }
+
       setCurrentPage(newPage);
       loadDrivers(searchTerm, statusFilter, ratingFilter, newPage, startDate, endDate);
     }
@@ -340,6 +465,12 @@ export default function DriverManagementView() {
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       const newPage = currentPage + 1;
+
+      if (isPresenceStatusFilter(statusFilter)) {
+        changePresenceFilterPage(newPage);
+        return;
+      }
+
       setCurrentPage(newPage);
       loadDrivers(searchTerm, statusFilter, ratingFilter, newPage, startDate, endDate);
     }
@@ -349,15 +480,19 @@ export default function DriverManagementView() {
     navigate(`/driver-profile/${driverId}`);
   };
 
-  // Apply client-side filters; online/offline presence is validated via isOnline
-  const filteredDrivers = drivers.filter((driver) =>
-    matchesDriverFilters(driver, {
-      searchTerm,
-      statusFilter,
-      ratingFilter,
-      applyStatusFilter: true,
-    })
-  );
+  const usesClientPresencePagination = isPresenceStatusFilter(statusFilter);
+
+  // Online/offline uses client-side pagination; other filters may still refine the current page.
+  const filteredDrivers = usesClientPresencePagination
+    ? drivers
+    : drivers.filter((driver) =>
+        matchesDriverFilters(driver, {
+          searchTerm,
+          statusFilter,
+          ratingFilter,
+          applyStatusFilter: true,
+        })
+      );
 
   const hasActiveFilters = Boolean(
     searchTerm ||
