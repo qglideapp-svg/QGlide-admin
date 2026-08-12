@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './DashboardView.css';
 import logo from '../../assets/images/logo.webp';
@@ -7,7 +7,7 @@ import moneyIcon from '../../assets/icons/money.png';
 import activeIcon from '../../assets/icons/active.png';
 import settingsIcon from '../../assets/icons/settings.png';
 import checkIcon from '../../assets/icons/check.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 import { fetchDashboardData, fetchRidesAnalytics } from '../../services/dashboardService';
 import { logoutUser } from '../../services/authService';
 import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV, fetchCashRides } from '../../services/financialService';
@@ -58,9 +58,10 @@ export default function DashboardView() {
   // Financial Management states
   const [financialOverview, setFinancialOverview] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [allTransactions, setAllTransactions] = useState([]); // Store all transactions for filtering
   const [payoutRequests, setPayoutRequests] = useState([]);
   const [isFinancialLoading, setIsFinancialLoading] = useState(false);
+  const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
+  const transactionsRequestRef = useRef(0);
   const [transactionFilter, setTransactionFilter] = useState('All Types');
   const [activeTransactionTab, setActiveTransactionTab] = useState('all'); // 'all' or 'cash'
   const [showAdminWithdrawModal, setShowAdminWithdrawModal] = useState(false);
@@ -128,7 +129,7 @@ export default function DashboardView() {
   
   useEffect(() => {
     if (activeSection === 'financial') {
-      loadFinancialData();
+      loadFinancialOverviewData();
     } else if (activeSection === 'support') {
       loadSupportData();
     } else if (activeSection === 'analytics') {
@@ -142,7 +143,12 @@ export default function DashboardView() {
     } else if (activeSection === 'support') {
       startSupportListPolling();
     }
-  }, [activeSection, ticketFilter, transactionFilter, activeTransactionTab]);
+  }, [activeSection, ticketFilter]);
+
+  useEffect(() => {
+    if (activeSection !== 'financial') return;
+    loadTransactionsData();
+  }, [activeSection, transactionFilter, activeTransactionTab]);
 
 
   // Cleanup polling intervals on component unmount
@@ -227,41 +233,51 @@ export default function DashboardView() {
     }
   };
 
-  const loadFinancialData = async () => {
-    if (isFinancialLoading) return; // Prevent multiple simultaneous calls
+  const loadFinancialOverviewData = async () => {
+    if (isFinancialLoading) return;
     setIsFinancialLoading(true);
-    
+
     try {
-      // Fetch transactions or cash rides based on active tab
-      const transactionsPromise = activeTransactionTab === 'cash' 
-        ? fetchCashRides()
-        : fetchTransactions({ type: transactionFilter });
-      
-      const [overviewResult, transactionsResult, payoutRequestsResult] = await Promise.all([
+      const [overviewResult, payoutRequestsResult] = await Promise.all([
         fetchFinancialOverview(),
-        transactionsPromise,
-        fetchPayoutRequests('pending') // Fetch pending payout requests from the dedicated API
+        fetchPayoutRequests('pending'),
       ]);
-      
+
       if (overviewResult.success) {
         setFinancialOverview(overviewResult.data);
       }
-      
-      if (transactionsResult.success) {
-        const transactionsData = transactionsResult.data || [];
-        setAllTransactions(transactionsData);
-        setTransactions(transactionsData);
-      }
-      
+
       if (payoutRequestsResult.success) {
-        // Limit to first 10 payout requests
         const payoutRequestsList = (payoutRequestsResult.data || []).slice(0, 10);
         setPayoutRequests(payoutRequestsList);
       }
     } catch (err) {
-      console.error('Financial data error:', err);
+      console.error('Financial overview error:', err);
     } finally {
       setIsFinancialLoading(false);
+    }
+  };
+
+  const loadTransactionsData = async () => {
+    const requestId = ++transactionsRequestRef.current;
+    setIsTransactionsLoading(true);
+
+    try {
+      const transactionsResult = activeTransactionTab === 'cash'
+        ? await fetchCashRides()
+        : await fetchTransactions({ type: transactionFilter });
+
+      if (requestId !== transactionsRequestRef.current) return;
+
+      if (transactionsResult.success) {
+        setTransactions(transactionsResult.data || []);
+      }
+    } catch (err) {
+      console.error('Transactions load error:', err);
+    } finally {
+      if (requestId === transactionsRequestRef.current) {
+        setIsTransactionsLoading(false);
+      }
     }
   };
   
@@ -936,15 +952,11 @@ export default function DashboardView() {
             </div>
           </div>
           <div className="acts">
-            <div className="search">
-              <span className="material-symbols-outlined">search</span>
-              <input placeholder={t('common.search')} />
-            </div>
             <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
-            <button className="ibtn" aria-label={t('common.notifications')}><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
-            <div className="user-info">
+            <NotificationBell />
+<div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
@@ -1095,27 +1107,18 @@ export default function DashboardView() {
                 </div>
               </div>
               <div className="acts">
-                <div className="search">
-                  <span className="material-symbols-outlined">search</span>
-                  <input placeholder={t('financial.searchTransactions')} />
-                </div>
-            <LanguageToggle />
-                <button className="ibtn" aria-label="dark-mode">
-                  <span className="material-symbols-outlined">dark_mode</span>
-                </button>
-                <button className="ibtn" aria-label={t('common.notifications')}>
-                  <img src={notificationsIcon} alt="notifications" className="kimg" />
-                  <i className="dot" />
-                </button>
+                <LanguageToggle />
+                <ThemeToggle />
+                <NotificationBell />
               </div>
             </header>
 
             <div className="container financial-section">
-              {isFinancialLoading ? (
-                <LazyLoader variant="cards" count={3} message={t('common.loading')} />
-              ) : (
-                <>
-                  <section className="metric-cards">
+              <section className="metric-cards">
+                {isFinancialLoading && !financialOverview ? (
+                  <LazyLoader variant="cards" count={3} message={t('common.loading')} />
+                ) : (
+                  <>
                     <div className="metric-card">
                       <div className="metric-header">
                         <div className="metric-info">
@@ -1183,9 +1186,11 @@ export default function DashboardView() {
                         {financialOverview?.pendingPayouts?.amount ? formatCurrency(financialOverview.pendingPayouts.amount) : 'QAR 0'}
                       </div>
                     </div>
-                  </section>
+                  </>
+                )}
+              </section>
 
-                  <section className="financial-grid">
+              <section className="financial-grid">
                     <div className="transactions-panel">
                       <div className="panel-header">
                         <div className="panel-header-left">
@@ -1226,7 +1231,17 @@ export default function DashboardView() {
                           </button>
                         </div>
                       </div>
-                      <div className="transactions-table-wrapper">
+                      <div className={`transactions-table-wrapper${isTransactionsLoading ? ' is-loading' : ''}`}>
+                        {isTransactionsLoading && (
+                          <div className="transactions-table-overlay" role="status" aria-live="polite">
+                            <LazyLoader
+                              variant="content"
+                              lines={0}
+                              message={t('common.loading')}
+                              className="transactions-table-loader"
+                            />
+                          </div>
+                        )}
                         <table className="transactions-table">
                           <thead>
                             <tr>
@@ -1332,8 +1347,6 @@ export default function DashboardView() {
                       </div>
                     </div>
                   </section>
-                </>
-              )}
             </div>
           </>
         ) : activeSection === 'support' ? (
@@ -1349,16 +1362,9 @@ export default function DashboardView() {
                 </div>
               </div>
               <div className="acts">
-                <div className="search">
-                  <span className="material-symbols-outlined">search</span>
-                  <input placeholder={t('support.searchTickets')} />
-                </div>
             <LanguageToggle />
-                <button className="ibtn" aria-label={t('common.notifications')}>
-                  <img src={notificationsIcon} alt="notifications" className="kimg" />
-                  <i className="dot" />
-                </button>
-              </div>
+            <NotificationBell />
+</div>
             </header>
 
             <div className="container support-section">
@@ -1666,11 +1672,8 @@ export default function DashboardView() {
                 <button className="ibtn" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
                   <span className="material-symbols-outlined">settings</span>
                 </button>
-                <button className="ibtn" aria-label={t('common.notifications')}>
-                  <img src={notificationsIcon} alt="notifications" className="kimg" />
-                  <i className="dot" />
-                </button>
-              </div>
+            <NotificationBell />
+</div>
             </header>
 
             <div className="container analytics-section">

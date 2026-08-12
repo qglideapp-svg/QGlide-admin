@@ -1,98 +1,229 @@
 import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
 
 
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+
+function parseErrorMessage(errorData, fallback) {
+  if (!errorData || typeof errorData !== 'object') return fallback;
+  const err = errorData.error ?? errorData.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && typeof err.message === 'string') return err.message;
+  return fallback;
+}
+
+function getApiHeaders(includeJson = false) {
+  const headers = { apikey: SUPABASE_ANON_KEY };
+  if (includeJson) {
+    headers['Content-Type'] = 'application/json';
+  }
+  return headers;
+}
+
+function extractActivityEventsArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.events)) return data.events;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.feed)) return data.feed;
+  if (Array.isArray(data.activities)) return data.activities;
+  if (data.data && Array.isArray(data.data.events)) return data.data.events;
+  if (data.data && Array.isArray(data.data.items)) return data.data.items;
+  if (data.data && Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+function normalizeActivityEvent(raw, index) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const createdRaw =
+    raw.created_at ??
+    raw.createdAt ??
+    raw.occurred_at ??
+    raw.occurredAt ??
+    raw.timestamp ??
+    null;
+
+  let createdAt = null;
+  if (createdRaw != null) {
+    const parsed = new Date(createdRaw);
+    if (!Number.isNaN(parsed.getTime())) {
+      createdAt = parsed.toISOString();
+    }
+  }
+
+  const isRead = Boolean(
+    raw.is_read ??
+    raw.isRead ??
+    raw.read ??
+    raw.read_at ??
+    raw.readAt,
+  );
+
+  return {
+    id: String(raw.id ?? raw.event_id ?? raw.eventId ?? `activity_${index}`),
+    title: String(raw.title ?? raw.summary ?? raw.subject ?? '').trim(),
+    message: String(
+      raw.message ??
+      raw.description ??
+      raw.body ??
+      raw.content ??
+      raw.details ??
+      '',
+    ).trim(),
+    category: String(raw.category ?? raw.type ?? raw.event_type ?? 'general').toLowerCase(),
+    severity: String(raw.severity ?? raw.level ?? raw.priority ?? '').toLowerCase(),
+    isRead,
+    actionUrl:
+      raw.action_url ??
+      raw.actionUrl ??
+      raw.link ??
+      raw.url ??
+      raw.metadata?.action_url ??
+      null,
+    createdAt,
+  };
+}
+
+export async function fetchAdminActivityFeed(opts = {}) {
+  try {
+    const limit = Math.max(1, parseInt(String(opts.limit ?? 30), 10) || 30);
+    const params = new URLSearchParams({ limit: String(limit) });
+
+    if (opts.cursor) params.set('cursor', opts.cursor);
+    if (opts.category) params.set('category', opts.category);
+    if (opts.unreadOnly) params.set('unread_only', 'true');
+    if (opts.search?.trim()) params.set('search', opts.search.trim());
+
+    const url = `${API_BASE_URL}/admin-activity-feed?${params.toString()}`;
+    const response = await authenticatedFetch(url, {
+      method: 'GET',
+      headers: getApiHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const rawList = extractActivityEventsArray(data);
+    const events = rawList.map((row, index) => normalizeActivityEvent(row, index)).filter(Boolean);
+
+    const nextCursor =
+      data.next_cursor ??
+      data.nextCursor ??
+      data.data?.next_cursor ??
+      data.data?.nextCursor ??
+      null;
+
+    const unreadCount =
+      data.unread_count ??
+      data.unreadCount ??
+      data.data?.unread_count ??
+      data.data?.unreadCount ??
+      null;
+
+    return {
+      success: true,
+      data: {
+        events,
+        nextCursor: nextCursor || null,
+        unreadCount: unreadCount != null ? Number(unreadCount) : null,
+        hasMore: Boolean(nextCursor),
+      },
+    };
+  } catch (error) {
+    console.error('❌ FETCH ADMIN ACTIVITY FEED ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch activity feed',
+    };
+  }
+}
+
+export async function markActivityEventsRead(eventIds = []) {
+  try {
+    const ids = Array.isArray(eventIds) ? eventIds.filter(Boolean) : [];
+    if (ids.length === 0) {
+      return { success: true, data: {} };
+    }
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-activity-feed`, {
+      method: 'PATCH',
+      headers: getApiHeaders(true),
+      body: JSON.stringify({ event_ids: ids }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ MARK ACTIVITY EVENTS READ ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to mark notifications as read',
+    };
+  }
+}
+
+export async function markAllActivityEventsRead() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin-activity-feed`, {
+      method: 'PATCH',
+      headers: getApiHeaders(true),
+      body: JSON.stringify({ mark_all_read: true }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ MARK ALL ACTIVITY EVENTS READ ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to mark all notifications as read',
+    };
+  }
+}
 
 // Send push notification to all users
 export const sendPushNotification = async (notificationData) => {
   try {
     const url = `${API_BASE_URL}/admin-notifications`;
-    
-    console.log('🚀 SEND NOTIFICATION REQUEST:', {
-      '🔗 URL': url,
-      '📝 Notification Data': notificationData,
-      '⏰ Timestamp': new Date().toISOString()
-    });
 
     const response = await authenticatedFetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getApiHeaders(true),
       body: JSON.stringify({
-        notification_type: notificationData.type || 'event', // 'news' or 'event'
+        notification_type: notificationData.type || 'event',
         title: notificationData.title,
         message: notificationData.message,
         image_url: notificationData.imageUrl || null,
         action_url: notificationData.actionUrl || null,
-      })
-    });
-
-    console.log('📡 SEND NOTIFICATION HTTP RESPONSE:', {
-      '✅ Status': response.status,
-      '📝 Status Text': response.statusText,
-      '🔗 URL': response.url,
-      '✅ OK': response.ok
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(parseErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`));
     }
 
     const data = await response.json();
-    
-    console.log('📡 SEND NOTIFICATION RESPONSE:', JSON.stringify(data, null, 2));
-    
     return { success: true, data };
   } catch (error) {
-    console.error('❌ SEND NOTIFICATION ERROR:', {
-      '🚨 Error Message': error.message,
-      '🔍 Error Type': error.constructor.name,
-      '📝 Error Stack': error.stack,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-    
-    return { 
-      success: false, 
-      error: error.message || 'Failed to send notification' 
-    };
-  }
-};
-
-// Fetch notification history (if needed in the future)
-export const fetchNotificationHistory = async (page = 1, limit = 20) => {
-  try {
-    const url = `${API_BASE_URL}/admin-notifications-history?page=${page}&limit=${limit}`;
-    
-    console.log('🚀 FETCH NOTIFICATION HISTORY REQUEST:', {
-      '🔗 URL': url,
-      '📄 Page': page,
-      '📏 Limit': limit,
-      '⏰ Timestamp': new Date().toISOString()
-    });
-
-    const response = await authenticatedFetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    return { success: true, data };
-  } catch (error) {
-    console.error('❌ FETCH NOTIFICATION HISTORY ERROR:', error);
-    
-    return { 
-      success: false, 
-      error: error.message || 'Failed to fetch notification history' 
+    console.error('❌ SEND NOTIFICATION ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send notification',
     };
   }
 };

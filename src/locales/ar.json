@@ -439,6 +439,13 @@
     "driverOnlineTitle": "سائق متصل",
     "viewDriver": "عرض السائق",
     "walletBalance": "رصيد المحفظة",
+    "totalBalance": "إجمالي الرصيد",
+    "mainWallet": "المحفظة الرئيسية",
+    "availableBalance": "الرصيد المتاح",
+    "pendingWithdrawals": "السحوبات المعلقة",
+    "commissionWallet": "محفظة العمولة",
+    "negativeBalance": "الرصيد السالب",
+    "walletTotal": "المحفظة (ر.ق)",
     "currentBalance": "الرصيد الحالي",
     "updateBalance": "تحديث الرصيد"
   },
@@ -889,5 +896,20 @@
     "roleDeleted": "تم حذف الدور بنجاح",
     "failedToAdd": "فشل إضافة الدور",
     "failedToDelete": "فشل حذف الدور"
+  },
+  "notificationCenter": {
+    "title": "الإشعارات",
+    "subtitle": "سجل النشاط — أحدث الأحداث والتنبيهات",
+    "loading": "جاري تحميل سجل النشاط...",
+    "empty": "لا يوجد نشاط بعد",
+    "errorLoad": "فشل تحميل سجل النشاط",
+    "errorMarkRead": "فشل تعليم الإشعارات كمقروءة",
+    "untitled": "حدث بدون عنوان",
+    "typeNews": "أخبار",
+    "typeEvent": "حدث",
+    "openLink": "فتح الرابط",
+    "loadMore": "تحميل المزيد",
+    "markAllRead": "تعليم الكل كمقروء",
+    "manage": "إرسال إشعارات"
   }
 }

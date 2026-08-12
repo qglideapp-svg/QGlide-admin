@@ -13,7 +13,7 @@ import ApproveWithdrawalModal from '../../components/modals/ApproveWithdrawalMod
 import RejectWithdrawalModal from '../../components/modals/RejectWithdrawalModal';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -309,10 +309,7 @@ export default function WithdrawalManagementView() {
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
             </button>
-            <button className="ibtn" aria-label="notifications">
-              <img src={notificationsIcon} alt="notifications" className="kimg" />
-              <i className="dot" />
-            </button>
+            <NotificationBell />
             <div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>

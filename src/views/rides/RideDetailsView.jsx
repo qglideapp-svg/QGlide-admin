@@ -9,7 +9,7 @@ import MapRoute from '../../components/common/MapRoute';
 import UserAvatar from '../../components/common/UserAvatar';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 import { logoutUser } from '../../services/authService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import LazyLoader from '../../components/common/LazyLoader.jsx';
@@ -390,15 +390,11 @@ export default function RideDetailsView() {
             </p>
           </div>
           <div className="acts">
-            <div className="search">
-              <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search..." />
-            </div>
             <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}><img src={settingsIcon} alt="settings" className="kimg" /></button>
-            <button className="ibtn" aria-label="notifications"><img src={notificationsIcon} alt="notifications" className="kimg" /><i className="dot" /></button>
-            <div className="user-info">
+            <NotificationBell />
+<div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>

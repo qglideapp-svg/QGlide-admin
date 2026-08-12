@@ -661,6 +661,288 @@ export const parseDriverBalance = (apiDriver) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+function toWalletNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function extractDriverWalletEntries(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const drivers =
+    payload.data?.drivers ??
+    payload.drivers ??
+    (Array.isArray(payload.data) ? payload.data : null);
+
+  if (Array.isArray(drivers)) {
+    return drivers;
+  }
+
+  if (
+    payload.driver_id != null ||
+    payload.found != null ||
+    payload.wallet ||
+    payload.driver
+  ) {
+    return [payload];
+  }
+
+  if (payload.data?.wallet || payload.wallet) {
+    return [{
+      driver_id: payload.data?.driver_id ?? payload.driver_id,
+      found: payload.data?.found ?? payload.found ?? true,
+      driver: payload.data?.driver ?? payload.driver ?? null,
+      wallet: payload.data?.wallet ?? payload.wallet,
+      error: payload.data?.error ?? payload.error,
+    }];
+  }
+
+  return [];
+}
+
+export function normalizeDriverWalletEntry(entry, requestedDriverId = null) {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const driverId = String(
+    entry.driver_id ??
+    entry.driver?.id ??
+    requestedDriverId ??
+    '',
+  );
+
+  if (!entry.found) {
+    return {
+      driverId,
+      found: false,
+      error: entry.error || 'Driver wallet not found',
+      wallet: null,
+      balance: 0,
+      totalBalance: 0,
+    };
+  }
+
+  const wallet = entry.wallet ?? {};
+  const commissionWallet = wallet.commission_wallet ?? {};
+  const mainWallet = wallet.main_wallet ?? {};
+
+  const commissionBalance = toWalletNumber(
+    wallet.commission_balance ?? commissionWallet.balance,
+  );
+  const mainWalletBalance = toWalletNumber(
+    wallet.main_wallet_balance ?? wallet.earnings_balance ?? mainWallet.balance,
+  );
+  const availableBalance = toWalletNumber(
+    mainWallet.available_balance,
+    mainWalletBalance,
+  );
+  const pendingWithdrawals = toWalletNumber(mainWallet.pending_withdrawals);
+  const totalBalance = toWalletNumber(
+    wallet.total_balance ?? wallet.legacy_balance,
+    commissionBalance + mainWalletBalance,
+  );
+  const negativeBalance = toWalletNumber(wallet.negative_balance);
+
+  return {
+    driverId,
+    found: true,
+    error: null,
+    driver: entry.driver ?? null,
+    walletId: wallet.wallet_id ?? null,
+    walletType: wallet.wallet_type ?? null,
+    currency: wallet.currency ?? 'QAR',
+    commissionBalance,
+    commissionCanReceiveRides: commissionWallet.can_receive_rides ?? null,
+    mainWalletBalance,
+    availableBalance,
+    pendingWithdrawals,
+    totalBalance,
+    negativeBalance,
+    legacyBalance: toWalletNumber(wallet.legacy_balance, totalBalance),
+    createdAt: wallet.created_at ?? null,
+    updatedAt: wallet.updated_at ?? null,
+    balance: totalBalance,
+  };
+}
+
+export function resolveDriverWalletFromPayload(payload, driverId = null) {
+  const entries = extractDriverWalletEntries(payload);
+  if (entries.length === 0) {
+    return null;
+  }
+
+  if (driverId) {
+    const match = entries.find((entry) =>
+      String(entry.driver_id ?? entry.driver?.id) === String(driverId),
+    );
+    if (match) {
+      return normalizeDriverWalletEntry(match, driverId);
+    }
+  }
+
+  return normalizeDriverWalletEntry(entries[0], driverId);
+}
+
+export const parseDriverWalletBalance = (payload, driverId = null) => {
+  const wallet = resolveDriverWalletFromPayload(payload, driverId);
+  if (wallet?.found) {
+    return wallet.totalBalance;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return 0;
+  }
+
+  const legacyWallet =
+    payload.wallet ??
+    payload.data?.wallet ??
+    payload;
+
+  const rawBalance =
+    legacyWallet?.total_balance ??
+    legacyWallet?.main_wallet_balance ??
+    legacyWallet?.balance ??
+    legacyWallet?.wallet_balance ??
+    legacyWallet?.available_balance ??
+    payload.balance ??
+    0;
+
+  return toWalletNumber(rawBalance);
+};
+
+async function requestDriverWallet(params = {}) {
+  const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && value !== '') {
+      query.set(key, String(value));
+    }
+  });
+
+  const url = `${API_BASE_URL}/admin-driver-wallet?${query.toString()}`;
+  const response = await authenticatedFetch(url, {
+    method: 'GET',
+    headers: {
+      apikey: anonKey,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json().catch(() => ({}));
+}
+
+export const fetchDriverWallet = async (driverId, { includeVerified = true } = {}) => {
+  try {
+    if (!driverId) {
+      throw new Error('Driver ID is required');
+    }
+
+    const params = { driver_id: String(driverId) };
+    if (includeVerified) {
+      params.include_verified = '1';
+    }
+
+    const data = await requestDriverWallet(params);
+    const wallet = resolveDriverWalletFromPayload(data, driverId);
+
+    if (!wallet?.found) {
+      return {
+        success: false,
+        error: wallet?.error || 'Driver wallet not found',
+        data,
+      };
+    }
+
+    return {
+      success: true,
+      data,
+      wallet,
+      balance: wallet.totalBalance,
+    };
+  } catch (error) {
+    console.error('❌ FETCH DRIVER WALLET ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch driver wallet',
+    };
+  }
+};
+
+export const fetchAllDriverWallets = async ({ includeVerified = true } = {}) => {
+  try {
+    const params = {};
+    if (includeVerified) {
+      params.include_verified = '1';
+    }
+
+    const data = await requestDriverWallet(params);
+    const wallets = extractDriverWalletEntries(data)
+      .map((entry) => normalizeDriverWalletEntry(entry))
+      .filter(Boolean);
+
+    const walletByDriverId = wallets.reduce((acc, wallet) => {
+      if (wallet.driverId) {
+        acc[wallet.driverId] = wallet;
+      }
+      return acc;
+    }, {});
+
+    return {
+      success: true,
+      data,
+      wallets,
+      walletByDriverId,
+      count: data.data?.count ?? wallets.length,
+    };
+  } catch (error) {
+    console.error('❌ FETCH ALL DRIVER WALLETS ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch driver wallets',
+    };
+  }
+};
+
+export const fetchDriverWalletsForIds = async (driverIds = [], options = {}) => {
+  const uniqueIds = [...new Set(driverIds.filter(Boolean).map(String))];
+  if (uniqueIds.length === 0) {
+    return {
+      success: true,
+      wallets: [],
+      walletByDriverId: {},
+    };
+  }
+
+  const results = await Promise.all(
+    uniqueIds.map((id) => fetchDriverWallet(id, options)),
+  );
+
+  const wallets = results
+    .filter((result) => result.success && result.wallet)
+    .map((result) => result.wallet);
+
+  const walletByDriverId = wallets.reduce((acc, wallet) => {
+    if (wallet.driverId) {
+      acc[wallet.driverId] = wallet;
+    }
+    return acc;
+  }, {});
+
+  return {
+    success: true,
+    wallets,
+    walletByDriverId,
+  };
+};
+
 export const updateDriverBalance = async (
   driverId,
   { balance, reason = '', operation = 'set', clearDebt = false } = {}
@@ -690,12 +972,16 @@ export const updateDriverBalance = async (
     }
 
     const data = await response.json();
-    const updatedBalance = parseDriverBalance(data?.data?.driver ?? data?.data ?? data);
+    const walletResult = await fetchDriverWallet(driverId);
+    const updatedBalance = walletResult.success
+      ? walletResult.balance
+      : parseDriverBalance(data?.data?.driver ?? data?.data ?? data);
 
     return {
       success: true,
       data,
       balance: updatedBalance ?? Number(balance),
+      wallet: walletResult.wallet ?? null,
     };
   } catch (error) {
     console.error('❌ UPDATE DRIVER BALANCE ERROR:', error);

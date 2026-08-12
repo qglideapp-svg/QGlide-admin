@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SettingsView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, searchSettings, fetchFareCosts, updateFareCosts, fetchPointsConfig, updatePointsConfig, fetchGovernmentImpositionAd, updateGovernmentImpositionAd } from '../../services/settingsService';
+import { fetchRoles, addRole, updateRole, deleteRole, fetchNotificationTemplates, updateNotificationTemplate, fetchSystemSettings, updateSystemSettings, copyApiKey, toggleLanguage, toggleTheme, fetchFareCosts, updateFareCosts, fetchPointsConfig, updatePointsConfig, fetchGovernmentImpositionAd, updateGovernmentImpositionAd } from '../../services/settingsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -10,7 +10,7 @@ import LanguageToggle from '../../components/common/LanguageToggle';
 import LazyLoader from '../../components/common/LazyLoader.jsx';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 import Toast from '../../components/common/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -57,7 +57,6 @@ export default function SettingsView() {
   const [isSavingPointsConfig, setIsSavingPointsConfig] = useState(false);
   const [governmentImpositionApproved, setGovernmentImpositionApproved] = useState(false);
   const [isTogglingGovernmentImposition, setIsTogglingGovernmentImposition] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -214,27 +213,6 @@ export default function SettingsView() {
         console.error('Error deleting role:', error);
         showToastMessage(t('toast.failedToDelete'), 'error');
       }
-    }
-  };
-
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      loadSettingsData();
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await searchSettings(searchTerm);
-      if (result.success) {
-        setRoles(result.data.roles);
-        setNotificationTemplates(result.data.templates);
-      }
-    } catch (error) {
-      console.error('Error searching settings:', error);
-      showToastMessage('Failed to search settings', 'error');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -456,26 +434,10 @@ export default function SettingsView() {
             <p className="sub">{t('settings.manageConfiguration')}</p>
           </div>
           <div className="acts">
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder={t('settings.searchSettings')}
-                className="search-input"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <button className="search-btn" onClick={handleSearch}>
-                <span className="material-symbols-outlined">search</span>
-              </button>
-            </div>
             <LanguageToggle />
 
             <ThemeToggle />
-            <button className="notifications-btn" aria-label="notifications">
-              <img src={notificationsIcon} alt="notifications" className="kimg" />
-              <span className="notification-dot"></span>
-            </button>
+            <NotificationBell buttonClassName="notifications-btn" dotClassName="notification-dot" dotElement="span" />
             <div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>

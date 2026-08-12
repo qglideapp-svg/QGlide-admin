@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ReportsGeneratorView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchReports, generateReport, deleteReport, retryReport, downloadReport, getReportOptions, searchReports, getDefaultReportConfig, getDefaultReportOptions } from '../../services/reportsService';
+import { fetchReports, generateReport, deleteReport, retryReport, downloadReport, getReportOptions, getDefaultReportConfig, getDefaultReportOptions } from '../../services/reportsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -10,7 +10,7 @@ import LanguageToggle from '../../components/common/LanguageToggle';
 import LazyLoader from '../../components/common/LazyLoader.jsx';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 import Toast from '../../components/common/Toast';
 
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -45,7 +45,6 @@ export default function ReportsGeneratorView() {
   const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
@@ -205,28 +204,6 @@ export default function ReportsGeneratorView() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      loadReports();
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await searchReports(searchTerm);
-      if (result.success) {
-        setReports(result.data);
-      } else {
-        showToastMessage(result.error || 'Failed to search reports', 'error');
-      }
-    } catch (error) {
-      console.error('Error searching reports:', error);
-      showToastMessage('Failed to search reports', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
@@ -330,27 +307,11 @@ export default function ReportsGeneratorView() {
             </div>
           </div>
           <div className="acts">
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="search-input"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <button className="search-btn" onClick={handleSearch}>
-                <span className="material-symbols-outlined">search</span>
-              </button>
-            </div>
             <LanguageToggle />
 
             <ThemeToggle />
-            <button className="notifications-btn" aria-label="notifications">
-              <img src={notificationsIcon} alt="notifications" className="kimg" />
-              <span className="notification-dot"></span>
-            </button>
-            <div className="user-info">
+            <NotificationBell buttonClassName="notifications-btn" dotClassName="notification-dot" dotElement="span" />
+<div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>

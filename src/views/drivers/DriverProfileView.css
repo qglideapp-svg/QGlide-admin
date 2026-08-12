@@ -488,6 +488,44 @@
   color: #D97706;
 }
 
+.driver-wallet-label {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.driver-wallet-breakdown {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.driver-wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.driver-wallet-row-label {
+  color: #6b7280;
+}
+
+.driver-wallet-row-value {
+  font-weight: 600;
+  color: #111827;
+}
+
+.driver-wallet-row-warning .driver-wallet-row-value {
+  color: #dc2626;
+}
+
 .btn-update-balance {
   display: inline-flex;
   align-items: center;
@@ -871,7 +909,22 @@
 .dark-mode .detail-value,
 .dark-mode .breadcrumb-current,
 .dark-mode .documents-panel h3,
-.dark-mode .driver-wallet-card h3,
+.dark-mode .driver-wallet-card h3 {
+  color: #f9fafb;
+}
+
+.dark-mode .driver-wallet-label,
+.dark-mode .driver-wallet-row-label {
+  color: #9ca3af;
+}
+
+.dark-mode .driver-wallet-row-value {
+  color: #f9fafb;
+}
+
+.dark-mode .driver-wallet-breakdown {
+  border-top-color: #374151;
+}
 .dark-mode .document-name {
   color: var(--text-dark, #f1f5f9);
 }

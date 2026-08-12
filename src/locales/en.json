@@ -439,6 +439,13 @@
     "driverOnlineTitle": "Driver Online",
     "viewDriver": "View Driver",
     "walletBalance": "Wallet Balance",
+    "totalBalance": "Total Balance",
+    "mainWallet": "Main Wallet",
+    "availableBalance": "Available Balance",
+    "pendingWithdrawals": "Pending Withdrawals",
+    "commissionWallet": "Commission Wallet",
+    "negativeBalance": "Negative Balance",
+    "walletTotal": "WALLET (QAR)",
     "currentBalance": "Current Balance",
     "updateBalance": "Update Balance"
   },
@@ -895,5 +902,20 @@
     "roleDeleted": "Role deleted successfully",
     "failedToAdd": "Failed to add role",
     "failedToDelete": "Failed to delete role"
+  },
+  "notificationCenter": {
+    "title": "Notifications",
+    "subtitle": "Activity feed — recent events and alerts",
+    "loading": "Loading activity feed...",
+    "empty": "No activity yet",
+    "errorLoad": "Failed to load activity feed",
+    "errorMarkRead": "Failed to mark notifications as read",
+    "untitled": "Untitled event",
+    "typeNews": "News",
+    "typeEvent": "Event",
+    "openLink": "Open link",
+    "loadMore": "Load more",
+    "markAllRead": "Mark all read",
+    "manage": "Send notifications"
   }
 }

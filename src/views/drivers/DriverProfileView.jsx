@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DriverProfileView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchDriverDetails, approveDriver, suspendDriver, unsuspendDriver, updateDriver, updateDriverBalance, deleteDriver, getDriverReviewsFromPayload, mapDriverRecentRide, mapAcceptanceRate, mapCancellationRate, formatDocumentLabel, resolveDriverProfileStatus, isDriverOnline, parseDriverBalance } from '../../services/driverService';
+import { fetchDriverDetails, fetchDriverWallet, approveDriver, suspendDriver, unsuspendDriver, updateDriver, updateDriverBalance, deleteDriver, getDriverReviewsFromPayload, mapDriverRecentRide, mapAcceptanceRate, mapCancellationRate, formatDocumentLabel, resolveDriverProfileStatus, isDriverOnline, parseDriverBalance } from '../../services/driverService';
 import { detectNewlyOnlineDrivers } from '../../utils/driverOnlineState';
 import Toast from '../../components/common/Toast';
 import SuspendDriverModal from '../../components/modals/SuspendDriverModal';
@@ -18,7 +18,7 @@ import UserAvatar from '../../components/common/UserAvatar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -81,6 +81,7 @@ export default function DriverProfileView() {
   // Balance modal and loading states
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
+  const [driverWallet, setDriverWallet] = useState(null);
 
   // Delete modal and loading states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -263,10 +264,22 @@ export default function DriverProfileView() {
     }
 
     try {
-      const result = await fetchDriverDetails(driverId);
+      const [result, walletResult] = await Promise.all([
+        fetchDriverDetails(driverId),
+        fetchDriverWallet(driverId),
+      ]);
 
       if (result.success && result.data) {
         applyDriverApiData(result.data);
+
+        if (walletResult.success && walletResult.wallet) {
+          setDriverWallet(walletResult.wallet);
+          setDriverData((prev) =>
+            prev ? { ...prev, walletBalance: walletResult.balance } : prev,
+          );
+        } else {
+          setDriverWallet(null);
+        }
       } else if (!silent) {
         setError(result.error || 'Failed to load driver details');
       }
@@ -532,13 +545,15 @@ export default function DriverProfileView() {
       });
 
       if (result.success) {
+        if (result.wallet) {
+          setDriverWallet(result.wallet);
+        }
         setDriverData((prev) => (prev ? { ...prev, walletBalance: result.balance ?? balance } : prev));
         setShowBalanceModal(false);
         setToast({
           type: 'success',
           message: t('toast.driverBalanceUpdated'),
         });
-        loadDriverData({ silent: true });
       } else {
         setToast({
           type: 'error',
@@ -778,18 +793,11 @@ export default function DriverProfileView() {
             </div>
           </div>
           <div className="acts">
-            <div className="search">
-              <span className="material-symbols-outlined">search</span>
-              <input placeholder={t('common.search')} />
-            </div>
             <LanguageToggle />
 
             <ThemeToggle />
-            <button className="ibtn" aria-label={t('common.notifications')}>
-              <img src={notificationsIcon} alt="notifications" className="kimg" />
-              <i className="dot" />
-            </button>
-            <div className="user-info">
+            <NotificationBell />
+<div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
@@ -1142,13 +1150,53 @@ export default function DriverProfileView() {
                 <div className="driver-wallet-header">
                   <div>
                     <h3>{t('drivers.walletBalance')}</h3>
-                    <div className="driver-wallet-balance">{formatCurrency(driverData.walletBalance || 0)}</div>
+                    <div className="driver-wallet-balance">
+                      {formatCurrency(driverWallet?.totalBalance ?? driverData.walletBalance ?? 0)}
+                    </div>
+                    <div className="driver-wallet-label">{t('drivers.totalBalance')}</div>
                   </div>
                   <button className="btn-update-balance" onClick={handleBalanceClick}>
                     <span className="material-symbols-outlined">account_balance_wallet</span>
                     {t('drivers.updateBalance')}
                   </button>
                 </div>
+
+                {driverWallet?.found && (
+                  <div className="driver-wallet-breakdown">
+                    <div className="driver-wallet-row">
+                      <span className="driver-wallet-row-label">{t('drivers.mainWallet')}</span>
+                      <span className="driver-wallet-row-value">
+                        {formatCurrency(driverWallet.mainWalletBalance)}
+                      </span>
+                    </div>
+                    <div className="driver-wallet-row">
+                      <span className="driver-wallet-row-label">{t('drivers.availableBalance')}</span>
+                      <span className="driver-wallet-row-value">
+                        {formatCurrency(driverWallet.availableBalance)}
+                      </span>
+                    </div>
+                    <div className="driver-wallet-row">
+                      <span className="driver-wallet-row-label">{t('drivers.pendingWithdrawals')}</span>
+                      <span className="driver-wallet-row-value">
+                        {formatCurrency(driverWallet.pendingWithdrawals)}
+                      </span>
+                    </div>
+                    <div className="driver-wallet-row">
+                      <span className="driver-wallet-row-label">{t('drivers.commissionWallet')}</span>
+                      <span className="driver-wallet-row-value">
+                        {formatCurrency(driverWallet.commissionBalance)}
+                      </span>
+                    </div>
+                    {driverWallet.negativeBalance > 0 && (
+                      <div className="driver-wallet-row driver-wallet-row-warning">
+                        <span className="driver-wallet-row-label">{t('drivers.negativeBalance')}</span>
+                        <span className="driver-wallet-row-value">
+                          {formatCurrency(driverWallet.negativeBalance)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="documents-panel">
@@ -1201,7 +1249,7 @@ export default function DriverProfileView() {
             onClose={() => setShowBalanceModal(false)}
             onConfirm={handleBalanceConfirm}
             driverName={driverData?.name || 'Unknown Driver'}
-            currentBalance={driverData?.walletBalance ?? 0}
+            currentBalance={driverWallet?.mainWalletBalance ?? driverData?.walletBalance ?? 0}
             isLoading={isUpdatingBalance}
           />
 

@@ -8,7 +8,7 @@ import LanguageToggle from '../../components/common/LanguageToggle';
 import LazyLoader from '../../components/common/LazyLoader.jsx';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -248,18 +248,11 @@ export default function CourierManagementView() {
             </div>
           </div>
           <div className="acts">
-            <div className="search">
-              <span className="material-symbols-outlined">search</span>
-              <input placeholder="Search..." />
-            </div>
             <LanguageToggle />
             <button className="ibtn" aria-label="settings" onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
             </button>
-            <button className="ibtn" aria-label="notifications">
-              <img src={notificationsIcon} alt="notifications" className="kimg" />
-              <i className="dot" />
-            </button>
+            <NotificationBell />
             <div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" aria-label="logout" onClick={handleLogout}>

@@ -14,7 +14,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/images/logo.webp';
 import settingsIcon from '../../assets/icons/settings.png';
-import notificationsIcon from '../../assets/icons/notifications.png';
+import NotificationBell from '../../components/common/NotificationBell';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <button className={`snav ${active ? 'active' : ''}`} type="button" onClick={onClick}>
@@ -215,20 +215,13 @@ export default function MarketersManagementView() {
             </div>
           </div>
           <div className="acts">
-            <div className="search">
-              <span className="material-symbols-outlined">search</span>
-              <input placeholder={t('common.search')} readOnly aria-hidden />
-            </div>
             <LanguageToggle />
             <ThemeToggle />
             <button className="ibtn" type="button" aria-label={t('common.settings')} onClick={() => navigate('/settings')}>
               <img src={settingsIcon} alt="settings" className="kimg" />
             </button>
-            <button className="ibtn" type="button" aria-label={t('common.notifications')}>
-              <img src={notificationsIcon} alt="notifications" className="kimg" />
-              <i className="dot" />
-            </button>
-            <div className="user-info">
+            <NotificationBell />
+<div className="user-info">
               <span className="user-name">QGlide Admin</span>
               <button className="logout-btn" type="button" aria-label={t('common.logout')} onClick={handleLogout}>
                 <span className="material-symbols-outlined">logout</span>
