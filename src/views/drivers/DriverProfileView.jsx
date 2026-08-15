@@ -755,7 +755,8 @@ export default function DriverProfileView() {
       navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    } else if (navItem === 'influencers') {
+    }
+    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
@@ -804,6 +805,7 @@ export default function DriverProfileView() {
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} active={true} onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
+          <NavItem icon="handshake" label={t('navigation.partners')} onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label={t('navigation.influencers')} onClick={() => handleNavClick('influencers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
@@ -1236,31 +1238,11 @@ export default function DriverProfileView() {
                       </span>
                     </div>
                     <div className="driver-wallet-row">
-                      <span className="driver-wallet-row-label">{t('drivers.availableBalance')}</span>
-                      <span className="driver-wallet-row-value">
-                        {formatCurrency(driverWallet.availableBalance)}
-                      </span>
-                    </div>
-                    <div className="driver-wallet-row">
-                      <span className="driver-wallet-row-label">{t('drivers.pendingWithdrawals')}</span>
-                      <span className="driver-wallet-row-value">
-                        {formatCurrency(driverWallet.pendingWithdrawals)}
-                      </span>
-                    </div>
-                    <div className="driver-wallet-row">
                       <span className="driver-wallet-row-label">{t('drivers.commissionWallet')}</span>
                       <span className="driver-wallet-row-value">
                         {formatCurrency(driverWallet.commissionBalance)}
                       </span>
                     </div>
-                    {driverWallet.negativeBalance > 0 && (
-                      <div className="driver-wallet-row driver-wallet-row-warning">
-                        <span className="driver-wallet-row-label">{t('drivers.negativeBalance')}</span>
-                        <span className="driver-wallet-row-value">
-                          {formatCurrency(driverWallet.negativeBalance)}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

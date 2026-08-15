@@ -99,6 +99,7 @@ export default function InfluencersManagementView() {
     else if (navItem === 'driver-management') navigate('/driver-management');
     else if (navItem === 'user-management') navigate('/user-management');
     else if (navItem === 'marketers') navigate('/marketers');
+    else if (navItem === 'partners') navigate('/partners');
     else if (navItem === 'influencers') navigate('/influencers');
     else if (navItem === 'financial') navigate('/dashboard?section=financial');
     else if (navItem === 'support') navigate('/dashboard?section=support');
@@ -155,6 +156,7 @@ export default function InfluencersManagementView() {
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
+          <NavItem icon="handshake" label={t('navigation.partners')} onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label={t('navigation.influencers')} active onClick={() => handleNavClick('influencers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />

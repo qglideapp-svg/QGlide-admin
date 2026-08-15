@@ -1530,7 +1530,10 @@ export const sendDocumentReminderEmails = async ({
     };
 
     if (Array.isArray(driverIds) && driverIds.length > 0) {
+      payload.audience = 'selected';
       payload.driver_ids = driverIds.map(String);
+    } else {
+      payload.audience = 'all';
     }
 
     const response = await authenticatedFetch(url, {

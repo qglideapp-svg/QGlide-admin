@@ -1,0 +1,87 @@
+.add-partner-modal-content.modal-content {
+  max-width: 720px;
+  width: 92%;
+  border-left: 4px solid #2563eb;
+}
+
+.add-partner-modal-content .modal-header h2 {
+  color: #1e40af;
+}
+
+.partner-modal-banner {
+  background: linear-gradient(90deg, rgba(219, 234, 254, 0.6), rgba(239, 246, 255, 0.9));
+  border: 1px solid rgba(37, 99, 235, 0.35);
+}
+
+.partner-modal-banner p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1e3a8a;
+}
+
+.optional {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.add-partner-modal-content .form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #374151;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.add-partner-modal-content .form-group select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.add-partner-modal-content .form-group select.error {
+  border-color: #ef4444;
+}
+
+.partner-category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.partners-management.dark-mode .partner-category-badge {
+  background: rgba(37, 99, 235, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.partner-code-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.partners-management.dark-mode .partner-code-pill {
+  background: rgba(15, 23, 42, 0.5);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.25);
+}

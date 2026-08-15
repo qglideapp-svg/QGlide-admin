@@ -123,7 +123,8 @@ export default function WithdrawalManagementView() {
       navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    } else if (navItem === 'influencers') {
+    }
+    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
@@ -264,6 +265,7 @@ export default function WithdrawalManagementView() {
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
           <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
+          <NavItem icon="handshake" label="Partners" onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label="Influencers" onClick={() => handleNavClick('influencers')} />
           <NavItem icon="account_balance_wallet" label="Financial" onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label="Withdrawals" active={true} />

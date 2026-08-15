@@ -26,6 +26,7 @@ const RentalManagementView = lazy(() => import('./views/rentals/RentalManagement
 const WithdrawalManagementView = lazy(() => import('./views/withdrawals/WithdrawalManagementView.jsx'));
 const NotificationManagementView = lazy(() => import('./views/notifications/NotificationManagementView.jsx'));
 const MarketersManagementView = lazy(() => import('./views/marketers/MarketersManagementView.jsx'));
+const PartnersManagementView = lazy(() => import('./views/partners/PartnersManagementView.jsx'));
 const InfluencersManagementView = lazy(() => import('./views/influencers/InfluencersManagementView.jsx'));
 const InfluencerDetailView = lazy(() => import('./views/influencers/InfluencerDetailView.jsx'));
 const AppUpdateView = lazy(() => import('./views/app-update/AppUpdateView.jsx'));
@@ -58,6 +59,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/withdrawals" element={withAuth(<WithdrawalManagementView />)} />
         <Route path="/notifications" element={withAuth(<NotificationManagementView />)} />
         <Route path="/marketers" element={withAuth(<MarketersManagementView />)} />
+        <Route path="/partners" element={withAuth(<PartnersManagementView />)} />
         <Route path="/influencers" element={withAuth(<InfluencersManagementView />)} />
         <Route path="/influencers/:influencerId/activity" element={withAuth(<InfluencerDetailView />)} />
         <Route path="/app-update" element={withAuth(<AppUpdateView />)} />
