@@ -27,6 +27,7 @@
     "remove": "Remove",
     "update": "Update",
     "view": "View",
+    "viewAll": "View All",
     "details": "Details",
     "actions": "Actions",
     "status": "Status",
@@ -88,7 +89,8 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "success": "Success",
-    "error": "Error"
+    "error": "Error",
+    "sent": "Sent"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -599,7 +601,9 @@
     "cancelledAt": "Cancelled At",
     "requestedAt": "Requested At",
     "riderSuspendedSuccess": "Rider suspended successfully!",
-    "riderSuspendFailed": "Failed to suspend rider",
+    "riderSuspendFailed": "Failed to suspend rider"
+  },
+  "rides": {
     "rideManagement": "Ride Management",
     "rideDetails": "Ride Details",
     "searchRides": "Search rides...",
@@ -636,7 +640,10 @@
     "dateTime": "Date & Time",
     "noRidesMessage": "There are no rides to display at the moment.",
     "paymentMethod": "Payment Method",
-    "paymentStatus": "Payment Status"
+    "paymentStatus": "Payment Status",
+    "newRideBookedTitle": "New Ride Booked",
+    "newRideBookedMessage": "{{name}} just booked a ride",
+    "viewRide": "View Ride"
   },
   "settings": {
     "adminSettings": "Admin Settings",
@@ -878,7 +885,23 @@
     "availableBalanceLabel": "Available Balance",
     "enterAmount": "Enter Amount",
     "withdrawing": "Withdrawing...",
-    "withdraw": "Withdraw"
+    "withdraw": "Withdraw",
+    "transactionDetails": "Transaction Details",
+    "loadingTransactionDetails": "Loading transaction details...",
+    "transactionDetailsUnavailable": "Unable to load transaction details.",
+    "reference": "Reference",
+    "userRole": "User Role",
+    "rideId": "Ride ID",
+    "walletId": "Wallet ID",
+    "walletType": "Wallet Type",
+    "balanceBefore": "Balance Before",
+    "balanceAfter": "Balance After",
+    "exportPDF": "Export PDF",
+    "exporting": "Exporting...",
+    "exportPDFSuccess": "Transactions exported to PDF successfully.",
+    "exportPDFFailed": "Failed to export transactions to PDF.",
+    "exportDateRequired": "Select a start and end date before exporting.",
+    "exportDateInvalid": "Start date must be before end date."
   },
   "withdrawals": {
     "withdrawalManagement": "Withdrawal Management",
@@ -1011,5 +1034,37 @@
     "loadMore": "Load more",
     "markAllRead": "Mark all read",
     "manage": "Send notifications"
+  },
+  "notifications": {
+    "pageTitle": "Push Notifications",
+    "pageSubtitle": "Send notifications to all users and review past broadcasts",
+    "sendTitle": "Send Push Notification",
+    "sendSubtitle": "Create and send a notification to all users",
+    "historyTitle": "Push Notification History",
+    "historySubtitle": "Previously sent notifications",
+    "historyLoading": "Loading notification history...",
+    "historyEmpty": "No push notifications have been sent yet",
+    "historyError": "Failed to load notification history",
+    "typeLabel": "Notification Type",
+    "titleLabel": "Title",
+    "messageLabel": "Message",
+    "titlePlaceholder": "Enter notification title",
+    "messagePlaceholder": "Enter notification message",
+    "imageUrlLabel": "Image URL (Optional)",
+    "imageUrlHint": "URL to an image displayed with the notification",
+    "actionUrlLabel": "Action URL (Optional)",
+    "actionUrlHint": "URL users open when they tap the notification",
+    "sending": "Sending...",
+    "sendButton": "Send Notification",
+    "titleRequired": "Title is required",
+    "messageRequired": "Message is required",
+    "sendSuccess": "Notification sent successfully to all users!",
+    "sendFailed": "Failed to send notification",
+    "sendUnexpectedError": "An unexpected error occurred",
+    "sentBy": "Sent by",
+    "deliveryStats": "Delivery",
+    "historySearchPlaceholder": "Search notifications...",
+    "historyFilterAll": "All types",
+    "historyTotal": "{count} notifications"
   }
 }

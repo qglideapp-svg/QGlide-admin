@@ -1,0 +1,71 @@
+.ride-booking-toast {
+  top: auto;
+  bottom: 24px;
+  right: 24px;
+  min-width: 360px;
+  max-width: 480px;
+  z-index: 1200;
+}
+
+.ride-booking-toast .toast-content {
+  align-items: flex-start;
+}
+
+.ride-booking-toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.ride-booking-toast-icon .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.ride-booking-toast-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ride-booking-toast-copy strong {
+  font-size: 14px;
+  color: #111827;
+}
+
+.ride-booking-toast-route {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.ride-booking-toast-view {
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ride-booking-toast-view:hover {
+  background: #1d4ed8;
+}
+
+.dark-mode .ride-booking-toast-copy strong {
+  color: #f8fafc;
+}
+
+.dark-mode .ride-booking-toast-route {
+  color: #9ca3af;
+}

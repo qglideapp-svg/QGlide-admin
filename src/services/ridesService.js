@@ -1,7 +1,134 @@
 import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
 
 
 const RIDES_API_BASE = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+
+function parseErrorMessage(errorData, fallback) {
+  if (!errorData || typeof errorData !== 'object') return fallback;
+  const err = errorData.error ?? errorData.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && typeof err.message === 'string') return err.message;
+  return fallback;
+}
+
+function extractLiveBookingsPayload(data) {
+  if (!data || typeof data !== 'object') {
+    return { bookings: [], nextSince: null };
+  }
+
+  const root = data.data && typeof data.data === 'object' ? data.data : data;
+  const bookings =
+    (Array.isArray(root.bookings) && root.bookings) ||
+    (Array.isArray(root.rides) && root.rides) ||
+    (Array.isArray(root.items) && root.items) ||
+    (Array.isArray(root.data) && root.data) ||
+    [];
+
+  const nextSince =
+    root.next_since ??
+    root.nextSince ??
+    data.next_since ??
+    data.nextSince ??
+    null;
+
+  return { bookings, nextSince };
+}
+
+export const normalizeLiveRideBooking = (raw, index = 0) => {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const rider = raw.rider && typeof raw.rider === 'object' ? raw.rider : {};
+  const route = raw.route && typeof raw.route === 'object' ? raw.route : {};
+
+  return {
+    id: raw.id ?? raw.ride_id ?? raw.booking_id ?? `booking_${index}`,
+    riderName:
+      rider.name ??
+      rider.full_name ??
+      raw.rider_name ??
+      raw.user_name ??
+      null,
+    pickup:
+      route.pickup_address ??
+      raw.pickup_address ??
+      raw.pickup_location ??
+      raw.from_address ??
+      null,
+    dropoff:
+      route.dropoff_address ??
+      raw.dropoff_address ??
+      raw.dropoff_location ??
+      raw.to_address ??
+      null,
+    fare: parseFloat(raw.fare ?? raw.total_amount ?? raw.price ?? 0) || 0,
+    status: raw.status ?? 'pending',
+    createdAt:
+      raw.created_at ??
+      raw.booked_at ??
+      raw.requested_at ??
+      raw.timestamp ??
+      null,
+  };
+};
+
+export const fetchLiveRideBookings = async ({
+  since = null,
+  waitSeconds = 25,
+  limit = 20,
+  signal,
+} = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (since) {
+      params.append('since', since);
+    }
+    params.append('wait_seconds', String(waitSeconds));
+    params.append('limit', String(limit));
+
+    const url = `${RIDES_API_BASE}/admin-ride-bookings-live?${params.toString()}`;
+    const response = await authenticatedFetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = parseErrorMessage(errorData, errorMessage);
+      } catch {
+        // Ignore JSON parse errors for non-JSON responses
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    const { bookings, nextSince } = extractLiveBookingsPayload(data);
+
+    return {
+      success: true,
+      bookings: bookings
+        .map((booking, index) => normalizeLiveRideBooking(booking, index))
+        .filter(Boolean),
+      nextSince,
+      raw: data,
+    };
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      return { success: false, aborted: true, error: error.message };
+    }
+
+    console.error('Live Ride Bookings API Error:', error);
+    return { success: false, error: error.message };
+  }
+};
 
 export const fetchRidesList = async (filters = {}) => {
   try {

@@ -369,3 +369,85 @@ export const getDefaultReportConfig = () => ({
 });
 
 export const getDefaultReportOptions = () => normalizeOptions({});
+
+const formatISODate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const getDefaultPaymentTransactionsDateRange = () => {
+  const endDate = new Date();
+  const startDate = new Date(endDate.getFullYear(), 0, 1);
+
+  return {
+    startDate: formatISODate(startDate),
+    endDate: formatISODate(endDate),
+  };
+};
+
+const sleep = (ms) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+
+export const exportPaymentTransactionsPDF = async ({ startDate, endDate } = {}) => {
+  const defaults = getDefaultPaymentTransactionsDateRange();
+  const resolvedStartDate = startDate || defaults.startDate;
+  const resolvedEndDate = endDate || defaults.endDate;
+
+  const generateResult = await generateReport({
+    type: 'payment_transactions',
+    startDate: resolvedStartDate,
+    endDate: resolvedEndDate,
+    format: 'pdf',
+  });
+
+  if (!generateResult.success) {
+    return generateResult;
+  }
+
+  let report = generateResult.data;
+  if (!report?.id) {
+    return {
+      success: false,
+      error: generateResult.message || 'Report was queued but no report ID was returned.',
+    };
+  }
+
+  if (report.status !== 'Ready') {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      await sleep(2500);
+
+      const listResult = await fetchReports({ page: 1, limit: 50 });
+      if (!listResult.success) {
+        continue;
+      }
+
+      const latest = listResult.data.find((item) => item.id === report.id);
+      if (!latest) {
+        continue;
+      }
+
+      report = latest;
+      if (latest.status === 'Ready') {
+        break;
+      }
+
+      if (latest.status === 'Failed') {
+        return { success: false, error: 'Report generation failed' };
+      }
+    }
+  }
+
+  if (report.status !== 'Ready') {
+    return {
+      success: false,
+      error: 'Report is still processing. Open Reports to download it when ready.',
+      reportId: report.id,
+    };
+  }
+
+  return downloadReport(report.id, report.name || 'payment_transactions', 'pdf');
+};

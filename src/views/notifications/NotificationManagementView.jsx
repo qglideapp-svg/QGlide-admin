@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NotificationManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { sendPushNotification } from '../../services/notificationService';
+import { sendPushNotification, fetchNotificationHistory } from '../../services/notificationService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import LanguageToggle from '../../components/common/LanguageToggle';
+import LazyLoader from '../../components/common/LazyLoader.jsx';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/images/logo.webp';
@@ -21,11 +22,21 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export default function NotificationManagementView() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, formatDateTime, translateApiLabel } = useLanguage();
   const { theme } = useTheme();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [toast, setToast] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyTotalCount, setHistoryTotalCount] = useState(null);
+  const [historyTypeFilter, setHistoryTypeFilter] = useState('all');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historySearchInput, setHistorySearchInput] = useState('');
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [isHistoryLoadingMore, setIsHistoryLoadingMore] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -95,6 +106,61 @@ export default function NotificationManagementView() {
     }));
   };
 
+  const loadNotificationHistory = useCallback(async (page = 1, append = false, filters = {}) => {
+    if (append) {
+      setIsHistoryLoadingMore(true);
+    } else {
+      setIsHistoryLoading(true);
+      setHistoryError(null);
+    }
+
+    const result = await fetchNotificationHistory({
+      page,
+      limit: 20,
+      notificationType: filters.notificationType ?? historyTypeFilter,
+      search: filters.search ?? historySearch,
+    });
+
+    if (append) {
+      setIsHistoryLoadingMore(false);
+    } else {
+      setIsHistoryLoading(false);
+    }
+
+    if (!result.success) {
+      if (!append) {
+        setHistory([]);
+        setHistoryError(result.error || t('notifications.historyError'));
+      }
+      return;
+    }
+
+    const nextHistory = result.data.notifications ?? [];
+    setHistory((prev) => (append ? [...prev, ...nextHistory] : nextHistory));
+    setHistoryPage(result.data.page ?? page);
+    setHistoryHasMore(Boolean(result.data.hasMore));
+    setHistoryTotalCount(result.data.totalCount ?? null);
+    setHistoryError(null);
+  }, [historySearch, historyTypeFilter, t]);
+
+  useEffect(() => {
+    loadNotificationHistory(1, false);
+  }, [historyTypeFilter, historySearch, loadNotificationHistory]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setHistorySearch(historySearchInput.trim());
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [historySearchInput]);
+
+  const getTypeLabel = (type) => {
+    if (type === 'news') return t('notificationCenter.typeNews');
+    if (type === 'event') return t('notificationCenter.typeEvent');
+    return translateApiLabel(type);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -102,7 +168,7 @@ export default function NotificationManagementView() {
     if (!formData.title.trim()) {
       setToast({
         type: 'error',
-        message: 'Title is required'
+        message: t('notifications.titleRequired')
       });
       return;
     }
@@ -110,7 +176,7 @@ export default function NotificationManagementView() {
     if (!formData.message.trim()) {
       setToast({
         type: 'error',
-        message: 'Message is required'
+        message: t('notifications.messageRequired')
       });
       return;
     }
@@ -123,7 +189,7 @@ export default function NotificationManagementView() {
       if (result.success) {
         setToast({
           type: 'success',
-          message: 'Notification sent successfully to all users!'
+          message: t('notifications.sendSuccess')
         });
         
         // Reset form
@@ -134,17 +200,19 @@ export default function NotificationManagementView() {
           imageUrl: '',
           actionUrl: '',
         });
+
+        await loadNotificationHistory(1, false);
       } else {
         setToast({
           type: 'error',
-          message: result.error || 'Failed to send notification'
+          message: result.error || t('notifications.sendFailed')
         });
       }
     } catch (error) {
       console.error('Send notification error:', error);
       setToast({
         type: 'error',
-        message: error.message || 'An unexpected error occurred'
+        message: error.message || t('notifications.sendUnexpectedError')
       });
     } finally {
       setIsSending(false);
@@ -167,7 +235,7 @@ export default function NotificationManagementView() {
           <NavItem icon="campaign" label={t('navigation.influencers')} onClick={() => handleNavClick('influencers')} />
           <NavItem icon="account_balance_wallet" label={t('navigation.financial')} onClick={() => handleNavClick('financial')} />
           <NavItem icon="payments" label={t('navigation.withdrawals')} onClick={() => handleNavClick('withdrawals')} />
-                    <NavItem icon="notifications" label="Notifications" active={true} />
+                    <NavItem icon="notifications" label={t('navigation.notifications')} active={true} />
           <NavItem icon="system_update" label={t('navigation.appUpdate')} onClick={() => handleNavClick('app-update')} />
           <NavItem icon="support_agent" label={t('navigation.support')} onClick={() => handleNavClick('support')} />
           <NavItem icon="insights" label={t('navigation.analytics')} onClick={() => handleNavClick('analytics')} />
@@ -199,8 +267,8 @@ export default function NotificationManagementView() {
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div>
-              <h1>Push Notifications</h1>
-              <p className="sub">Send notifications to all users about news or events</p>
+              <h1>{t('notifications.pageTitle')}</h1>
+              <p className="sub">{t('notifications.pageSubtitle')}</p>
             </div>
           </div>
           <div className="acts">
@@ -219,18 +287,18 @@ export default function NotificationManagementView() {
           </div>
         </header>
 
-        <div className="container">
+        <div className="container notification-page-grid">
           <div className="notification-card">
             <div className="card-header">
               <div className="header-left">
-                <h2>Send Push Notification</h2>
-                <p className="subtitle">Create and send a notification to all users</p>
+                <h2>{t('notifications.sendTitle')}</h2>
+                <p className="subtitle">{t('notifications.sendSubtitle')}</p>
               </div>
             </div>
 
             <form className="notification-form" onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="type">Notification Type *</label>
+                <label htmlFor="type">{t('notifications.typeLabel')}</label>
                 <select
                   id="type"
                   name="type"
@@ -239,13 +307,13 @@ export default function NotificationManagementView() {
                   className="form-select"
                   required
                 >
-                  <option value="news">News</option>
-                  <option value="event">Event</option>
+                  <option value="news">{t('notificationCenter.typeNews')}</option>
+                  <option value="event">{t('notificationCenter.typeEvent')}</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="title">Title *</label>
+                <label htmlFor="title">{t('notifications.titleLabel')}</label>
                 <input
                   type="text"
                   id="title"
@@ -253,7 +321,7 @@ export default function NotificationManagementView() {
                   value={formData.title}
                   onChange={handleInputChange}
                   className="form-input"
-                  placeholder="Enter notification title"
+                  placeholder={t('notifications.titlePlaceholder')}
                   required
                   maxLength={100}
                 />
@@ -261,14 +329,14 @@ export default function NotificationManagementView() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="message">Message *</label>
+                <label htmlFor="message">{t('notifications.messageLabel')}</label>
                 <textarea
                   id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleInputChange}
                   className="form-textarea"
-                  placeholder="Enter notification message"
+                  placeholder={t('notifications.messagePlaceholder')}
                   required
                   rows={6}
                   maxLength={500}
@@ -277,7 +345,7 @@ export default function NotificationManagementView() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="imageUrl">Image URL (Optional)</label>
+                <label htmlFor="imageUrl">{t('notifications.imageUrlLabel')}</label>
                 <input
                   type="url"
                   id="imageUrl"
@@ -287,11 +355,11 @@ export default function NotificationManagementView() {
                   className="form-input"
                   placeholder="https://example.com/image.jpg"
                 />
-                <small className="form-hint">URL to an image that will be displayed with the notification</small>
+                <small className="form-hint">{t('notifications.imageUrlHint')}</small>
               </div>
 
               <div className="form-group">
-                <label htmlFor="actionUrl">Action URL (Optional)</label>
+                <label htmlFor="actionUrl">{t('notifications.actionUrlLabel')}</label>
                 <input
                   type="url"
                   id="actionUrl"
@@ -301,7 +369,7 @@ export default function NotificationManagementView() {
                   className="form-input"
                   placeholder="https://example.com/page"
                 />
-                <small className="form-hint">URL that users will be redirected to when they tap the notification</small>
+                <small className="form-hint">{t('notifications.actionUrlHint')}</small>
               </div>
 
               <div className="form-actions">
@@ -319,7 +387,7 @@ export default function NotificationManagementView() {
                   }}
                   disabled={isSending}
                 >
-                  Clear
+                  {t('common.clear')}
                 </button>
                 <button
                   type="submit"
@@ -331,17 +399,141 @@ export default function NotificationManagementView() {
                       <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite' }}>
                         hourglass_empty
                       </span>
-                      Sending...
+                      {t('notifications.sending')}
                     </>
                   ) : (
                     <>
                       <span className="material-symbols-outlined">send</span>
-                      Send Notification
+                      {t('notifications.sendButton')}
                     </>
                   )}
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="notification-card notification-history-card">
+            <div className="card-header">
+              <div className="header-left">
+                <h2>{t('notifications.historyTitle')}</h2>
+                <p className="subtitle">
+                  {historyTotalCount != null
+                    ? t('notifications.historyTotal').replace('{count}', String(historyTotalCount))
+                    : t('notifications.historySubtitle')}
+                </p>
+              </div>
+            </div>
+
+            <div className="notification-history-toolbar">
+              <div className="notification-history-search">
+                <span className="material-symbols-outlined notification-history-search-icon">search</span>
+                <input
+                  type="search"
+                  value={historySearchInput}
+                  onChange={(e) => setHistorySearchInput(e.target.value)}
+                  placeholder={t('notifications.historySearchPlaceholder')}
+                  aria-label={t('notifications.historySearchPlaceholder')}
+                />
+              </div>
+              <select
+                className="notification-history-filter"
+                value={historyTypeFilter}
+                onChange={(e) => setHistoryTypeFilter(e.target.value)}
+                aria-label={t('notifications.typeLabel')}
+              >
+                <option value="all">{t('notifications.historyFilterAll')}</option>
+                <option value="news">{t('notificationCenter.typeNews')}</option>
+                <option value="event">{t('notificationCenter.typeEvent')}</option>
+              </select>
+            </div>
+
+            <div className="notification-history-body">
+              {isHistoryLoading ? (
+                <LazyLoader variant="content" lines={5} message={t('notifications.historyLoading')} />
+              ) : historyError ? (
+                <div className="notification-history-state notification-history-state-error">
+                  <span className="material-symbols-outlined">error</span>
+                  <p>{historyError}</p>
+                  <button type="button" className="btn-cancel" onClick={() => loadNotificationHistory(1, false)}>
+                    {t('common.tryAgain')}
+                  </button>
+                </div>
+              ) : history.length === 0 ? (
+                <div className="notification-history-state">
+                  <span className="material-symbols-outlined">notifications_off</span>
+                  <p>{t('notifications.historyEmpty')}</p>
+                </div>
+              ) : (
+                <ul className="notification-history-list">
+                  {history.map((item) => (
+                    <li key={item.id} className="notification-history-item">
+                      <div className="notification-history-item-head">
+                        <div className="notification-history-badges">
+                          <span className={`notification-history-type notification-history-type-${item.type}`}>
+                            {getTypeLabel(item.type)}
+                          </span>
+                          {item.deliveryStatus && (
+                            <span className={`notification-history-status notification-history-status-${String(item.deliveryStatus).toLowerCase()}`}>
+                              {translateApiLabel(item.deliveryStatus)}
+                            </span>
+                          )}
+                        </div>
+                        {item.sentAt && (
+                          <time dateTime={item.sentAt}>
+                            {formatDateTime(item.sentAt)}
+                          </time>
+                        )}
+                      </div>
+                      <div className="notification-history-content">
+                        {item.imageUrl && (
+                          <img
+                            src={item.imageUrl}
+                            alt=""
+                            className="notification-history-image"
+                            loading="lazy"
+                          />
+                        )}
+                        <div className="notification-history-text">
+                          <h3>{item.title || t('notificationCenter.untitled')}</h3>
+                          {item.message && <p>{item.message}</p>}
+                          <div className="notification-history-meta">
+                            {item.sentByName && (
+                              <span>{t('notifications.sentBy')}: {item.sentByName}</span>
+                            )}
+                            {item.deliverySummary && (
+                              <span>{t('notifications.deliveryStats')}: {item.deliverySummary}</span>
+                            )}
+                          </div>
+                          {item.actionUrl && (
+                            <a
+                              href={item.actionUrl}
+                              target={item.actionUrl.startsWith('http') ? '_blank' : '_self'}
+                              rel={item.actionUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
+                              className="notification-history-link"
+                            >
+                              {t('notificationCenter.openLink')}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {history.length > 0 && historyHasMore && (
+              <div className="notification-history-footer">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => loadNotificationHistory(historyPage + 1, true)}
+                  disabled={isHistoryLoadingMore}
+                >
+                  {isHistoryLoadingMore ? t('common.loading') : t('notificationCenter.loadMore')}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>

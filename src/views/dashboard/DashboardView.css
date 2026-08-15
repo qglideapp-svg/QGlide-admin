@@ -557,6 +557,7 @@ body { margin: 0; overflow-x: hidden; background: var(--bg); }
 
 .transactions-table tbody tr {
   transition: background 0.2s;
+  cursor: pointer;
 }
 
 .transactions-table tbody tr:hover {

@@ -27,6 +27,7 @@
     "remove": "إزالة",
     "update": "تحديث",
     "view": "عرض",
+    "viewAll": "عرض الكل",
     "details": "التفاصيل",
     "actions": "الإجراءات",
     "status": "الحالة",
@@ -88,7 +89,8 @@
     "enabled": "مفعل",
     "disabled": "معطل",
     "success": "نجاح",
-    "error": "خطأ"
+    "error": "خطأ",
+    "sent": "تم الإرسال"
   },
   "navigation": {
     "dashboard": "لوحة التحكم",
@@ -599,7 +601,9 @@
     "cancelledAt": "وقت الإلغاء",
     "requestedAt": "وقت الطلب",
     "riderSuspendedSuccess": "تم تعليق الراكب بنجاح!",
-    "riderSuspendFailed": "فشل تعليق الراكب",
+    "riderSuspendFailed": "فشل تعليق الراكب"
+  },
+  "rides": {
     "rideManagement": "إدارة الرحلات",
     "rideDetails": "تفاصيل الرحلة",
     "searchRides": "بحث عن الرحلات...",
@@ -636,7 +640,10 @@
     "dateTime": "التاريخ والوقت",
     "noRidesMessage": "لا توجد رحلات للعرض في الوقت الحالي.",
     "paymentMethod": "طريقة الدفع",
-    "paymentStatus": "حالة الدفع"
+    "paymentStatus": "حالة الدفع",
+    "newRideBookedTitle": "حجز رحلة جديدة",
+    "newRideBookedMessage": "قام {{name}} بحجز رحلة للتو",
+    "viewRide": "عرض الرحلة"
   },
   "settings": {
     "adminSettings": "إعدادات الإدارة",
@@ -872,7 +879,23 @@
     "fare": "الأجرة",
     "topUp": "شحن",
     "payout": "سحب",
-    "refund": "استرداد"
+    "refund": "استرداد",
+    "transactionDetails": "تفاصيل المعاملة",
+    "loadingTransactionDetails": "جاري تحميل تفاصيل المعاملة...",
+    "transactionDetailsUnavailable": "تعذر تحميل تفاصيل المعاملة.",
+    "reference": "المرجع",
+    "userRole": "دور المستخدم",
+    "rideId": "معرف الرحلة",
+    "walletId": "معرف المحفظة",
+    "walletType": "نوع المحفظة",
+    "balanceBefore": "الرصيد قبل",
+    "balanceAfter": "الرصيد بعد",
+    "exportPDF": "تصدير PDF",
+    "exporting": "جاري التصدير...",
+    "exportPDFSuccess": "تم تصدير المعاملات إلى PDF بنجاح.",
+    "exportPDFFailed": "فشل تصدير المعاملات إلى PDF.",
+    "exportDateRequired": "يرجى اختيار تاريخ البداية والنهاية قبل التصدير.",
+    "exportDateInvalid": "يجب أن يكون تاريخ البداية قبل تاريخ النهاية."
   },
   "withdrawals": {
     "withdrawalManagement": "إدارة السحوبات",
@@ -1005,5 +1028,37 @@
     "loadMore": "تحميل المزيد",
     "markAllRead": "تعليم الكل كمقروء",
     "manage": "إرسال إشعارات"
+  },
+  "notifications": {
+    "pageTitle": "الإشعارات الفورية",
+    "pageSubtitle": "إرسال الإشعارات لجميع المستخدمين ومراجعة الإرسالات السابقة",
+    "sendTitle": "إرسال إشعار فوري",
+    "sendSubtitle": "إنشاء وإرسال إشعار لجميع المستخدمين",
+    "historyTitle": "سجل الإشعارات الفورية",
+    "historySubtitle": "الإشعارات المرسلة سابقًا",
+    "historyLoading": "جاري تحميل سجل الإشعارات...",
+    "historyEmpty": "لم يتم إرسال أي إشعارات فورية بعد",
+    "historyError": "فشل تحميل سجل الإشعارات",
+    "typeLabel": "نوع الإشعار",
+    "titleLabel": "العنوان",
+    "messageLabel": "الرسالة",
+    "titlePlaceholder": "أدخل عنوان الإشعار",
+    "messagePlaceholder": "أدخل رسالة الإشعار",
+    "imageUrlLabel": "رابط الصورة (اختياري)",
+    "imageUrlHint": "رابط صورة تظهر مع الإشعار",
+    "actionUrlLabel": "رابط الإجراء (اختياري)",
+    "actionUrlHint": "الرابط الذي يفتحه المستخدمون عند النقر على الإشعار",
+    "sending": "جاري الإرسال...",
+    "sendButton": "إرسال الإشعار",
+    "titleRequired": "العنوان مطلوب",
+    "messageRequired": "الرسالة مطلوبة",
+    "sendSuccess": "تم إرسال الإشعار بنجاح إلى جميع المستخدمين!",
+    "sendFailed": "فشل إرسال الإشعار",
+    "sendUnexpectedError": "حدث خطأ غير متوقع",
+    "sentBy": "أرسل بواسطة",
+    "deliveryStats": "التسليم",
+    "historySearchPlaceholder": "البحث في الإشعارات...",
+    "historyFilterAll": "جميع الأنواع",
+    "historyTotal": "{count} إشعار"
   }
 }

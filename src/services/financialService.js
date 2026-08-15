@@ -1,102 +1,151 @@
 import { authenticatedFetch } from './apiClient';
+import { exportPaymentTransactionsPDF } from './reportsService';
 
 // Financial Service with Real APIs
 const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXpvb3dtbWl5bWJiaHhvZ2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTQzMjQsImV4cCI6MjA3NTI3MDMyNH0.9vdJHTTnW38CctYwD9GZOvoX_SEu58FLu81mbjQFBdk';
 
-const mockTransactions = [
-  {
-    id: '#TRX752A4B',
-    date: 'Oct 07, 2025',
-    user: 'Jassim Al-Kuwari',
-    type: 'Fare',
-    amount: 45.50,
-    status: 'Completed'
-  },
-  {
-    id: '#TRX9C3D8E',
-    date: 'Oct 07, 2025',
-    user: 'Fatima Al-Abdullah',
-    type: 'Top-up',
-    amount: 100.00,
-    status: 'Completed'
-  },
-  {
-    id: '#TRX1F6B2C',
-    date: 'Oct 06, 2025',
-    user: 'Ahmed Khan (Driver)',
-    type: 'Payout',
-    amount: 850.00,
-    status: 'Pending'
-  },
-  {
-    id: '#TRX5E9A1D',
-    date: 'Oct 06, 2025',
-    user: 'Noora Al-Mansoori',
-    type: 'Refund',
-    amount: 25.00,
-    status: 'Completed'
-  },
-  {
-    id: '#TRX8B4C2F',
-    date: 'Oct 06, 2025',
-    user: 'Mohammed Al-Thani',
-    type: 'Fare',
-    amount: 67.20,
-    status: 'Completed'
-  },
-  {
-    id: '#TRX3E7A9D',
-    date: 'Oct 05, 2025',
-    user: 'Sarah Hassan (Driver)',
-    type: 'Payout',
-    amount: 1250.00,
-    status: 'Completed'
-  },
-  {
-    id: '#TRX6D1F5B',
-    date: 'Oct 05, 2025',
-    user: 'Ali Al-Marri',
-    type: 'Top-up',
-    amount: 200.00,
-    status: 'Completed'
-  },
-  {
-    id: '#TRX9A2C4E',
-    date: 'Oct 05, 2025',
-    user: 'Layla Ahmed',
-    type: 'Fare',
-    amount: 38.75,
-    status: 'Completed'
-  },
-  {
-    id: '#TRX4F8B1C',
-    date: 'Oct 04, 2025',
-    user: 'Omar Khalid',
-    type: 'Refund',
-    amount: 42.30,
-    status: 'Pending'
-  },
-  {
-    id: '#TRX7E3D9A',
-    date: 'Oct 04, 2025',
-    user: 'Hassan Ali (Driver)',
-    type: 'Payout',
-    amount: 1200.00,
-    status: 'Pending'
-  }
-];
+function parseErrorMessage(errorData, fallback) {
+  if (!errorData || typeof errorData !== 'object') return fallback;
+  const err = errorData.error ?? errorData.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && typeof err.message === 'string') return err.message;
+  return fallback;
+}
 
-const mockFinancialOverview = {
-  systemWalletBalance: 1250340,
-  commissions: {
-    amount: 98450,
-    trend: 5.1,
-    period: 'MTD'
-  },
-  pendingPayouts: {
-    amount: 32180,
-    count: 8
+export const resolveTransactionId = (transaction) => {
+  if (!transaction || typeof transaction !== 'object') {
+    return null;
+  }
+
+  const rawId =
+    transaction.transaction_id ??
+    transaction.transactionId ??
+    transaction.id ??
+    null;
+
+  if (rawId == null || rawId === '') {
+    return null;
+  }
+
+  return String(rawId).replace(/^#/, '');
+};
+
+export const extractTransactionDetailsPayload = (responseData) => {
+  if (!responseData || typeof responseData !== 'object') {
+    return null;
+  }
+
+  return (
+    responseData.data?.transaction ??
+    responseData.data?.data?.transaction ??
+    responseData.transaction ??
+    (responseData.data && typeof responseData.data === 'object' ? responseData.data : null) ??
+    responseData
+  );
+};
+
+export const mapTransactionDetailsSummary = (apiTransaction) => {
+  if (!apiTransaction || typeof apiTransaction !== 'object') {
+    return null;
+  }
+
+  const user = apiTransaction.user || apiTransaction.rider || apiTransaction.driver || {};
+  const ride = apiTransaction.ride || {};
+  const payment = apiTransaction.payment || {};
+  const wallet = apiTransaction.wallet || {};
+
+  return {
+    id: apiTransaction.id || apiTransaction.transaction_id,
+    type: apiTransaction.type || apiTransaction.transaction_type,
+    status: apiTransaction.status,
+    amount: parseFloat(apiTransaction.amount ?? apiTransaction.total_amount ?? 0) || 0,
+    currency: apiTransaction.currency || 'QAR',
+    createdAt:
+      apiTransaction.created_at ||
+      apiTransaction.date ||
+      apiTransaction.timestamp ||
+      apiTransaction.processed_at,
+    description:
+      apiTransaction.description ||
+      apiTransaction.note ||
+      apiTransaction.details,
+    reference:
+      apiTransaction.reference ||
+      apiTransaction.transaction_ref ||
+      apiTransaction.external_reference,
+    userName:
+      typeof user === 'string'
+        ? user
+        : (user.name || user.full_name || apiTransaction.user_name),
+    userEmail: user.email || apiTransaction.user_email || null,
+    userPhone: user.phone || apiTransaction.user_phone || null,
+    userRole: user.role || apiTransaction.user_role || null,
+    paymentMethod:
+      payment.method ||
+      payment.payment_method ||
+      apiTransaction.payment_method ||
+      null,
+    paymentStatus:
+      payment.status ||
+      payment.payment_status ||
+      apiTransaction.payment_status ||
+      null,
+    rideId: ride.id || ride.ride_id || apiTransaction.ride_id || null,
+    walletId: wallet.id || wallet.wallet_id || apiTransaction.wallet_id || null,
+    walletType: wallet.type || wallet.wallet_type || apiTransaction.wallet_type || null,
+    balanceBefore: apiTransaction.balance_before ?? null,
+    balanceAfter: apiTransaction.balance_after ?? null,
+  };
+};
+
+export const fetchTransactionDetails = async (transactionId) => {
+  try {
+    const normalizedId = resolveTransactionId({ id: transactionId });
+    if (!normalizedId) {
+      return { success: false, error: 'Transaction ID is required' };
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const params = new URLSearchParams();
+    params.append('transaction_id', normalizedId);
+    const url = `${API_BASE_URL}/admin-transaction-details?${params.toString()}`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: anonKey,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = parseErrorMessage(errorData, errorMessage);
+      } catch {
+        // Ignore JSON parse errors for non-JSON responses
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    const payload = extractTransactionDetailsPayload(data);
+    const transaction = mapTransactionDetailsSummary(payload);
+
+    if (!transaction) {
+      return { success: false, error: 'Transaction details not found' };
+    }
+
+    return {
+      success: true,
+      transaction,
+      raw: data,
+    };
+  } catch (error) {
+    console.error('Transaction details API error:', error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -110,7 +159,6 @@ export const fetchFinancialOverview = async () => {
     });
     
     if (!response.ok) {
-      // Try to get error message from response
       let errorMessage = `HTTP error! status: ${response.status}`;
       try {
         const errorData = await response.json();
@@ -130,10 +178,8 @@ export const fetchFinancialOverview = async () => {
     }
     
     if (data.success) {
-      // Handle different possible response structures
       const overview = data.data?.financial_overview || data.data || data;
       
-      // Helper function to extract numeric value from object or number
       const extractValue = (field) => {
         if (!field) return 0;
         if (typeof field === 'number') return field;
@@ -146,7 +192,6 @@ export const fetchFinancialOverview = async () => {
         return 0;
       };
       
-      // Helper function to extract trend/change_percent
       const extractTrend = (field) => {
         if (!field) return 0;
         if (typeof field === 'number') return field;
@@ -182,22 +227,19 @@ export const fetchTransactions = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
     
-    // Add pagination if provided
     if (filters.page) {
       params.append('page', filters.page.toString());
     } else {
-      params.append('page', '1'); // Default to page 1
+      params.append('page', '1');
     }
     
     if (filters.limit) {
       params.append('limit', filters.limit.toString());
     } else {
-      params.append('limit', '20'); // Default limit
+      params.append('limit', '20');
     }
     
-    // Add filter parameters if provided
     if (filters.type && filters.type !== 'All Types') {
-      // Map UI values to API values
       const typeMapping = {
         'Fare': 'fare',
         'Top-up': 'topup',
@@ -433,30 +475,11 @@ export const approvePayoutRequest = async (requestId) => {
   };
 };
 
-export const exportTransactionsCSV = async () => {
-  try {
-    const response = await authenticatedFetch(`${API_BASE_URL}/admin-transactions-export-csv`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Export CSV API error:', error);
-    return { success: false, error: error.message };
-  }
+export const exportTransactionsToPDF = async (filters = {}) => {
+  return exportPaymentTransactionsPDF({
+    startDate: filters.start_date,
+    endDate: filters.end_date,
+  });
 };
 
 export const searchTransactions = async (query, limit = 10) => {

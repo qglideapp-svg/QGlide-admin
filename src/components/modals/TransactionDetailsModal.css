@@ -1,0 +1,121 @@
+.transaction-details-modal-content {
+  width: min(640px, 92vw);
+}
+
+.transaction-details-modal-body {
+  display: grid;
+  gap: 20px;
+}
+
+.transaction-details-modal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.transaction-details-modal-id {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  word-break: break-all;
+}
+
+.transaction-details-modal-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.transaction-details-modal-status-completed,
+.transaction-details-modal-status-success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.transaction-details-modal-status-pending,
+.transaction-details-modal-status-processing {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.transaction-details-modal-status-failed,
+.transaction-details-modal-status-cancelled,
+.transaction-details-modal-status-canceled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.transaction-details-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.transaction-detail-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.transaction-detail-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.transaction-detail-value {
+  font-size: 14px;
+  color: #111827;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.transaction-details-modal-error,
+.transaction-details-modal-warning {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.transaction-details-modal-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.transaction-details-modal-warning {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.transaction-details-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dark-mode .transaction-details-modal-id,
+.dark-mode .transaction-detail-value {
+  color: #f9fafb;
+}
+
+.dark-mode .transaction-detail-row {
+  border-bottom-color: #374151;
+}
+
+.dark-mode .transaction-detail-label {
+  color: #9ca3af;
+}
+
+@media (max-width: 640px) {
+  .transaction-detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

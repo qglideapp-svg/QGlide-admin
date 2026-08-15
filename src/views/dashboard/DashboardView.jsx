@@ -10,7 +10,8 @@ import checkIcon from '../../assets/icons/check.png';
 import NotificationBell from '../../components/common/NotificationBell';
 import { fetchDashboardData, fetchRidesAnalytics } from '../../services/dashboardService';
 import { logoutUser } from '../../services/authService';
-import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsCSV, fetchCashRides } from '../../services/financialService';
+import { fetchFinancialOverview, fetchTransactions, fetchPayoutRequests, exportTransactionsToPDF, fetchCashRides, resolveTransactionId } from '../../services/financialService';
+import { getDefaultPaymentTransactionsDateRange } from '../../services/reportsService';
 import { fetchSupportTickets, fetchTicketDetails, sendMessage, markAsResolved, markAsPending } from '../../services/supportService';
 import { fetchAnalyticsReports, fetchAnalyticsMetrics, fetchRidesByRegion, fetchRidesByVehicleType, fetchAcceptanceRateByHour, fetchDriverLeaderboard, fetchRevenueByPaymentType, exportAnalyticsReport, exportAnalyticsAsJSON, exportRevenueData, exportSpecificSections } from '../../services/analyticsService';
 import LazyLoader from '../../components/common/LazyLoader.jsx';
@@ -19,6 +20,7 @@ import ThemeToggle from '../../components/common/ThemeToggle';
 import LanguageToggle from '../../components/common/LanguageToggle';
 import UserAvatar from '../../components/common/UserAvatar';
 import AdminWithdrawModal from '../../components/modals/AdminWithdrawModal';
+import TransactionDetailsModal from '../../components/modals/TransactionDetailsModal';
 import DriversWithoutDocsModal from '../../components/modals/DriversWithoutDocsModal';
 import { fetchDriversWithoutDocs, sendDocumentReminderEmails } from '../../services/driverService';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -61,9 +63,15 @@ export default function DashboardView() {
   const [payoutRequests, setPayoutRequests] = useState([]);
   const [isFinancialLoading, setIsFinancialLoading] = useState(false);
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
+  const [isExportingTransactions, setIsExportingTransactions] = useState(false);
   const transactionsRequestRef = useRef(0);
   const [transactionFilter, setTransactionFilter] = useState('All Types');
   const [activeTransactionTab, setActiveTransactionTab] = useState('all'); // 'all' or 'cash'
+  const defaultTransactionDates = getDefaultPaymentTransactionsDateRange();
+  const [transactionStartDate, setTransactionStartDate] = useState(defaultTransactionDates.startDate);
+  const [transactionEndDate, setTransactionEndDate] = useState(defaultTransactionDates.endDate);
+  const [selectedTransactionId, setSelectedTransactionId] = useState(null);
+  const [selectedTransactionFallback, setSelectedTransactionFallback] = useState(null);
   const [showAdminWithdrawModal, setShowAdminWithdrawModal] = useState(false);
   const [isProcessingWithdraw, setIsProcessingWithdraw] = useState(false);
   
@@ -595,8 +603,63 @@ export default function DashboardView() {
     // Add other navigation handlers as needed
   }, [navigate]);
   
-  const handleExportCSV = () => {
-    exportTransactionsCSV(transactions);
+  const handleExportPDF = async () => {
+    if (activeTransactionTab !== 'all') {
+      return;
+    }
+
+    if (!transactionStartDate || !transactionEndDate) {
+      showToastMessage(t('financial.exportDateRequired'), 'error');
+      return;
+    }
+
+    if (transactionStartDate > transactionEndDate) {
+      showToastMessage(t('financial.exportDateInvalid'), 'error');
+      return;
+    }
+
+    setIsExportingTransactions(true);
+
+    try {
+      const result = await exportTransactionsToPDF({
+        start_date: transactionStartDate,
+        end_date: transactionEndDate,
+      });
+
+      if (result.success) {
+        showToastMessage(t('financial.exportPDFSuccess'), 'success');
+      } else {
+        showToastMessage(result.error || t('financial.exportPDFFailed'), 'error');
+      }
+    } catch (error) {
+      showToastMessage(error.message || t('financial.exportPDFFailed'), 'error');
+    } finally {
+      setIsExportingTransactions(false);
+    }
+  };
+
+  const handleTransactionClick = (transaction) => {
+    const transactionId = resolveTransactionId(transaction);
+    if (!transactionId) {
+      return;
+    }
+
+    setSelectedTransactionFallback({
+      id: transactionId,
+      type: transaction.type,
+      status: transaction.status,
+      amount: transaction.amount,
+      createdAt: transaction.date || transaction.created_at || transaction.createdAt,
+      userName: transaction.user || transaction.user_name,
+      reference: transaction.reference || transaction.transaction_ref,
+      description: transaction.description,
+    });
+    setSelectedTransactionId(transactionId);
+  };
+
+  const handleCloseTransactionDetails = () => {
+    setSelectedTransactionId(null);
+    setSelectedTransactionFallback(null);
   };
   
   const handleTicketSelect = async (ticket) => {
@@ -1216,8 +1279,22 @@ export default function DashboardView() {
                         </div>
                         <div className="panel-controls">
                           <div className="date-picker-wrapper">
-                            <input type="text" placeholder="mm/dd/yyyy" className="date-picker" />
-                            <span className="material-symbols-outlined">calendar_today</span>
+                            <input
+                              type="date"
+                              className="date-picker"
+                              value={transactionStartDate}
+                              onChange={(event) => setTransactionStartDate(event.target.value)}
+                              aria-label={t('analytics.startDate')}
+                            />
+                          </div>
+                          <div className="date-picker-wrapper">
+                            <input
+                              type="date"
+                              className="date-picker"
+                              value={transactionEndDate}
+                              onChange={(event) => setTransactionEndDate(event.target.value)}
+                              aria-label={t('analytics.endDate')}
+                            />
                           </div>
                           <select 
                             className="type-filter"
@@ -1230,9 +1307,15 @@ export default function DashboardView() {
                             <option>{t('financial.payout')}</option>
                             <option>{t('financial.refund')}</option>
                           </select>
-                          <button className="export-btn" onClick={handleExportCSV}>
-                            {t('common.export')} CSV
-                          </button>
+                          {activeTransactionTab === 'all' && (
+                            <button
+                              className="export-btn"
+                              onClick={handleExportPDF}
+                              disabled={isExportingTransactions}
+                            >
+                              {isExportingTransactions ? t('financial.exporting') : t('financial.exportPDF')}
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className={`transactions-table-wrapper${isTransactionsLoading ? ' is-loading' : ''}`}>
@@ -1269,7 +1352,11 @@ export default function DashboardView() {
                               </tr>
                             ) : (
                               transactions.map((transaction) => (
-                                <tr key={transaction.id}>
+                                <tr
+                                  key={transaction.id}
+                                  className="transaction-row"
+                                  onClick={() => handleTransactionClick(transaction)}
+                                >
                                   <td className="transaction-id">{transaction.id}</td>
                                   <td>{formatApiDateTime(transaction.date || transaction.created_at || transaction.createdAt)}</td>
                                   <td>{transaction.user}</td>
@@ -1984,6 +2071,13 @@ export default function DashboardView() {
         onConfirm={handleAdminWithdraw}
         availableBalance={financialOverview?.commissions?.amount}
         isLoading={isProcessingWithdraw}
+      />
+
+      <TransactionDetailsModal
+        isOpen={Boolean(selectedTransactionId)}
+        onClose={handleCloseTransactionDetails}
+        transactionId={selectedTransactionId}
+        fallbackTransaction={selectedTransactionFallback}
       />
 
       {/* Section Selection Modal */}
