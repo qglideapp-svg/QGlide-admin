@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './RideDetailsView.css';
-import { fetchRideDetails } from '../../services/ridesService';
+import { fetchRideDetails, normalizeFareDetails } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import LanguageToggle from '../../components/common/LanguageToggle';
@@ -62,20 +62,8 @@ export default function RideDetailsView() {
         licensePlate: apiData.driver?.license_plate || 'N/A'
       },
       
-      // Handle fare details
-      fare: {
-        base: apiData.fare_details?.base_fare || 0,
-        distance: apiData.fare_details?.distance_fare || 0,
-        distanceKm: apiData.fare_details?.distance_km || 0,
-        time: apiData.fare_details?.time_fare || 0,
-        timeMinutes: apiData.fare_details?.time_minutes || 0,
-        airportSurcharge: apiData.fare_details?.airport_surcharge || 0,
-        promoCode: apiData.fare_details?.promo_code ? {
-          code: apiData.fare_details.promo_code,
-          discount: apiData.fare_details.promo_discount || 0
-        } : null,
-        total: apiData.fare_details?.total_fare || 0
-      },
+      // Handle fare details — map all known API line items, including surcharges not shown before
+      fare: normalizeFareDetails(apiData),
       
       // Handle payment data
       payment: {
@@ -164,19 +152,52 @@ export default function RideDetailsView() {
             vehicle: 'Toyota Camry',
             licensePlate: 'ABC123'
           },
-          fare: {
-            base: 10.00,
-            distance: 36.40,
-            distanceKm: 18.2,
-            time: 12.50,
-            timeMinutes: 25,
-            airportSurcharge: 5.00,
-            promoCode: {
-              code: 'QATAR2025',
-              discount: 10.00
+          fare: normalizeFareDetails({
+            fare_details: {
+              currency: 'QAR',
+              ride_type: 'q-standard',
+              car_type: 'sedan',
+              is_estimate: false,
+              estimated_fare: 52.25,
+              actual_fare: 58.5,
+              gross_total_fare: 58.5,
+              promo_code: 'WELCOME10',
+              promo_discount: 5,
+              total_after_promo: 53.5,
+              line_items: [
+                {
+                  key: 'trip_fare',
+                  label: 'Trip fare (distance + time)',
+                  amount: 45,
+                  detail: '12.5 km · 17 min billed',
+                },
+                {
+                  key: 'wait_time',
+                  label: 'Wait time',
+                  amount: 3.5,
+                  detail: '2 min billed (5 min total, 3 min grace @ QAR 0.5/min)',
+                },
+                {
+                  key: 'surge',
+                  label: 'Surge pricing',
+                  amount: 4.88,
+                  detail: '1.1x multiplier',
+                },
+                {
+                  key: 'landmark_zone_discount',
+                  label: 'Landmark zone discount',
+                  amount: -2,
+                  detail: 'The Pearl (20%)',
+                },
+                {
+                  key: 'government_imposition',
+                  label: 'Government imposition surcharge',
+                  amount: 2,
+                  detail: null,
+                },
+              ],
             },
-            total: 53.90
-          },
+          }),
           payment: {
             method: 'Visa',
             lastFour: '4242'
@@ -211,19 +232,52 @@ export default function RideDetailsView() {
           vehicle: 'Toyota Camry',
           licensePlate: 'ABC123'
         },
-        fare: {
-          base: 10.00,
-          distance: 36.40,
-          distanceKm: 18.2,
-          time: 12.50,
-          timeMinutes: 25,
-          airportSurcharge: 5.00,
-          promoCode: {
-            code: 'QATAR2025',
-            discount: 10.00
+        fare: normalizeFareDetails({
+          fare_details: {
+            currency: 'QAR',
+            ride_type: 'q-standard',
+            car_type: 'sedan',
+            is_estimate: false,
+            estimated_fare: 52.25,
+            actual_fare: 58.5,
+            gross_total_fare: 58.5,
+            promo_code: 'WELCOME10',
+            promo_discount: 5,
+            total_after_promo: 53.5,
+            line_items: [
+              {
+                key: 'trip_fare',
+                label: 'Trip fare (distance + time)',
+                amount: 45,
+                detail: '12.5 km · 17 min billed',
+              },
+              {
+                key: 'wait_time',
+                label: 'Wait time',
+                amount: 3.5,
+                detail: '2 min billed (5 min total, 3 min grace @ QAR 0.5/min)',
+              },
+              {
+                key: 'surge',
+                label: 'Surge pricing',
+                amount: 4.88,
+                detail: '1.1x multiplier',
+              },
+              {
+                key: 'landmark_zone_discount',
+                label: 'Landmark zone discount',
+                amount: -2,
+                detail: 'The Pearl (20%)',
+              },
+              {
+                key: 'government_imposition',
+                label: 'Government imposition surcharge',
+                amount: 2,
+                detail: null,
+              },
+            ],
           },
-          total: 53.90
-        },
+        }),
         payment: {
           method: 'Visa',
           lastFour: '4242'
@@ -286,12 +340,11 @@ export default function RideDetailsView() {
       navigate('/courier-management');
     } else if (navItem === 'rental-management') {
       navigate('/rental-management');
-    } else if (navItem === 'user-management') {
-      navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    }
-    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
+    } else if (navItem === 'partners') {
+      navigate('/partners');
+    } else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
@@ -316,6 +369,36 @@ export default function RideDetailsView() {
     navigate('/ride-management');
   };
 
+  const formatFareLineLabel = (item) => {
+    if (item.label) {
+      return item.label;
+    }
+    if (item.labelKey) {
+      let label = t(`rides.${item.labelKey}`);
+      if (item.code) {
+        return `${label} (${item.code})`;
+      }
+      if (item.metaValue != null && item.metaSuffixKey) {
+        return `${label} (${item.metaValue} ${t(`rides.${item.metaSuffixKey}`)})`;
+      }
+      return label;
+    }
+    return item.id;
+  };
+
+  const formatFareAmount = (amount, currency = 'QAR', kind = 'charge') => {
+    const value = Math.abs(Number(amount) || 0).toFixed(2);
+    const prefix = kind === 'discount' ? `- ${currency} ` : `${currency} `;
+    return `${prefix}${value}`;
+  };
+
+  const formatFareLineAmount = (item, currency = 'QAR') => formatFareAmount(item.amount, currency, item.kind);
+
+  const formatPaymentMethod = (method) => {
+    if (!method) return t('common.notAvailable');
+    return translateApiLabel(String(method).replace(/_/g, ' '));
+  };
+
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
       try {
@@ -333,9 +416,18 @@ export default function RideDetailsView() {
     switch (status.toLowerCase()) {
       case 'completed': return 'status-completed';
       case 'active': return 'status-active';
-      case 'cancelled': return 'status-cancelled';
+      case 'cancelled':
+      case 'canceled':
+        return 'status-cancelled';
       default: return 'status-pending';
     }
+  };
+
+  const shouldHideRideActions = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    return normalized === 'cancelled'
+      || normalized === 'canceled'
+      || normalized === 'completed';
   };
 
   // Wrap the entire render in try-catch for error handling
@@ -350,7 +442,6 @@ export default function RideDetailsView() {
           <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label="Ride Management" active={true} onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="handshake" label="Partners" onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label="Influencers" onClick={() => handleNavClick('influencers')} />
@@ -418,10 +509,12 @@ export default function RideDetailsView() {
             </button>
             <div className="status-actions">
               <span className={`status-badge ${getStatusClass(currentRideData.status)}`}>{currentRideData.status || 'Unknown'}</span>
-              <div className="action-buttons">
-                <button className="btn-cancel">Cancel Ride</button>
-                <button className="btn-reassign">Reassign Driver</button>
-              </div>
+              {!shouldHideRideActions(currentRideData.status) && (
+                <div className="action-buttons">
+                  <button className="btn-cancel">Cancel Ride</button>
+                  <button className="btn-reassign">Reassign Driver</button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -460,44 +553,90 @@ export default function RideDetailsView() {
 
               {/* Fare Details */}
               <div className="section fare-details-section">
-                <h3>Fare Details</h3>
+                <h3>{t('rides.fareDetails')}</h3>
+                {(currentRideData.fare?.rideType || currentRideData.fare?.carType || currentRideData.fare?.isEstimate) && (
+                  <div className="fare-meta-row">
+                    {currentRideData.fare?.rideType && (
+                      <span>{t('rides.rideType')}: {translateApiLabel(currentRideData.fare.rideType)}</span>
+                    )}
+                    {currentRideData.fare?.carType && (
+                      <span>{t('rides.carType')}: {translateApiLabel(currentRideData.fare.carType)}</span>
+                    )}
+                    {currentRideData.fare?.isEstimate && (
+                      <span className="fare-estimate-badge">{t('rides.estimatedFareLabel')}</span>
+                    )}
+                  </div>
+                )}
                 <div className="fare-breakdown">
-                  <div className="fare-item">
-                    <span>Base Fare</span>
-                    <span>QAR {currentRideData.fare?.base?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  <div className="fare-item">
-                    <span>Distance ({currentRideData.fare?.distanceKm || 0} km)</span>
-                    <span>QAR {currentRideData.fare?.distance?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  <div className="fare-item">
-                    <span>Time ({currentRideData.fare?.timeMinutes || 0} min)</span>
-                    <span>QAR {currentRideData.fare?.time?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  <div className="fare-item">
-                    <span>Airport Surcharge</span>
-                    <span>QAR {currentRideData.fare?.airportSurcharge?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  {currentRideData.fare?.promoCode && (
-                    <div className="fare-item promo-code">
-                      <span>Promo Code ({currentRideData.fare.promoCode.code})</span>
-                      <span>- QAR {currentRideData.fare.promoCode.discount?.toFixed(2) || '0.00'}</span>
+                  {(currentRideData.fare?.lineItems ?? []).map((item) => (
+                    <div
+                      key={item.id}
+                      className={`fare-item${item.kind === 'discount' ? ' promo-code' : ''}`}
+                    >
+                      <div className="fare-item-label">
+                        <span>{formatFareLineLabel(item)}</span>
+                        {item.detail && <small className="fare-item-detail">{item.detail}</small>}
+                      </div>
+                      <span>{formatFareLineAmount(item, currentRideData.fare?.currency || 'QAR')}</span>
+                    </div>
+                  ))}
+
+                  {currentRideData.fare?.surgeMultiplier != null && currentRideData.fare.surgeMultiplier > 1
+                    && !(currentRideData.fare?.lineItems ?? []).some((item) => item.key === 'surge') && (
+                    <div className="fare-item fare-meta">
+                      <span>{t('rides.surgeMultiplier')}</span>
+                      <span>{currentRideData.fare.surgeMultiplier}x</span>
                     </div>
                   )}
-                  
+
+                  {currentRideData.fare?.estimatedFare != null
+                    && currentRideData.fare.estimatedFare !== currentRideData.fare?.total && (
+                    <div className="fare-item fare-meta">
+                      <span>{t('rides.estimatedFare')}</span>
+                      <span>{formatFareAmount(currentRideData.fare.estimatedFare, currentRideData.fare?.currency || 'QAR')}</span>
+                    </div>
+                  )}
+
                   <div className="fare-separator"></div>
-                  
+
+                  {currentRideData.fare?.grossTotal != null
+                    && currentRideData.fare?.totalAfterPromo != null
+                    && currentRideData.fare.grossTotal !== currentRideData.fare.totalAfterPromo && (
+                    <div className="fare-item">
+                      <span>{t('rides.grossTotal')}</span>
+                      <span>{formatFareAmount(currentRideData.fare.grossTotal, currentRideData.fare?.currency || 'QAR')}</span>
+                    </div>
+                  )}
+
                   <div className="fare-item total-fare">
-                    <span>Total Fare</span>
-                    <span className="total-amount">QAR {currentRideData.fare?.total?.toFixed(2) || '0.00'}</span>
+                    <span>{t('rides.totalFare')}</span>
+                    <span className="total-amount">
+                      {formatFareAmount(currentRideData.fare?.total ?? 0, currentRideData.fare?.currency || 'QAR')}
+                    </span>
                   </div>
-                  
+
+                  {(currentRideData.fare?.notes ?? []).length > 0 && (
+                    <div className="fare-notes">
+                      {currentRideData.fare.notes.map((note) => (
+                        <p key={note}>{note}</p>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="payment-section">
                     <div className="payment-method">
-                      <div className="visa-logo">VISA</div>
                       <div className="payment-info">
-                        <div className="payment-text">Paid with Visa</div>
-                        <div className="card-number">**** **** **** {currentRideData.payment?.lastFour || '0000'}</div>
+                        <div className="payment-text">
+                          {t('rides.paymentMethod')}: {formatPaymentMethod(currentRideData.payment?.method)}
+                        </div>
+                        <div className="payment-status">
+                          {t('rides.paymentStatus')}: {translateApiLabel(currentRideData.payment?.status || 'pending')}
+                        </div>
+                        {currentRideData.payment?.transactionId && currentRideData.payment.transactionId !== 'N/A' && (
+                          <div className="payment-transaction">
+                            {currentRideData.payment.transactionId}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

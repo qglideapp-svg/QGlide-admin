@@ -97,7 +97,6 @@ export default function InfluencersManagementView() {
     else if (navItem === 'courier-management') navigate('/courier-management');
     else if (navItem === 'rental-management') navigate('/rental-management');
     else if (navItem === 'driver-management') navigate('/driver-management');
-    else if (navItem === 'user-management') navigate('/user-management');
     else if (navItem === 'marketers') navigate('/marketers');
     else if (navItem === 'partners') navigate('/partners');
     else if (navItem === 'influencers') navigate('/influencers');
@@ -154,7 +153,6 @@ export default function InfluencersManagementView() {
           <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="handshake" label={t('navigation.partners')} onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label={t('navigation.influencers')} active onClick={() => handleNavClick('influencers')} />

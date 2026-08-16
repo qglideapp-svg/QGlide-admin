@@ -95,6 +95,15 @@ function normalizeNotificationRecord(raw, index) {
     title: String(raw.title ?? '').trim(),
     message: String(raw.message ?? raw.body ?? raw.content ?? '').trim(),
     type: String(raw.notification_type ?? raw.type ?? 'event').toLowerCase(),
+    targetAudience: normalizeNotificationAudience(
+      raw.audience ??
+      raw.target_audience ??
+      raw.targetAudience ??
+      raw.recipient_type ??
+      raw.recipientType ??
+      raw.metadata?.audience ??
+      raw.metadata?.target_audience,
+    ),
     imageUrl: raw.image_url ?? raw.imageUrl ?? null,
     actionUrl: raw.action_url ?? raw.actionUrl ?? null,
     sentAt,
@@ -103,6 +112,18 @@ function normalizeNotificationRecord(raw, index) {
     delivery,
     deliverySummary: formatDeliverySummary(delivery),
   };
+}
+
+function normalizeNotificationAudience(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+
+  if (normalized === 'driver' || normalized === 'drivers') return 'drivers';
+  if (normalized === 'rider' || normalized === 'riders' || normalized === 'passenger' || normalized === 'passengers') {
+    return 'riders';
+  }
+  if (normalized === 'both' || normalized === 'all' || normalized === 'everyone') return 'all';
+
+  return 'all';
 }
 
 function extractActivityEventsArray(data) {
@@ -177,6 +198,8 @@ export async function fetchAdminActivityFeed(opts = {}) {
 
     if (opts.cursor) params.set('cursor', opts.cursor);
     if (opts.category) params.set('category', opts.category);
+    if (opts.eventType?.trim()) params.set('event_type', opts.eventType.trim());
+    if (opts.since?.trim()) params.set('since', opts.since.trim());
     if (opts.unreadOnly) params.set('unread_only', 'true');
     if (opts.search?.trim()) params.set('search', opts.search.trim());
 
@@ -292,6 +315,11 @@ export const fetchNotificationHistory = async (opts = {}) => {
     if (opts.notificationType && opts.notificationType !== 'all') {
       params.set('notification_type', opts.notificationType);
     }
+    if (opts.audience && opts.audience !== 'all') {
+      params.set('audience', opts.audience);
+    } else if (opts.targetAudience && opts.targetAudience !== 'all') {
+      params.set('audience', opts.targetAudience);
+    }
     if (opts.search?.trim()) {
       params.set('search', opts.search.trim());
     }
@@ -341,16 +369,24 @@ export const fetchNotificationHistory = async (opts = {}) => {
   }
 };
 
-// Send push notification to all users
+// Send push notification to drivers or riders
 export const sendPushNotification = async (notificationData) => {
   try {
     const url = `${API_BASE_URL}/admin-notifications`;
+    const audience = normalizeNotificationAudience(
+      notificationData.audience ?? notificationData.targetAudience,
+    );
+
+    if (audience !== 'drivers' && audience !== 'riders') {
+      throw new Error('Audience must be drivers or riders');
+    }
 
     const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: getApiHeaders(true),
       body: JSON.stringify({
         notification_type: notificationData.type || 'event',
+        audience,
         title: notificationData.title,
         message: notificationData.message,
         image_url: notificationData.imageUrl || null,

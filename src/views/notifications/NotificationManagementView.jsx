@@ -32,6 +32,7 @@ export default function NotificationManagementView() {
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyTotalCount, setHistoryTotalCount] = useState(null);
   const [historyTypeFilter, setHistoryTypeFilter] = useState('all');
+  const [historyAudienceFilter, setHistoryAudienceFilter] = useState('all');
   const [historySearch, setHistorySearch] = useState('');
   const [historySearchInput, setHistorySearchInput] = useState('');
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -43,6 +44,7 @@ export default function NotificationManagementView() {
     title: '',
     message: '',
     type: 'news', // 'news' or 'event'
+    targetAudience: 'drivers', // 'drivers' or 'riders'
     imageUrl: '',
     actionUrl: '',
   });
@@ -62,12 +64,11 @@ export default function NotificationManagementView() {
       navigate('/rental-management');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
-    } else if (navItem === 'user-management') {
-      navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    }
-    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
+    } else if (navItem === 'partners') {
+      navigate('/partners');
+    } else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
@@ -118,6 +119,7 @@ export default function NotificationManagementView() {
       page,
       limit: 20,
       notificationType: filters.notificationType ?? historyTypeFilter,
+      targetAudience: filters.targetAudience ?? historyAudienceFilter,
       search: filters.search ?? historySearch,
     });
 
@@ -141,11 +143,11 @@ export default function NotificationManagementView() {
     setHistoryHasMore(Boolean(result.data.hasMore));
     setHistoryTotalCount(result.data.totalCount ?? null);
     setHistoryError(null);
-  }, [historySearch, historyTypeFilter, t]);
+  }, [historyAudienceFilter, historySearch, historyTypeFilter, t]);
 
   useEffect(() => {
     loadNotificationHistory(1, false);
-  }, [historyTypeFilter, historySearch, loadNotificationHistory]);
+  }, [historyTypeFilter, historyAudienceFilter, historySearch, loadNotificationHistory]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -154,6 +156,31 @@ export default function NotificationManagementView() {
 
     return () => window.clearTimeout(timer);
   }, [historySearchInput]);
+
+  const getAudienceLabel = (audience) => {
+    if (audience === 'drivers') return t('notifications.audienceDrivers');
+    if (audience === 'riders') return t('notifications.audienceRiders');
+    return t('notifications.audienceAll');
+  };
+
+  const getSendSuccessMessage = (audience) => {
+    if (audience === 'drivers') return t('notifications.sendSuccessDrivers');
+    if (audience === 'riders') return t('notifications.sendSuccessRiders');
+    return t('notifications.sendSuccess');
+  };
+
+  const getSendButtonLabel = (audience) => {
+    if (audience === 'drivers') return t('notifications.sendButtonDrivers');
+    if (audience === 'riders') return t('notifications.sendButtonRiders');
+    return t('notifications.sendButton');
+  };
+
+  const handleAudienceSelect = (targetAudience) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetAudience,
+    }));
+  };
 
   const getTypeLabel = (type) => {
     if (type === 'news') return t('notificationCenter.typeNews');
@@ -189,7 +216,7 @@ export default function NotificationManagementView() {
       if (result.success) {
         setToast({
           type: 'success',
-          message: t('notifications.sendSuccess')
+          message: getSendSuccessMessage(formData.targetAudience),
         });
         
         // Reset form
@@ -197,6 +224,7 @@ export default function NotificationManagementView() {
           title: '',
           message: '',
           type: 'news',
+          targetAudience: formData.targetAudience,
           imageUrl: '',
           actionUrl: '',
         });
@@ -229,7 +257,6 @@ export default function NotificationManagementView() {
           <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="handshake" label={t('navigation.partners')} onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label={t('navigation.influencers')} onClick={() => handleNavClick('influencers')} />
@@ -297,6 +324,31 @@ export default function NotificationManagementView() {
             </div>
 
             <form className="notification-form" onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label>{t('notifications.audienceLabel')}</label>
+                <div className="notification-audience-options" role="group" aria-label={t('notifications.audienceLabel')}>
+                  <button
+                    type="button"
+                    className={`notification-audience-option ${formData.targetAudience === 'drivers' ? 'active' : ''}`}
+                    onClick={() => handleAudienceSelect('drivers')}
+                    disabled={isSending}
+                  >
+                    <span className="material-symbols-outlined">local_taxi</span>
+                    <span>{t('notifications.audienceDrivers')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`notification-audience-option ${formData.targetAudience === 'riders' ? 'active' : ''}`}
+                    onClick={() => handleAudienceSelect('riders')}
+                    disabled={isSending}
+                  >
+                    <span className="material-symbols-outlined">person</span>
+                    <span>{t('notifications.audienceRiders')}</span>
+                  </button>
+                </div>
+                <small className="form-hint">{t('notifications.audienceHint')}</small>
+              </div>
+
               <div className="form-group">
                 <label htmlFor="type">{t('notifications.typeLabel')}</label>
                 <select
@@ -381,6 +433,7 @@ export default function NotificationManagementView() {
                       title: '',
                       message: '',
                       type: 'news',
+                      targetAudience: formData.targetAudience,
                       imageUrl: '',
                       actionUrl: '',
                     });
@@ -404,7 +457,7 @@ export default function NotificationManagementView() {
                   ) : (
                     <>
                       <span className="material-symbols-outlined">send</span>
-                      {t('notifications.sendButton')}
+                      {getSendButtonLabel(formData.targetAudience)}
                     </>
                   )}
                 </button>
@@ -435,6 +488,16 @@ export default function NotificationManagementView() {
                   aria-label={t('notifications.historySearchPlaceholder')}
                 />
               </div>
+              <select
+                className="notification-history-filter"
+                value={historyAudienceFilter}
+                onChange={(e) => setHistoryAudienceFilter(e.target.value)}
+                aria-label={t('notifications.audienceLabel')}
+              >
+                <option value="all">{t('notifications.historyFilterAllAudiences')}</option>
+                <option value="drivers">{t('notifications.audienceDrivers')}</option>
+                <option value="riders">{t('notifications.audienceRiders')}</option>
+              </select>
               <select
                 className="notification-history-filter"
                 value={historyTypeFilter}
@@ -469,6 +532,9 @@ export default function NotificationManagementView() {
                     <li key={item.id} className="notification-history-item">
                       <div className="notification-history-item-head">
                         <div className="notification-history-badges">
+                          <span className={`notification-history-audience notification-history-audience-${item.targetAudience}`}>
+                            {getAudienceLabel(item.targetAudience)}
+                          </span>
                           <span className={`notification-history-type notification-history-type-${item.type}`}>
                             {getTypeLabel(item.type)}
                           </span>

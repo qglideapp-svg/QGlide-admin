@@ -15,10 +15,8 @@ import LazyRoute from './components/layout/LazyRoute.jsx';
 const DashboardView = lazy(() => import('./views/dashboard/DashboardView.jsx'));
 const RideManagementView = lazy(() => import('./views/rides/RideManagementView.jsx'));
 const RideDetailsView = lazy(() => import('./views/rides/RideDetailsView.jsx'));
-const UserManagementView = lazy(() => import('./views/users/UserManagementView.jsx'));
 const DriverManagementView = lazy(() => import('./views/drivers/DriverManagementView.jsx'));
 const DriverProfileView = lazy(() => import('./views/drivers/DriverProfileView.jsx'));
-const UserProfileView = lazy(() => import('./views/users/UserProfileView.jsx'));
 const ReportsGeneratorView = lazy(() => import('./views/reports/ReportsGeneratorView.jsx'));
 const SettingsView = lazy(() => import('./views/settings/SettingsView.jsx'));
 const CourierManagementView = lazy(() => import('./views/courier/CourierManagementView.jsx'));
@@ -48,10 +46,8 @@ createRoot(document.getElementById('root')).render(
         <Route path="/dashboard" element={withAuth(<DashboardView />)} />
         <Route path="/ride-management" element={withAuth(<RideManagementView />)} />
         <Route path="/ride-details/:rideId" element={withAuth(<RideDetailsView />)} />
-        <Route path="/user-management" element={withAuth(<UserManagementView />)} />
         <Route path="/driver-management" element={withAuth(<DriverManagementView />)} />
         <Route path="/driver-profile/:driverId" element={withAuth(<DriverProfileView />)} />
-        <Route path="/user-profile/:userId" element={withAuth(<UserProfileView />)} />
         <Route path="/reports" element={withAuth(<ReportsGeneratorView />)} />
         <Route path="/settings" element={withAuth(<SettingsView />)} />
         <Route path="/courier-management" element={withAuth(<CourierManagementView />)} />

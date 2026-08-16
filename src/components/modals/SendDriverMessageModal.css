@@ -1,0 +1,252 @@
+@import './SuspendDriverModal.css';
+
+.driver-messages-modal {
+  max-width: 680px;
+}
+
+.driver-messages-subtitle {
+  margin: 6px 0 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.driver-messages-history {
+  padding: 0 24px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.driver-messages-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.driver-messages-history-head h3,
+.driver-messages-compose h3 {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.driver-messages-count {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.driver-messages-history-body {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.driver-messages-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 160px;
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.driver-messages-state .material-symbols-outlined {
+  font-size: 32px;
+  color: #9ca3af;
+}
+
+.driver-messages-state p {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+}
+
+.driver-messages-state-error .material-symbols-outlined {
+  color: #ef4444;
+}
+
+.driver-messages-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.driver-message-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.driver-message-item:last-child {
+  border-bottom: none;
+}
+
+.driver-message-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.driver-message-item-head strong {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #111827;
+}
+
+.driver-message-item-head time {
+  flex-shrink: 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.driver-message-item p {
+  margin: 0 0 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+  white-space: pre-wrap;
+}
+
+.driver-message-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.driver-message-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.driver-message-status-sent,
+.driver-message-status-delivered,
+.driver-message-status-read,
+.driver-message-status-saved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.driver-message-status-failed,
+.driver-message-status-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.driver-messages-history-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+
+.driver-messages-compose {
+  padding: 20px 24px 0;
+}
+
+.driver-messages-compose p {
+  margin: 8px 0 16px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.driver-messages-compose input,
+.driver-messages-compose textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #111827;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+.driver-messages-compose textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.driver-messages-compose input:focus,
+.driver-messages-compose textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.driver-messages-compose label {
+  display: block;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.driver-messages-compose label + input,
+.driver-messages-compose label + textarea {
+  margin-top: 8px;
+}
+
+:root.dark-mode .driver-messages-history,
+.dark-mode .driver-messages-history {
+  border-bottom-color: #374151;
+}
+
+:root.dark-mode .driver-messages-history-body,
+.dark-mode .driver-messages-history-body {
+  background: #111827;
+  border-color: #374151;
+}
+
+:root.dark-mode .driver-message-item,
+.dark-mode .driver-message-item {
+  background: #1f2937;
+  border-bottom-color: #374151;
+}
+
+:root.dark-mode .driver-message-item-head strong,
+.dark-mode .driver-message-item-head strong,
+:root.dark-mode .driver-messages-compose h3,
+.dark-mode .driver-messages-compose h3,
+:root.dark-mode .driver-messages-history-head h3,
+.dark-mode .driver-messages-history-head h3 {
+  color: #f9fafb;
+}
+
+:root.dark-mode .driver-message-item p,
+.dark-mode .driver-message-item p {
+  color: #d1d5db;
+}
+
+:root.dark-mode .driver-messages-compose input,
+.dark-mode .driver-messages-compose input,
+:root.dark-mode .driver-messages-compose textarea,
+.dark-mode .driver-messages-compose textarea {
+  background: #111827;
+  border-color: #4b5563;
+  color: #f9fafb;
+}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ensureValidSession } from '../../services/authService';
 import DriverOnlineMonitor from './DriverOnlineMonitor';
-import RideBookingMonitor from './RideBookingMonitor';
+import AdminLiveMonitor from './AdminLiveMonitor';
 
 const SESSION_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -52,7 +52,7 @@ const AuthGuard = ({ children }) => {
     <>
       {children}
       <DriverOnlineMonitor />
-      <RideBookingMonitor />
+      <AdminLiveMonitor />
     </>
   );
 };

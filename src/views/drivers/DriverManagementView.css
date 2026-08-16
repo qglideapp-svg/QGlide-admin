@@ -276,6 +276,36 @@
   background: #F9FAFB;
 }
 
+.message-cell {
+  width: 150px;
+}
+
+.driver-message-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.driver-message-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.driver-message-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
 /* Driver Cell */
 .driver-info-cell {
   display: flex;

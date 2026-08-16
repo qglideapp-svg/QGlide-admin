@@ -1574,6 +1574,208 @@ export const sendDocumentReminderEmails = async ({
   }
 };
 
+function extractDriverMessageEventsArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.events)) return data.events;
+  if (Array.isArray(data.items)) return data.items;
+  if (data.data && Array.isArray(data.data.events)) return data.data.events;
+  if (data.data && Array.isArray(data.data.items)) return data.data.items;
+  if (data.data && Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+function parseAdminNameFromActivitySummary(summary) {
+  if (!summary) return null;
+  const match = String(summary).match(/^(.+?)\s+sent a message to\s/i);
+  return match?.[1]?.trim() || null;
+}
+
+function getDriverMessageDeliveryStatus(metadata = {}) {
+  const fcmSuccess = Number(metadata.fcm_success ?? 0);
+  const inboxPersisted = Boolean(metadata.inbox_persisted);
+
+  if (fcmSuccess > 0 && inboxPersisted) return 'delivered';
+  if (fcmSuccess > 0) return 'sent';
+  if (inboxPersisted) return 'saved';
+  return null;
+}
+
+function normalizeDriverMessageFromActivityEvent(raw, index) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const metadata = raw.metadata && typeof raw.metadata === 'object' ? raw.metadata : {};
+  const entity = raw.entity && typeof raw.entity === 'object' ? raw.entity : {};
+  const actor = raw.actor && typeof raw.actor === 'object' ? raw.actor : null;
+
+  const createdAtRaw =
+    raw.created_at ??
+    raw.createdAt ??
+    raw.occurred_at ??
+    raw.occurredAt ??
+    null;
+
+  let sentAt = null;
+  if (createdAtRaw != null) {
+    const parsed = new Date(createdAtRaw);
+    if (!Number.isNaN(parsed.getTime())) {
+      sentAt = parsed.toISOString();
+    }
+  }
+
+  const summary = String(raw.message ?? raw.summary ?? '').trim();
+  const sentByName =
+    metadata.admin_name ??
+    metadata.adminName ??
+    metadata.sent_by_name ??
+    metadata.sentByName ??
+    actor?.name ??
+    parseAdminNameFromActivitySummary(summary);
+
+  return {
+    id: String(raw.id ?? raw.event_id ?? raw.eventId ?? `driver_message_${index}`),
+    driverId: String(metadata.driver_id ?? entity.id ?? '').trim() || null,
+    driverName: String(metadata.driver_name ?? metadata.driverName ?? '').trim() || null,
+    title: String(metadata.title ?? raw.title ?? '').trim(),
+    message: String(metadata.message ?? metadata.body ?? '').trim(),
+    summary,
+    sentAt,
+    sentByName: sentByName || null,
+    status: getDriverMessageDeliveryStatus(metadata),
+    fcmSuccess: metadata.fcm_success != null ? Number(metadata.fcm_success) : null,
+    inboxPersisted: Boolean(metadata.inbox_persisted),
+  };
+}
+
+function eventMatchesDriverId(event, driverId) {
+  if (!driverId) return true;
+  const normalizedDriverId = String(driverId).trim();
+  if (!normalizedDriverId) return true;
+  return event.driverId === normalizedDriverId;
+}
+
+export const fetchDriverMessageHistory = async ({
+  driverId,
+  driverName,
+  search,
+  since,
+  limit = 20,
+  cursor,
+} = {}) => {
+  try {
+    const safeLimit = Math.max(1, parseInt(String(limit ?? 20), 10) || 20);
+    const params = new URLSearchParams({
+      event_type: 'admin.driver_message_sent',
+      limit: String(safeLimit),
+    });
+
+    const searchTerm = String(search ?? driverName ?? '').trim();
+    if (searchTerm) {
+      params.set('search', searchTerm);
+    }
+    if (since?.trim()) {
+      params.set('since', since.trim());
+    }
+    if (cursor) {
+      params.set('cursor', String(cursor));
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const url = `${API_BASE_URL}/admin-activity-feed?${params.toString()}`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: anonKey,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const rawList = extractDriverMessageEventsArray(data);
+    const messages = rawList
+      .map((row, index) => normalizeDriverMessageFromActivityEvent(row, index))
+      .filter(Boolean)
+      .filter((event) => eventMatchesDriverId(event, driverId));
+
+    const nextCursor =
+      data.next_cursor ??
+      data.nextCursor ??
+      data.data?.next_cursor ??
+      data.data?.nextCursor ??
+      null;
+
+    return {
+      success: true,
+      data: {
+        messages,
+        nextCursor: nextCursor || null,
+        hasMore: Boolean(nextCursor),
+        totalCount: null,
+      },
+    };
+  } catch (error) {
+    console.error('❌ FETCH DRIVER MESSAGE HISTORY ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch driver message history',
+    };
+  }
+};
+
+export const sendDriverMessage = async ({ driverId, title, message }) => {
+  try {
+    if (!driverId) {
+      throw new Error('Driver ID is required');
+    }
+
+    const trimmedMessage = String(message || '').trim();
+    if (!trimmedMessage) {
+      throw new Error('Message is required');
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const url = `${API_BASE_URL}/admin-send-driver-message`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+      },
+      body: JSON.stringify({
+        driver_id: String(driverId),
+        title: String(title || '').trim() || 'Message from QGlide Admin',
+        message: trimmedMessage,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const payload = data?.data ?? data;
+
+    return {
+      success: true,
+      data: payload,
+      message: payload?.message || data?.message || 'Message sent successfully',
+    };
+  } catch (error) {
+    console.error('❌ SEND DRIVER MESSAGE ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send message to driver',
+    };
+  }
+};
+
 // Helper function to transform driver data from API to UI format
 export const transformDriverData = (apiDriver) => {
   return {

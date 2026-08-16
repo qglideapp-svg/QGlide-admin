@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RideManagementView.css';
 import { logoutUser } from '../../services/authService';
-import { fetchRidesList } from '../../services/ridesService';
+import { fetchRidesList, resolveRideListFare } from '../../services/ridesService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import LanguageToggle from '../../components/common/LanguageToggle';
@@ -194,12 +194,11 @@ export default function RideManagementView() {
       navigate('/courier-management');
     } else if (navItem === 'rental-management') {
       navigate('/rental-management');
-    } else if (navItem === 'user-management') {
-      navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    }
-    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
+    } else if (navItem === 'partners') {
+      navigate('/partners');
+    } else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
@@ -306,7 +305,6 @@ export default function RideManagementView() {
           <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label={t('navigation.rideManagement')} active={true} />
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="handshake" label={t('navigation.partners')} onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label={t('navigation.influencers')} onClick={() => handleNavClick('influencers')} />
@@ -421,7 +419,7 @@ export default function RideManagementView() {
                               <div className="time">{formattedTime}</div>
                             </div>
                           </td>
-                          <td className="fare-cell">QAR {Number(ride.fare ?? 0).toFixed(2)}</td>
+                          <td className="fare-cell">QAR {resolveRideListFare(ride).toFixed(2)}</td>
                           <td><StatusBadge status={ride.status || 'pending'} /></td>
                           <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                             <div className="actions">

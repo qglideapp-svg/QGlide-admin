@@ -119,12 +119,11 @@ export default function WithdrawalManagementView() {
       navigate('/ride-management');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
-    } else if (navItem === 'user-management') {
-      navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    }
-    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
+    } else if (navItem === 'partners') {
+      navigate('/partners');
+    } else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'financial') {
       navigate('/dashboard?section=financial');
@@ -263,7 +262,6 @@ export default function WithdrawalManagementView() {
           <NavItem icon="space_dashboard" label="Dashboard" onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label="Ride Management" onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label="Driver Management" onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label="User Management" onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label="Marketers" onClick={() => handleNavClick('marketers')} />
           <NavItem icon="handshake" label="Partners" onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label="Influencers" onClick={() => handleNavClick('influencers')} />

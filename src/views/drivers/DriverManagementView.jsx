@@ -11,6 +11,8 @@ import {
   matchesDriverFilters,
   isPresenceStatusFilter,
 } from '../../services/driverService';
+import Toast from '../../components/common/Toast';
+import SendDriverMessageModal from '../../components/modals/SendDriverMessageModal';
 import { detectNewlyOnlineDrivers } from '../../utils/driverOnlineState';
 import UserAvatar from '../../components/common/UserAvatar';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -69,6 +71,8 @@ export default function DriverManagementView() {
   
   // Export state
   const [isExporting, setIsExporting] = useState(false);
+  const [messageDriver, setMessageDriver] = useState(null);
+  const [toast, setToast] = useState(null);
   const loadRequestIdRef = useRef(0);
   const pollRequestIdRef = useRef(0);
   const driverStatusMapRef = useRef(new Map());
@@ -356,12 +360,11 @@ export default function DriverManagementView() {
       navigate('/courier-management');
     } else if (navItem === 'rental-management') {
       navigate('/rental-management');
-    } else if (navItem === 'user-management') {
-      navigate('/user-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    }
-    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
+    } else if (navItem === 'partners') {
+      navigate('/partners');
+    } else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
@@ -481,6 +484,15 @@ export default function DriverManagementView() {
     navigate(`/driver-profile/${driverId}`);
   };
 
+  const handleOpenMessageModal = (event, driver) => {
+    event.stopPropagation();
+    setMessageDriver(driver);
+  };
+
+  const handleCloseMessageModal = () => {
+    setMessageDriver(null);
+  };
+
   const usesClientPresencePagination = isPresenceStatusFilter(statusFilter);
 
   // Online/offline uses client-side pagination; other filters may still refine the current page.
@@ -515,7 +527,6 @@ export default function DriverManagementView() {
           <NavItem icon="space_dashboard" label={t('navigation.dashboard')} onClick={() => handleNavClick('dashboard')} />
           <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} active={true} />
-          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="handshake" label={t('navigation.partners')} onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label={t('navigation.influencers')} onClick={() => handleNavClick('influencers')} />
@@ -651,7 +662,7 @@ export default function DriverManagementView() {
                 </div>
               )}
               {isInitialLoading ? (
-                <LazyLoader variant="table" rows={8} columns={6} message={t('drivers.loadingDrivers')} />
+                <LazyLoader variant="table" rows={8} columns={7} message={t('drivers.loadingDrivers')} />
               ) : (
               <table className="drivers-table">
                 <thead>
@@ -662,12 +673,13 @@ export default function DriverManagementView() {
                     <th>{t('drivers.rating')}</th>
                     <th>{t('drivers.totalRides')}</th>
                     <th>{t('drivers.walletTotal')}</th>
+                    <th>{t('drivers.message')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {error && drivers.length === 0 && !isSearching ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ef4444' }}>error</span>
                           <div style={{ color: '#ef4444', fontWeight: '500' }}>{t('common.error')}</div>
@@ -691,7 +703,7 @@ export default function DriverManagementView() {
                     </tr>
                   ) : filteredDrivers.length === 0 && !isSearching ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6b7280' }}>search_off</span>
                           <div style={{ color: '#374151', fontWeight: '500' }}>{t('drivers.noDriversFound')}</div>
@@ -735,6 +747,18 @@ export default function DriverManagementView() {
                           driverWallets[String(driver.id)]?.totalBalance ??
                           driver.earnings,
                         )}
+                      </td>
+                      <td className="message-cell">
+                        <button
+                          type="button"
+                          className="driver-message-btn"
+                          aria-label={t('drivers.sendMessage')}
+                          title={t('drivers.sendMessage')}
+                          onClick={(event) => handleOpenMessageModal(event, driver)}
+                        >
+                          <span className="material-symbols-outlined">chat</span>
+                          <span>{t('drivers.sendMessage')}</span>
+                        </button>
                       </td>
                     </tr>
                     ))
@@ -828,6 +852,24 @@ export default function DriverManagementView() {
           </div>
         </div>
       </main>
+
+      <SendDriverMessageModal
+        isOpen={Boolean(messageDriver)}
+        onClose={handleCloseMessageModal}
+        driverId={messageDriver?.id}
+        driverName={messageDriver?.name}
+        onSuccess={(message) => setToast({ type: 'success', message })}
+        onError={(message) => setToast({ type: 'error', message })}
+      />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          duration={5000}
+        />
+      )}
     </div>
   );
 }

@@ -99,7 +99,6 @@ body {
 /* Dark mode cards */
 .dark-mode .settings-card,
 .dark-mode .withdrawal-management-card,
-.dark-mode .user-management-card,
 .dark-mode .driver-management-card,
 .dark-mode .ride-management-card {
   background: var(--card);

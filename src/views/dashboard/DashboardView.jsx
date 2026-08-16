@@ -582,14 +582,13 @@ export default function DashboardView() {
       navigate('/courier-management');
     } else if (navItem === 'rental-management') {
       navigate('/rental-management');
-    } else if (navItem === 'user-management') {
-      navigate('/user-management');
     } else if (navItem === 'driver-management') {
       navigate('/driver-management');
     } else if (navItem === 'marketers') {
       navigate('/marketers');
-    }
-    else if (navItem === 'partners') navigate('/partners'); else if (navItem === 'influencers') {
+    } else if (navItem === 'partners') {
+      navigate('/partners');
+    } else if (navItem === 'influencers') {
       navigate('/influencers');
     } else if (navItem === 'reports') {
       navigate('/reports');
@@ -681,6 +680,18 @@ export default function DashboardView() {
       setIsLoadingTicketDetails(false);
     }
   };
+
+  useEffect(() => {
+    const ticketId = searchParams.get('ticket');
+    if (activeSection !== 'support' || !ticketId || supportTickets.length === 0) {
+      return;
+    }
+
+    const matchedTicket = supportTickets.find((ticket) => String(ticket.id) === String(ticketId));
+    if (matchedTicket && selectedTicket?.id !== matchedTicket.id) {
+      handleTicketSelect(matchedTicket);
+    }
+  }, [activeSection, searchParams, supportTickets, selectedTicket?.id]);
 
   // Start polling for ticket details every 2 seconds
   const startTicketPolling = (ticketId) => {
@@ -974,7 +985,6 @@ export default function DashboardView() {
           <NavItem icon="space_dashboard" label={t('navigation.dashboard')} active={activeSection === 'overview'} onClick={() => handleNavClick('overview')} />
           <NavItem icon="local_taxi" label={t('navigation.rideManagement')} onClick={() => handleNavClick('ride-management')} />
           <NavItem icon="directions_car" label={t('navigation.driverManagement')} onClick={() => handleNavClick('driver-management')} />
-          <NavItem icon="group" label={t('navigation.userManagement')} onClick={() => handleNavClick('user-management')} />
           <NavItem icon="manage_accounts" label={t('navigation.marketers')} onClick={() => handleNavClick('marketers')} />
           <NavItem icon="handshake" label={t('navigation.partners')} onClick={() => handleNavClick('partners')} />
           <NavItem icon="campaign" label={t('navigation.influencers')} onClick={() => handleNavClick('influencers')} />
