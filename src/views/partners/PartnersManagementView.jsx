@@ -7,6 +7,8 @@ import {
   deletePartner,
   fetchPartnersList,
   updatePartner,
+  PARTNER_CATEGORIES,
+  PARTNER_STATUSES,
 } from '../../services/partnerService';
 import Toast from '../../components/common/Toast';
 import ThemeToggle from '../../components/common/ThemeToggle';
@@ -15,6 +17,7 @@ import LazyLoader from '../../components/common/LazyLoader.jsx';
 import AddPartnerModal from '../../components/modals/AddPartnerModal';
 import EditPartnerModal from '../../components/modals/EditPartnerModal';
 import DeletePartnerModal from '../../components/modals/DeletePartnerModal';
+import PartnerCodesModal from '../../components/modals/PartnerCodesModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/images/logo.webp';
@@ -29,19 +32,22 @@ const NavItem = ({ icon, label, active, onClick }) => (
 );
 
 const getCategoryLabelKey = (category) => {
-  switch (String(category || '').toLowerCase()) {
-    case 'limousine':
-      return 'partners.categoryLimousine';
-    case 'restaurant':
-      return 'partners.categoryRestaurant';
-    case 'club':
-      return 'partners.categoryClub';
-    case 'bar':
-      return 'partners.categoryBar';
-    default:
-      return null;
-  }
+  const match = PARTNER_CATEGORIES.find((c) => c.value === String(category || '').toLowerCase());
+  return match?.labelKey ?? null;
 };
+
+const getStatusLabelKey = (status) => {
+  const match = PARTNER_STATUSES.find((s) => s.value === String(status || '').toLowerCase());
+  return match?.labelKey ?? null;
+};
+
+function partnerStatusClass(status) {
+  const s = String(status || '').toLowerCase();
+  if (s === 'active') return 'partner-status-active';
+  if (s === 'pending_approval') return 'partner-status-pending';
+  if (s === 'suspended' || s === 'rejected') return 'partner-status-inactive';
+  return 'partner-status-default';
+}
 
 export default function PartnersManagementView() {
   const navigate = useNavigate();
@@ -49,54 +55,64 @@ export default function PartnersManagementView() {
   const { theme } = useTheme();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [partners, setPartners] = useState([]);
+  const [totalCount, setTotalCount] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editPartner, setEditPartner] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [codesTarget, setCodesTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState(null);
 
   const loadPartners = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
-    const result = await fetchPartnersList({ page: 1, limit: 50 });
+    const result = await fetchPartnersList({
+      page: 1,
+      limit: 50,
+      search: debouncedSearch || undefined,
+      category: categoryFilter || undefined,
+      status: statusFilter || undefined,
+    });
     if (result.success && result.data?.partners) {
       setPartners(result.data.partners);
+      setTotalCount(result.data.totalCount ?? result.data.partners.length);
     } else {
       setLoadError(result.error || t('partners.errorLoad'));
       setPartners([]);
+      setTotalCount(null);
     }
     setIsLoading(false);
-  }, [t]);
+  }, [categoryFilter, debouncedSearch, statusFilter, t]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     loadPartners();
   }, [loadPartners]);
 
-  const duplicateEmails = useMemo(() => partners.map((partner) => partner.email.toLowerCase()), [partners]);
+  const duplicateEmails = useMemo(
+    () => partners.filter((partner) => partner.email).map((partner) => partner.email.toLowerCase()),
+    [partners]
+  );
 
   const editDuplicateEmails = useMemo(
     () =>
       partners
-        .filter((partner) => (editPartner ? partner.id !== editPartner.id : true))
+        .filter((partner) => partner.email && (editPartner ? partner.id !== editPartner.id : true))
         .map((partner) => partner.email.toLowerCase()),
     [partners, editPartner]
   );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return partners;
-    return partners.filter(
-      (partner) =>
-        partner.email.toLowerCase().includes(q)
-        || (partner.displayName && partner.displayName.toLowerCase().includes(q))
-        || (partner.legalName && partner.legalName.toLowerCase().includes(q))
-        || (partner.partnerCode && partner.partnerCode.toLowerCase().includes(q))
-        || (partner.category && partner.category.toLowerCase().includes(q))
-    );
-  }, [partners, search]);
+  const hasActiveFilters = Boolean(debouncedSearch || categoryFilter || statusFilter);
 
   const handleNavClick = (navItem) => {
     if (navItem === 'dashboard') navigate('/dashboard');
@@ -130,12 +146,14 @@ export default function PartnersManagementView() {
   const toggleSidebar = () => setIsSidebarCollapsed((value) => !value);
 
   const handleAddPartner = useCallback(
-    async ({ category, displayName, legalName, email }) => {
+    async ({ category, displayName, legalName, email, password, confirmPassword }) => {
       const result = await createPartner({
         category,
         displayName,
         legalName,
         email,
+        password,
+        confirmPassword,
       });
 
       if (!result.success) {
@@ -143,48 +161,50 @@ export default function PartnersManagementView() {
         throw new Error(result.error || 'create failed');
       }
 
-      setPartners((prev) => [result.data, ...prev]);
+      await loadPartners();
       setToast({ type: 'success', message: t('partners.successToast') });
     },
-    [t]
+    [loadPartners, t]
   );
 
   const handleUpdatePartner = useCallback(
-    async ({ partnerId, category, displayName, legalName, email }) => {
+    async ({ partnerId, category, displayName, legalName, email, password, confirmPassword }) => {
       const result = await updatePartner(partnerId, {
         category,
         displayName,
         legalName,
         email,
+        password,
+        confirmPassword,
       });
       if (!result.success) {
         setToast({ type: 'error', message: result.error || t('partners.errorUpdate') });
         throw new Error(result.error || 'update failed');
       }
       setPartners((prev) => prev.map((partner) => (
-        partner.id === partnerId ? result.data : partner
+        partner.id === partnerId ? { ...partner, ...result.data } : partner
       )));
       setToast({ type: 'success', message: t('partners.successUpdate') });
     },
     [t]
   );
 
-  const handleConfirmDelete = useCallback(async () => {
+  const handleConfirmDelete = useCallback(async (reason) => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      const result = await deletePartner(deleteTarget.id);
+      const result = await deletePartner(deleteTarget.id, reason);
       if (!result.success) {
         setToast({ type: 'error', message: result.error || t('partners.errorDelete') });
         throw new Error(result.error || 'delete failed');
       }
-      setPartners((prev) => prev.filter((partner) => partner.id !== deleteTarget.id));
+      await loadPartners();
       setToast({ type: 'success', message: t('partners.successDelete') });
       setDeleteTarget(null);
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteTarget, t]);
+  }, [deleteTarget, loadPartners, t]);
 
   return (
     <div
@@ -257,7 +277,12 @@ export default function PartnersManagementView() {
 
         <div className="container">
           <div className="partners-toolbar">
-            <h2>{t('partners.listHeading')}</h2>
+            <div className="partners-toolbar-heading">
+              <h2>{t('partners.listHeading')}</h2>
+              {totalCount != null ? (
+                <span className="partners-count-pill">{totalCount}</span>
+              ) : null}
+            </div>
             <div className="partners-toolbar-actions">
               <div className="partners-search">
                 <span className="material-symbols-outlined partners-search-icon">search</span>
@@ -269,6 +294,32 @@ export default function PartnersManagementView() {
                   aria-label={t('partners.searchPlaceholder')}
                 />
               </div>
+              <select
+                className="partners-filter-select"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                aria-label={t('partners.filterCategory')}
+              >
+                <option value="">{t('partners.filterAllCategories')}</option>
+                {PARTNER_CATEGORIES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="partners-filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                aria-label={t('partners.filterStatus')}
+              >
+                <option value="">{t('partners.filterAllStatuses')}</option>
+                {PARTNER_STATUSES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
+              </select>
               <button type="button" className="btn-add-partner" onClick={() => setShowModal(true)}>
                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                   store
@@ -280,7 +331,7 @@ export default function PartnersManagementView() {
 
           <div className="partners-card">
             {isLoading ? (
-              <LazyLoader variant="table" rows={6} columns={6} message={t('partners.loading')} />
+              <LazyLoader variant="table" rows={6} columns={7} message={t('partners.loading')} />
             ) : loadError ? (
               <div className="partners-panel-state partners-panel-state-error">
                 <span className="material-symbols-outlined partners-panel-icon">error</span>
@@ -290,11 +341,11 @@ export default function PartnersManagementView() {
                   {t('partners.retry')}
                 </button>
               </div>
-            ) : filtered.length === 0 ? (
+            ) : partners.length === 0 ? (
               <div className="partners-empty">
                 <span className="partners-empty-icon material-symbols-outlined">handshake</span>
                 <p className="partners-empty-title">
-                  {partners.length === 0 ? t('partners.empty') : t('partners.noSearchResults')}
+                  {hasActiveFilters ? t('partners.noSearchResults') : t('partners.empty')}
                 </p>
               </div>
             ) : (
@@ -304,17 +355,23 @@ export default function PartnersManagementView() {
                     <tr>
                       <th scope="col">{t('partners.colBusiness')}</th>
                       <th scope="col">{t('partners.colCategory')}</th>
-                      <th scope="col">{t('partners.colCode')}</th>
-                      <th scope="col">{t('partners.colEmail')}</th>
+                      <th scope="col">{t('partners.colStatus')}</th>
+                      <th scope="col">{t('partners.colMunicipality')}</th>
+                      <th scope="col">{t('partners.colPortalLogin')}</th>
                       <th scope="col" className="partners-th-narrow">{t('partners.colAdded')}</th>
                       <th scope="col" className="partners-th-actions">{t('partners.colActions')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((partner) => {
+                    {partners.map((partner) => {
                       const categoryLabelKey = getCategoryLabelKey(partner.category);
+                      const statusLabelKey = getStatusLabelKey(partner.status);
                       return (
-                        <tr key={partner.id}>
+                        <tr
+                          key={partner.id}
+                          className="partners-row-clickable"
+                          onClick={() => navigate(`/partners/${partner.id}/activity`)}
+                        >
                           <td className="partners-cell partners-cell-name">
                             <div className="partners-business-cell">
                               <strong>{partner.displayName || '—'}</strong>
@@ -329,13 +386,16 @@ export default function PartnersManagementView() {
                             </span>
                           </td>
                           <td className="partners-cell">
-                            {partner.partnerCode ? (
-                              <span className="partner-code-pill">{partner.partnerCode}</span>
-                            ) : (
-                              <span className="partners-pill">{t('partners.codePending')}</span>
-                            )}
+                            <span className={`partner-status-badge ${partnerStatusClass(partner.status)}`}>
+                              {statusLabelKey ? t(statusLabelKey) : partner.status || '—'}
+                            </span>
                           </td>
-                          <td className="partners-cell partners-cell-email">{partner.email}</td>
+                          <td className="partners-cell">{partner.municipality || '—'}</td>
+                          <td className="partners-cell">
+                            <span className={`partner-portal-pill ${partner.hasPortalLogin ? 'yes' : 'no'}`}>
+                              {partner.hasPortalLogin ? t('partners.portalLoginYes') : t('partners.portalLoginNo')}
+                            </span>
+                          </td>
                           <td className="partners-cell partners-cell-date">
                             {(() => {
                               const d = new Date(partner.createdAt);
@@ -346,8 +406,33 @@ export default function PartnersManagementView() {
                             <div className="partners-row-actions">
                               <button
                                 type="button"
+                                className="partners-btn-codes"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCodesTarget(partner);
+                                }}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>qr_code_2</span>
+                                {t('partners.manageCodes')}
+                              </button>
+                              <button
+                                type="button"
+                                className="partners-btn-analytics"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/partners/${partner.id}/activity`);
+                                }}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>insights</span>
+                                {t('partners.viewActivity')}
+                              </button>
+                              <button
+                                type="button"
                                 className="partners-btn partners-btn-edit"
-                                onClick={() => setEditPartner(partner)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditPartner(partner);
+                                }}
                               >
                                 <span className="material-symbols-outlined" aria-hidden>
                                   edit
@@ -357,7 +442,10 @@ export default function PartnersManagementView() {
                               <button
                                 type="button"
                                 className="partners-btn partners-btn-delete"
-                                onClick={() => setDeleteTarget(partner)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTarget(partner);
+                                }}
                               >
                                 <span className="material-symbols-outlined" aria-hidden>
                                   delete
@@ -399,6 +487,13 @@ export default function PartnersManagementView() {
         email={deleteTarget?.email}
         displayName={deleteTarget?.displayName}
         isLoading={isDeleting}
+      />
+
+      <PartnerCodesModal
+        isOpen={!!codesTarget}
+        partner={codesTarget}
+        onClose={() => setCodesTarget(null)}
+        onGenerated={() => loadPartners()}
       />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} duration={5000} />}

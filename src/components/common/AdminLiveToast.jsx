@@ -40,12 +40,20 @@ const TOAST_CONFIG = {
     messageKey: 'liveUpdates.complaintMessage',
     actionKey: 'liveUpdates.viewTicket',
   },
+  driver_message: {
+    icon: 'chat',
+    tone: 'info',
+    titleKey: 'liveUpdates.driverMessageTitle',
+    messageKey: 'liveUpdates.driverMessageBody',
+    actionKey: 'liveUpdates.openChat',
+  },
 };
 
 const AdminLiveToast = ({
   kind = 'booking',
   rideId,
   ticketId,
+  driverId,
   riderName,
   driverName,
   pickup,
@@ -64,7 +72,7 @@ const AdminLiveToast = ({
     || t(config.messageKey, {
       rider: riderName || t('rides.rider'),
       driver: driverName || t('rides.driver'),
-      name: riderName || t('rides.rider'),
+      name: driverName || riderName || t('rides.rider'),
     });
 
   const routeLabel = pickup && dropoff
@@ -87,6 +95,15 @@ const AdminLiveToast = ({
 
   const handleAction = () => {
     handleClose();
+
+    if (kind === 'driver_message') {
+      if (driverId) {
+        navigate(`/driver-profile/${driverId}`);
+      } else {
+        navigate('/driver-management');
+      }
+      return;
+    }
 
     if (kind === 'support_ticket' || kind === 'complaint') {
       const params = new URLSearchParams({ section: 'support' });

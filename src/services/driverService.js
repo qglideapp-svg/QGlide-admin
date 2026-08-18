@@ -1574,6 +1574,1058 @@ export const sendDocumentReminderEmails = async ({
   }
 };
 
+function normalizeId(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function normalizePersonName(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function collectDriverIds(record = {}) {
+  const metadata = record.metadata && typeof record.metadata === 'object' ? record.metadata : {};
+  const entity = record.entity && typeof record.entity === 'object' ? record.entity : {};
+
+  return [
+    record.driverId,
+    record.driver_id,
+    record.userId,
+    record.user_id,
+    metadata.driver_id,
+    metadata.driverId,
+    metadata.user_id,
+    metadata.userId,
+    entity.id,
+    entity.driver_id,
+    entity.user_id,
+  ]
+    .map(normalizeId)
+    .filter(Boolean);
+}
+
+function collectDriverName(record = {}) {
+  const metadata = record.metadata && typeof record.metadata === 'object' ? record.metadata : {};
+
+  return normalizePersonName(
+    record.driverName ??
+    record.driver_name ??
+    metadata.driver_name ??
+    metadata.driverName ??
+    '',
+  );
+}
+
+function matchesDriverConversation(record, { driverId, driverName, alternateDriverIds = [] } = {}) {
+  const targetIds = [driverId, ...alternateDriverIds]
+    .map(normalizeId)
+    .filter(Boolean);
+  const targetName = normalizePersonName(driverName);
+
+  if (targetIds.length === 0 && !targetName) {
+    return true;
+  }
+
+  if (targetIds.length > 0) {
+    const candidateIds = collectDriverIds(record);
+    if (targetIds.some((targetId) => candidateIds.includes(targetId))) {
+      return true;
+    }
+  }
+
+  if (targetName) {
+    const recordName = collectDriverName(record);
+    if (recordName && recordName === targetName) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function dedupeRawDriverMessages(rawList = []) {
+  const seen = new Map();
+
+  rawList.forEach((raw, index) => {
+    if (!raw || typeof raw !== 'object') {
+      return;
+    }
+
+    const id = String(raw.id ?? raw.message_id ?? raw.messageId ?? `raw_driver_message_${index}`);
+    if (!seen.has(id)) {
+      seen.set(id, raw);
+    }
+  });
+
+  return Array.from(seen.values());
+}
+
+function extractIncomingDriverMessagesArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) {
+    return dedupeRawDriverMessages(data);
+  }
+
+  const root = data.data && typeof data.data === 'object' ? data.data : data;
+
+  if (Array.isArray(root.messages)) {
+    return dedupeRawDriverMessages(root.messages);
+  }
+
+  if (Array.isArray(data.messages)) {
+    return dedupeRawDriverMessages(data.messages);
+  }
+
+  if (data.data && Array.isArray(data.data)) {
+    return data.data;
+  }
+
+  return [];
+}
+
+function isTruthyFlag(value) {
+  return value === true || value === 1 || value === '1' || value === 'true';
+}
+
+function mapRawThreadMessageToChat(raw, index, { driverId, driverName } = {}) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const message = String(raw.message ?? raw.body ?? raw.content ?? raw.text ?? '').trim();
+  if (!message) {
+    return null;
+  }
+
+  const createdAtRaw = raw.created_at ?? raw.createdAt ?? raw.sent_at ?? raw.sentAt ?? null;
+  let createdAt = null;
+  if (createdAtRaw != null) {
+    const parsed = new Date(createdAtRaw);
+    if (!Number.isNaN(parsed.getTime())) {
+      createdAt = parsed.toISOString();
+    }
+  }
+
+  const sender = resolveDriverMessageSender(raw);
+
+  return {
+    id: String(raw.id ?? raw.message_id ?? raw.messageId ?? `thread_message_${index}`),
+    driverId: String(raw.driver_id ?? raw.driverId ?? driverId ?? '').trim() || null,
+    driverName: String(raw.driver_name ?? raw.driverName ?? driverName ?? '').trim() || null,
+    ticketId: String(raw.ticket_id ?? raw.ticketId ?? '').trim() || null,
+    ticketStatus: raw.ticket_status ?? raw.ticketStatus ?? null,
+    message,
+    createdAt,
+    sender,
+    senderType: String(raw.sender_type ?? raw.senderType ?? '').trim().toLowerCase() || null,
+    isFromDriver: isTruthyFlag(raw.is_from_driver),
+    isFromAdmin: isTruthyFlag(raw.is_from_admin),
+    senderName: String(
+      raw.sender_name ??
+      raw.senderName ??
+      (sender === 'admin'
+        ? (raw.admin_name ?? raw.adminName ?? 'Admin')
+        : (raw.driver_name ?? raw.driverName ?? driverName ?? 'Driver')),
+    ).trim() || null,
+    isRead: Boolean(raw.is_read ?? raw.isRead ?? raw.read ?? false),
+    title: raw.title ?? null,
+  };
+}
+
+export function isAdminChatMessage(message) {
+  if (!message) {
+    return false;
+  }
+
+  if (message.senderType === 'driver' || message.isFromDriver) {
+    return false;
+  }
+
+  if (message.senderType === 'admin' || message.isFromAdmin) {
+    return true;
+  }
+
+  return message.sender === 'admin';
+}
+
+function resolveDriverMessageSender(raw = {}) {
+  const senderType = String(raw.sender_type ?? raw.senderType ?? '').trim().toLowerCase();
+  if (senderType === 'driver') {
+    return 'driver';
+  }
+  if (senderType === 'admin') {
+    return 'admin';
+  }
+
+  if (isTruthyFlag(raw.is_from_driver)) {
+    return 'driver';
+  }
+
+  if (isTruthyFlag(raw.is_from_admin)) {
+    return 'admin';
+  }
+
+  const driverId = normalizeId(raw.driver_id ?? raw.driverId);
+  const senderId = normalizeId(raw.sender_id ?? raw.senderId ?? raw.user_id ?? raw.userId);
+  if (senderId && driverId && senderId === driverId) {
+    return 'driver';
+  }
+
+  const roleHint = String(raw.sender ?? raw.from_role ?? raw.role ?? '').trim().toLowerCase();
+  if (roleHint.includes('admin')) {
+    return 'admin';
+  }
+  if (roleHint.includes('driver')) {
+    return 'driver';
+  }
+
+  return 'driver';
+}
+
+function normalizeIncomingDriverMessage(raw, index) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const metadata = raw.metadata && typeof raw.metadata === 'object' ? raw.metadata : {};
+
+  const createdAtRaw =
+    raw.created_at ??
+    raw.createdAt ??
+    raw.sent_at ??
+    raw.sentAt ??
+    metadata.created_at ??
+    metadata.sent_at ??
+    null;
+
+  let createdAt = null;
+  if (createdAtRaw != null) {
+    const parsed = new Date(createdAtRaw);
+    if (!Number.isNaN(parsed.getTime())) {
+      createdAt = parsed.toISOString();
+    }
+  }
+
+  const sender = resolveDriverMessageSender(raw);
+  const ticketStatusRaw =
+    raw.ticket_status ??
+    raw.ticketStatus ??
+    raw.thread_status ??
+    raw.threadStatus ??
+    null;
+
+  return {
+    id: String(raw.id ?? raw.message_id ?? raw.messageId ?? `incoming_driver_message_${index}`),
+    driverId: String(raw.driver_id ?? raw.driverId ?? metadata.driver_id ?? metadata.driverId ?? '').trim() || null,
+    driverName: String(raw.driver_name ?? raw.driverName ?? metadata.driver_name ?? metadata.driverName ?? '').trim() || null,
+    ticketId: String(raw.ticket_id ?? raw.ticketId ?? raw.thread_id ?? raw.threadId ?? metadata.ticket_id ?? '').trim() || null,
+    ticketStatus: ticketStatusRaw ? String(ticketStatusRaw).trim().toLowerCase() : null,
+    message: String(
+      raw.message ??
+      raw.body ??
+      raw.content ??
+      raw.text ??
+      metadata.message ??
+      metadata.body ??
+      '',
+    ).trim(),
+    isRead: Boolean(raw.is_read ?? raw.isRead ?? raw.read ?? false),
+    createdAt,
+    sender,
+    senderType: String(raw.sender_type ?? raw.senderType ?? '').trim().toLowerCase() || null,
+    isFromDriver: isTruthyFlag(raw.is_from_driver),
+    isFromAdmin: isTruthyFlag(raw.is_from_admin),
+    senderName: String(
+      raw.sender_name ??
+      raw.senderName ??
+      (sender === 'admin'
+        ? (raw.admin_name ?? raw.adminName ?? 'Admin')
+        : (raw.driver_name ?? raw.driverName ?? 'Driver')),
+    ).trim() || null,
+  };
+}
+
+function getLatestMessageTimestamp(messages = []) {
+  let latest = null;
+
+  messages.forEach((message) => {
+    const createdAt = message?.createdAt;
+    if (!createdAt) {
+      return;
+    }
+
+    const parsed = new Date(createdAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return;
+    }
+
+    if (!latest || parsed.getTime() > new Date(latest).getTime()) {
+      latest = parsed.toISOString();
+    }
+  });
+
+  return latest;
+}
+
+function buildChatMessageFingerprint(message) {
+  const text = String(message.message ?? '').trim().toLowerCase();
+  const driverKey = normalizeId(message.driverId);
+  const timestamp = message.createdAt ?? message.sentAt ?? null;
+  const parsed = timestamp ? new Date(timestamp) : null;
+  const timeBucket = parsed && !Number.isNaN(parsed.getTime())
+    ? Math.floor(parsed.getTime() / 1000)
+    : 0;
+
+  return `${driverKey}|${timeBucket}|${text}`;
+}
+
+function mergeChatMessages(existing = [], incoming = []) {
+  const merged = new Map();
+  const fingerprints = new Map();
+
+  const upsertMessage = (message, fingerprint) => {
+    const key = String(message.id || fingerprint);
+    merged.set(key, message);
+    fingerprints.set(fingerprint, message);
+  };
+
+  [...existing, ...incoming].forEach((message) => {
+    if (!message?.message) {
+      return;
+    }
+
+    const fingerprint = buildChatMessageFingerprint(message);
+    const existingFingerprint = fingerprints.get(fingerprint);
+
+    if (!existingFingerprint) {
+      upsertMessage(message, fingerprint);
+      return;
+    }
+
+    if (existingFingerprint.sender === message.sender) {
+      return;
+    }
+
+    // Same text/time from two APIs: admin outbound belongs on the admin side only.
+    const adminMessage = existingFingerprint.sender === 'admin'
+      ? existingFingerprint
+      : (message.sender === 'admin' ? message : null);
+
+    if (adminMessage) {
+      merged.forEach((value, key) => {
+        if (value === existingFingerprint || value === message) {
+          merged.delete(key);
+        }
+      });
+      upsertMessage(adminMessage, fingerprint);
+      return;
+    }
+
+    upsertMessage(message, fingerprint);
+  });
+
+  return Array.from(merged.values()).sort((left, right) => {
+    const leftTime = new Date(left.createdAt || 0).getTime();
+    const rightTime = new Date(right.createdAt || 0).getTime();
+    return leftTime - rightTime;
+  });
+}
+
+function extractDriverMessageTicketMeta(root = {}) {
+  const ticket = root.ticket && typeof root.ticket === 'object'
+    ? root.ticket
+    : (root.thread && typeof root.thread === 'object' ? root.thread : {});
+
+  const summary = root.summary && typeof root.summary === 'object' ? root.summary : {};
+
+  return {
+    ticketId: String(
+      ticket.id ??
+      ticket.ticket_id ??
+      summary.ticket_id ??
+      summary.ticketId ??
+      '',
+    ).trim() || null,
+    ticketStatus: String(
+      ticket.status ??
+      summary.ticket_status ??
+      summary.ticketStatus ??
+      'open',
+    ).trim().toLowerCase(),
+  };
+}
+
+export const isDriverMessageTicketClosed = (status) => {
+  const normalized = String(status ?? '').trim().toLowerCase();
+  return normalized === 'closed' || normalized === 'resolved' || normalized === 'ended';
+};
+
+function toDriverChatMessage(message, fallbackSender = 'driver') {
+  if (!message) return null;
+
+  const createdAt = message.createdAt ?? message.sentAt ?? null;
+  const sender = isAdminChatMessage(message) ? 'admin' : 'driver';
+  const normalizedMessage = String(message.message ?? message.body ?? message.content ?? '').trim();
+
+  if (!normalizedMessage) {
+    return null;
+  }
+
+  return {
+    id: String(message.id),
+    driverId: message.driverId ?? null,
+    driverName: message.driverName ?? null,
+    ticketId: message.ticketId ?? null,
+    ticketStatus: message.ticketStatus ?? null,
+    message: normalizedMessage,
+    createdAt,
+    sender,
+    senderType: message.senderType ?? null,
+    isFromDriver: Boolean(message.isFromDriver),
+    isFromAdmin: Boolean(message.isFromAdmin),
+    senderName: message.senderName
+      ?? (sender === 'admin' ? (message.sentByName || 'Admin') : (message.driverName || 'Driver')),
+    isRead: Boolean(message.isRead),
+    title: message.title ?? null,
+  };
+}
+
+function mapActivityFeedMessagesToChat(messages = [], driverId, driverName, alternateDriverIds = []) {
+  return messages
+    .filter((message) => matchesDriverConversation(message, { driverId, driverName, alternateDriverIds }))
+    .map((message) => toDriverChatMessage({
+      id: message.id,
+      driverId: message.driverId ?? driverId,
+      driverName: message.driverName ?? driverName,
+      message: message.message,
+      sentAt: message.sentAt,
+      sender: 'admin',
+      sentByName: message.sentByName,
+      isRead: true,
+    }, 'admin'))
+    .filter(Boolean);
+}
+
+function mapThreadMessagesToChat(messages = [], driverId, driverName) {
+  return messages
+    .map((message) => toDriverChatMessage({
+      ...message,
+      driverId: message.driverId ?? driverId,
+      driverName: message.driverName ?? driverName,
+    }))
+    .filter(Boolean);
+}
+
+function mapInboundMessagesToChat(
+  messages = [],
+  driverId,
+  driverName,
+  alternateDriverIds = [],
+  { scopedToDriver = false } = {},
+) {
+  return messages
+    .filter((message) => message.sender !== 'admin')
+    .filter((message) => (
+      scopedToDriver
+      || matchesDriverConversation(message, { driverId, driverName, alternateDriverIds })
+    ))
+    .map((message) => toDriverChatMessage({
+      ...message,
+      driverId: message.driverId ?? driverId,
+      driverName: message.driverName ?? driverName,
+      sender: 'driver',
+    }, 'driver'))
+    .filter(Boolean);
+}
+
+function dedupeNormalizedDriverMessages(messages = []) {
+  const byId = new Map();
+
+  messages.forEach((message) => {
+    if (!message?.message) {
+      return;
+    }
+
+    const key = String(message.id || `${message.createdAt}|${message.message}|${message.sender || 'driver'}`);
+    if (!byId.has(key)) {
+      byId.set(key, message);
+    }
+  });
+
+  return Array.from(byId.values());
+}
+
+function dedupeChatMessages(messages = []) {
+  const byId = new Map();
+
+  messages.forEach((message) => {
+    if (!message?.message) {
+      return;
+    }
+
+    const key = String(message.id || `${message.sender}|${message.createdAt}|${message.message}`);
+    if (!byId.has(key)) {
+      byId.set(key, message);
+    }
+  });
+
+  return Array.from(byId.values()).sort((left, right) => {
+    const leftTime = new Date(left.createdAt || 0).getTime();
+    const rightTime = new Date(right.createdAt || 0).getTime();
+    return leftTime - rightTime;
+  });
+}
+
+async function fetchPaginatedDriverChatThread({
+  driverId,
+  since,
+  limit = 100,
+  order = 'asc',
+  senderType,
+  maxPages = 6,
+} = {}) {
+  const collected = [];
+  const rawCollected = [];
+  let cursor = null;
+  let ticketId = null;
+  let ticketStatus = 'open';
+  let latestMessageAt = null;
+  let unreadCount = 0;
+  let lastError = null;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const result = await fetchAdminDriverMessages({
+      since: page === 0 ? since : undefined,
+      driverId,
+      limit,
+      cursor,
+      order,
+      senderType,
+    });
+
+    if (!result.success) {
+      lastError = result.error;
+      break;
+    }
+
+    collected.push(...(result.data.messages ?? []));
+    rawCollected.push(...(result.data.rawMessages ?? []));
+    ticketId = ticketId ?? result.data.ticketId ?? null;
+    ticketStatus = result.data.ticketStatus ?? ticketStatus;
+    unreadCount = Math.max(unreadCount, Number(result.data.summary?.unreadCount ?? 0));
+    latestMessageAt = result.data.summary?.latestMessageAt ?? latestMessageAt;
+
+    if (!result.data.hasMore || !result.data.nextCursor) {
+      break;
+    }
+
+    cursor = result.data.nextCursor;
+  }
+
+  if (collected.length === 0 && lastError) {
+    return { success: false, error: lastError, messages: [] };
+  }
+
+  return {
+    success: true,
+    messages: dedupeNormalizedDriverMessages(collected),
+    rawMessages: dedupeRawDriverMessages(rawCollected),
+    ticketId,
+    ticketStatus,
+    unreadCount,
+    latestMessageAt,
+  };
+}
+
+async function fetchPaginatedInboundDriverMessages({
+  since,
+  driverId,
+  alternateDriverIds = [],
+  limit = 100,
+  maxPages = 6,
+} = {}) {
+  const fetchForDriver = async (scopedDriverId) => {
+    const collected = [];
+    let cursor = null;
+    let ticketId = null;
+    let ticketStatus = 'open';
+    let latestMessageAt = null;
+    let unreadCount = 0;
+    let lastError = null;
+
+    for (let page = 0; page < maxPages; page += 1) {
+      const result = await fetchAdminDriverMessages({
+        since: page === 0 ? since : undefined,
+        driverId: scopedDriverId,
+        limit,
+        cursor,
+      });
+
+      if (!result.success) {
+        lastError = result.error;
+        break;
+      }
+
+      collected.push(...(result.data.messages ?? []));
+      rawCollected.push(...(result.data.rawMessages ?? []));
+      ticketId = ticketId ?? result.data.ticketId ?? null;
+      ticketStatus = result.data.ticketStatus ?? ticketStatus;
+      unreadCount = Math.max(unreadCount, Number(result.data.summary?.unreadCount ?? 0));
+      latestMessageAt = result.data.summary?.latestMessageAt ?? latestMessageAt;
+
+      if (!result.data.hasMore || !result.data.nextCursor) {
+        break;
+      }
+
+      cursor = result.data.nextCursor;
+    }
+
+    if (collected.length === 0 && lastError) {
+      return { success: false, error: lastError, messages: [] };
+    }
+
+    return {
+      success: true,
+      messages: dedupeNormalizedDriverMessages(collected),
+      rawMessages: dedupeRawDriverMessages(rawCollected),
+      ticketId,
+      ticketStatus,
+      unreadCount,
+      latestMessageAt,
+      scopedToDriver: Boolean(scopedDriverId),
+    };
+  };
+
+  const idsToTry = [...new Set(
+    [driverId, ...alternateDriverIds]
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean),
+  )];
+
+  for (const candidateId of idsToTry) {
+    const result = await fetchForDriver(candidateId);
+    if (result.success && result.messages.length > 0) {
+      return result;
+    }
+  }
+
+  if (idsToTry.length > 0) {
+    const fallbackResult = await fetchForDriver(undefined);
+    if (fallbackResult.success) {
+      return fallbackResult;
+    }
+  }
+
+  return fetchForDriver(driverId);
+}
+
+async function fetchPaginatedAdminOutboundMessages({
+  driverId,
+  driverName,
+  alternateDriverIds = [],
+  limit = 100,
+  maxPages = 6,
+} = {}) {
+  const collected = [];
+  let cursor = null;
+  let lastError = null;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const result = await fetchDriverMessageHistory({
+      driverId,
+      driverName,
+      limit,
+      cursor,
+    });
+
+    if (!result.success) {
+      lastError = result.error;
+      break;
+    }
+
+    const batch = (result.data.messages ?? [])
+      .filter((message) => matchesDriverConversation(message, {
+        driverId,
+        driverName,
+        alternateDriverIds,
+      }));
+
+    collected.push(...batch);
+
+    if (!result.data.hasMore || !result.data.nextCursor) {
+      break;
+    }
+
+    cursor = result.data.nextCursor;
+  }
+
+  if (collected.length === 0 && lastError) {
+    return { success: false, error: lastError, messages: [] };
+  }
+
+  return {
+    success: true,
+    messages: dedupeNormalizedDriverMessages(collected),
+  };
+}
+
+async function resolveDriverChatIds(driverId, alternateDriverIds = []) {
+  const ids = new Set(
+    [driverId, ...alternateDriverIds]
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean),
+  );
+
+  if (!driverId) {
+    return [...ids];
+  }
+
+  try {
+    const details = await fetchDriverDetails(driverId);
+    if (details.success && details.data) {
+      const profile = details.data.driver_profile ?? {};
+      [
+        details.data.id,
+        details.data.user_id,
+        details.data.driver_id,
+        profile.id,
+        profile.user_id,
+        profile.driver_id,
+      ].forEach((value) => {
+        const normalized = String(value ?? '').trim();
+        if (normalized) {
+          ids.add(normalized);
+        }
+      });
+    }
+  } catch {
+    // Ignore profile lookup failures and fall back to provided IDs.
+  }
+
+  return [...ids];
+}
+
+export const fetchDriverChatThread = async ({
+  driverId,
+  driverName,
+  alternateDriverIds = [],
+  limit = 100,
+  since,
+} = {}) => {
+  if (!driverId) {
+    return { success: false, error: 'Driver ID is required' };
+  }
+
+  try {
+    const idsToTry = await resolveDriverChatIds(driverId, alternateDriverIds);
+
+    let threadResult = null;
+    let driverReplyResult = null;
+
+    for (const candidateId of idsToTry) {
+      const [fullThread, driverReplies] = await Promise.all([
+        fetchPaginatedDriverChatThread({
+          driverId: candidateId,
+          since: since || undefined,
+          limit: Math.max(limit, 30),
+          order: 'asc',
+        }),
+        fetchPaginatedDriverChatThread({
+          driverId: candidateId,
+          since: since || undefined,
+          limit: Math.max(limit, 30),
+          order: 'asc',
+          senderType: 'driver',
+        }),
+      ]);
+
+      if (!fullThread.success && !driverReplies.success) {
+        threadResult = fullThread.success ? fullThread : driverReplies;
+        continue;
+      }
+
+      const mergedMessages = dedupeNormalizedDriverMessages([
+        ...(fullThread.success ? fullThread.messages : []),
+        ...(driverReplies.success ? driverReplies.messages : []),
+      ]);
+
+      threadResult = {
+        success: true,
+        messages: mergedMessages,
+        rawMessages: [
+          ...(fullThread.rawMessages ?? []),
+          ...(driverReplies.rawMessages ?? []),
+        ],
+        ticketId: fullThread.ticketId ?? driverReplies.ticketId ?? null,
+        ticketStatus: fullThread.ticketStatus ?? driverReplies.ticketStatus ?? 'open',
+        unreadCount: Math.max(
+          Number(fullThread.unreadCount ?? 0),
+          Number(driverReplies.unreadCount ?? 0),
+        ),
+        latestMessageAt: fullThread.latestMessageAt ?? driverReplies.latestMessageAt ?? null,
+        rawFullCount: fullThread.messages?.length ?? 0,
+        rawDriverCount: driverReplies.messages?.length ?? 0,
+      };
+
+      if (mergedMessages.length > 0) {
+        break;
+      }
+    }
+
+    if (!threadResult?.success) {
+      throw new Error(threadResult?.error || 'Failed to load chat thread');
+    }
+
+    const messages = mapThreadMessagesToChat(
+      threadResult.messages ?? [],
+      driverId,
+      driverName,
+    );
+
+    if (import.meta.env.DEV) {
+      window.__QGLIDE_LAST_CHAT_THREAD__ = {
+        driverId,
+        rawMessages: threadResult.rawMessages ?? [],
+        mappedMessages: messages,
+      };
+    }
+
+    const ticketStatus =
+      threadResult.ticketStatus ??
+      [...messages].reverse().find((item) => item.ticketStatus)?.ticketStatus ??
+      'open';
+
+    if (import.meta.env.DEV) {
+      console.info('[driver-chat-thread]', {
+        driverId,
+        driverName,
+        alternateDriverIds,
+        threadCount: messages.length,
+        adminCount: messages.filter((item) => item.sender === 'admin').length,
+        driverCount: messages.filter((item) => item.sender === 'driver').length,
+        rawFullCount: threadResult.rawFullCount,
+        rawDriverPollCount: threadResult.rawDriverCount,
+        rawDriverRowsInApi: (threadResult.rawMessages ?? []).filter((raw) => (
+          String(raw.sender_type ?? '').toLowerCase() === 'driver' || isTruthyFlag(raw.is_from_driver)
+        )).length,
+        unreadCount: threadResult.unreadCount,
+        sampleRaw: (threadResult.rawMessages ?? []).map((raw) => ({
+          id: raw.id,
+          sender_type: raw.sender_type,
+          is_from_driver: raw.is_from_driver,
+          is_from_admin: raw.is_from_admin,
+          message: String(raw.message ?? '').slice(0, 40),
+        })),
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        messages,
+        ticketId: threadResult.ticketId ?? null,
+        ticketStatus,
+        isClosed: isDriverMessageTicketClosed(ticketStatus),
+        unreadCount: threadResult.unreadCount
+          ?? messages.filter((item) => item.sender === 'driver' && !item.isRead).length,
+        latestMessageAt: getLatestMessageTimestamp(messages)
+          ?? threadResult.latestMessageAt
+          ?? null,
+      },
+    };
+  } catch (error) {
+    console.error('❌ FETCH DRIVER CHAT THREAD ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch driver chat thread',
+    };
+  }
+};
+
+export const closeDriverMessageTicket = async ({ ticketId, driverId } = {}) => {
+  try {
+    if (!ticketId && !driverId) {
+      throw new Error('Ticket ID or driver ID is required');
+    }
+
+    const payload = { status: 'closed' };
+    if (ticketId) payload.ticket_id = String(ticketId);
+    if (driverId) payload.driver_id = String(driverId);
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const url = `${API_BASE_URL}/admin-driver-messages`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ CLOSE DRIVER MESSAGE TICKET ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to close driver message ticket',
+    };
+  }
+};
+
+export const fetchAdminDriverMessages = async ({
+  since,
+  unreadOnly = false,
+  driverId,
+  senderType,
+  order,
+  limit = 50,
+  cursor,
+} = {}) => {
+  try {
+    const safeLimit = Math.max(1, parseInt(String(limit ?? 50), 10) || 50);
+    const params = new URLSearchParams({
+      limit: String(safeLimit),
+    });
+
+    if (since?.trim()) {
+      params.set('since', since.trim());
+    }
+    if (unreadOnly) {
+      params.set('unread_only', 'true');
+    }
+    if (driverId) {
+      params.set('driver_id', String(driverId));
+      if (order?.trim()) {
+        params.set('order', order.trim());
+      } else {
+        params.set('order', 'asc');
+      }
+    } else if (order?.trim()) {
+      params.set('order', order.trim());
+    }
+    if (senderType?.trim()) {
+      params.set('sender_type', senderType.trim());
+    }
+    if (cursor) {
+      params.set('cursor', String(cursor));
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const url = `${API_BASE_URL}/admin-driver-messages?${params.toString()}`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: anonKey,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const root = data.data && typeof data.data === 'object' ? data.data : data;
+    const rawList = extractIncomingDriverMessagesArray(root);
+    const messages = rawList
+      .map((row, index) => (
+        driverId
+          ? mapRawThreadMessageToChat(row, index, { driverId })
+          : normalizeIncomingDriverMessage(row, index)
+      ))
+      .filter(Boolean);
+
+    const summary = root.summary && typeof root.summary === 'object' ? root.summary : {};
+    const pagination = root.pagination && typeof root.pagination === 'object' ? root.pagination : {};
+    const ticketMeta = extractDriverMessageTicketMeta(root);
+    const nextCursor =
+      pagination.next_cursor ??
+      pagination.nextCursor ??
+      root.next_cursor ??
+      root.nextCursor ??
+      data.next_cursor ??
+      data.nextCursor ??
+      null;
+    const hasMore = Boolean(
+      pagination.has_more ??
+      pagination.hasMore ??
+      nextCursor,
+    );
+
+    const latestMessageAt =
+      summary.latest_message_at ??
+      summary.latestMessageAt ??
+      getLatestMessageTimestamp(messages) ??
+      null;
+
+    return {
+      success: true,
+      data: {
+        messages,
+        rawMessages: rawList,
+        ticketId: ticketMeta.ticketId,
+        ticketStatus: ticketMeta.ticketStatus,
+        isClosed: isDriverMessageTicketClosed(ticketMeta.ticketStatus),
+        summary: {
+          unreadCount: Number(summary.unread_count ?? summary.unreadCount ?? 0),
+          latestMessageAt,
+        },
+        nextCursor: nextCursor || null,
+        hasMore,
+      },
+    };
+  } catch (error) {
+    console.error('❌ FETCH ADMIN DRIVER MESSAGES ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch driver messages',
+    };
+  }
+};
+
+export const markAdminDriverMessagesRead = async (messageIds = []) => {
+  try {
+    const ids = Array.isArray(messageIds) ? messageIds.filter(Boolean).map(String) : [];
+    if (ids.length === 0) {
+      return { success: true, data: {} };
+    }
+
+    const anonKey = localStorage.getItem('anonKey') || SUPABASE_API_KEY;
+    const url = `${API_BASE_URL}/admin-driver-messages`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+      },
+      body: JSON.stringify({
+        message_ids: ids,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ MARK ADMIN DRIVER MESSAGES READ ERROR:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to mark driver messages as read',
+    };
+  }
+};
+
 function extractDriverMessageEventsArray(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -1634,8 +2686,17 @@ function normalizeDriverMessageFromActivityEvent(raw, index) {
 
   return {
     id: String(raw.id ?? raw.event_id ?? raw.eventId ?? `driver_message_${index}`),
-    driverId: String(metadata.driver_id ?? entity.id ?? '').trim() || null,
-    driverName: String(metadata.driver_name ?? metadata.driverName ?? '').trim() || null,
+    driverId: String(
+      metadata.driver_id ??
+      metadata.driverId ??
+      metadata.user_id ??
+      metadata.userId ??
+      entity.driver_id ??
+      entity.id ??
+      entity.user_id ??
+      '',
+    ).trim() || null,
+    driverName: String(metadata.driver_name ?? metadata.driverName ?? entity.full_name ?? entity.name ?? '').trim() || null,
     title: String(metadata.title ?? raw.title ?? '').trim(),
     message: String(metadata.message ?? metadata.body ?? '').trim(),
     summary,
@@ -1647,11 +2708,8 @@ function normalizeDriverMessageFromActivityEvent(raw, index) {
   };
 }
 
-function eventMatchesDriverId(event, driverId) {
-  if (!driverId) return true;
-  const normalizedDriverId = String(driverId).trim();
-  if (!normalizedDriverId) return true;
-  return event.driverId === normalizedDriverId;
+function eventMatchesDriverId(event, driverId, driverName) {
+  return matchesDriverConversation(event, { driverId, driverName });
 }
 
 export const fetchDriverMessageHistory = async ({
@@ -1661,15 +2719,16 @@ export const fetchDriverMessageHistory = async ({
   since,
   limit = 20,
   cursor,
+  eventType = 'admin.driver_message_sent',
 } = {}) => {
   try {
     const safeLimit = Math.max(1, parseInt(String(limit ?? 20), 10) || 20);
     const params = new URLSearchParams({
-      event_type: 'admin.driver_message_sent',
+      event_type: String(eventType || 'admin.driver_message_sent'),
       limit: String(safeLimit),
     });
 
-    const searchTerm = String(search ?? driverName ?? '').trim();
+    const searchTerm = String(search ?? '').trim();
     if (searchTerm) {
       params.set('search', searchTerm);
     }
@@ -1700,7 +2759,7 @@ export const fetchDriverMessageHistory = async ({
     const messages = rawList
       .map((row, index) => normalizeDriverMessageFromActivityEvent(row, index))
       .filter(Boolean)
-      .filter((event) => eventMatchesDriverId(event, driverId));
+      .filter((event) => eventMatchesDriverId(event, driverId, driverName));
 
     const nextCursor =
       data.next_cursor ??
@@ -1778,8 +2837,15 @@ export const sendDriverMessage = async ({ driverId, title, message }) => {
 
 // Helper function to transform driver data from API to UI format
 export const transformDriverData = (apiDriver) => {
+  const primaryId = apiDriver.id || apiDriver.driver_id || '';
+  const profileId = apiDriver.driver_id || apiDriver.driver_profile?.id || '';
+  const userId = apiDriver.user_id || apiDriver.driver_profile?.user_id || '';
+
   return {
-    id: apiDriver.id || apiDriver.driver_id || '',
+    id: primaryId,
+    userId,
+    profileId,
+    alternateIds: [...new Set([primaryId, profileId, userId].filter(Boolean))],
     name: apiDriver.full_name || apiDriver.name || apiDriver.driver_name || 'Unknown Driver',
     phone: apiDriver.phone_number || apiDriver.phone || apiDriver.contact_number || '',
     avatar: apiDriver.avatar_url || apiDriver.profile_picture || apiDriver.avatar || apiDriver.profile_image || '',

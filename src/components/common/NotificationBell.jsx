@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import notificationsIcon from '../../assets/icons/notifications.png';
 import { fetchAdminActivityFeed } from '../../services/notificationService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import DriverMessagesBell from './DriverMessagesBell';
 import NotificationsModal from './NotificationsModal';
+import './DriverMessagesModal.css';
 
 export default function NotificationBell({
   buttonClassName = 'ibtn',
@@ -39,7 +41,12 @@ export default function NotificationBell({
   const Dot = dotElement;
 
   return (
-    <>
+    <div className="admin-header-alerts">
+      <DriverMessagesBell
+        buttonClassName={buttonClassName}
+        dotClassName={dotClassName}
+        dotElement={dotElement}
+      />
       <button
         type="button"
         className={buttonClassName}
@@ -57,6 +64,6 @@ export default function NotificationBell({
         }}
         onNotificationsLoaded={handleNotificationsLoaded}
       />
-    </>
+    </div>
   );
 }

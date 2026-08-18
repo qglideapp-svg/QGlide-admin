@@ -858,8 +858,7 @@ export default function DriverManagementView() {
         onClose={handleCloseMessageModal}
         driverId={messageDriver?.id}
         driverName={messageDriver?.name}
-        onSuccess={(message) => setToast({ type: 'success', message })}
-        onError={(message) => setToast({ type: 'error', message })}
+        alternateDriverIds={messageDriver?.alternateIds ?? []}
       />
 
       {toast && (

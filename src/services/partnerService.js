@@ -1,3 +1,8 @@
+import { authenticatedFetch } from './apiClient';
+import { SUPABASE_ANON_KEY } from './authService';
+
+const API_BASE_URL = 'https://bvazoowmmiymbbhxoggo.supabase.co/functions/v1';
+
 export const PARTNER_CATEGORIES = [
   { value: 'limousine', labelKey: 'partners.categoryLimousine' },
   { value: 'restaurant', labelKey: 'partners.categoryRestaurant' },
@@ -5,223 +10,351 @@ export const PARTNER_CATEGORIES = [
   { value: 'bar', labelKey: 'partners.categoryBar' },
 ];
 
-const STORAGE_KEY = 'qglide_admin_partners';
-
-const CATEGORY_CODE_PREFIX = {
-  limousine: 'LIM',
-  restaurant: 'RST',
-  club: 'CLB',
-  bar: 'BAR',
-};
-
-const SEED_PARTNERS = [
-  {
-    id: 'pt_seed_1',
-    email: 'fleet@dohalimo.qa',
-    displayName: 'Doha Premium Limousine',
-    legalName: 'Doha Premium Limousine W.L.L.',
-    category: 'limousine',
-    partnerCode: 'QG-LIM-DOHA-4821',
-    status: 'active',
-    createdAt: '2026-01-15T09:00:00.000Z',
-  },
-  {
-    id: 'pt_seed_2',
-    email: 'manager@alwadi.restaurant',
-    displayName: 'Al Wadi Restaurant',
-    legalName: 'Al Wadi Hospitality LLC',
-    category: 'restaurant',
-    partnerCode: 'QG-RST-9F4KD',
-    status: 'active',
-    createdAt: '2026-02-03T11:30:00.000Z',
-  },
-  {
-    id: 'pt_seed_3',
-    email: 'ops@skylineclub.qa',
-    displayName: 'Skyline Club Doha',
-    legalName: 'Skyline Entertainment W.L.L.',
-    category: 'club',
-    partnerCode: 'QG-CLB-K7M2',
-    status: 'active',
-    createdAt: '2026-02-18T20:15:00.000Z',
-  },
-  {
-    id: 'pt_seed_4',
-    email: 'contact@marinabar.qa',
-    displayName: 'Marina Bar & Lounge',
-    legalName: 'Marina Bar Trading',
-    category: 'bar',
-    partnerCode: 'QG-BAR-3Q8XN',
-    status: 'active',
-    createdAt: '2026-03-01T16:45:00.000Z',
-  },
+export const PARTNER_STATUSES = [
+  { value: 'pending_approval', labelKey: 'partners.statusPendingApproval' },
+  { value: 'active', labelKey: 'partners.statusActive' },
+  { value: 'suspended', labelKey: 'partners.statusSuspended' },
+  { value: 'rejected', labelKey: 'partners.statusRejected' },
 ];
 
-function clonePartners(partners) {
-  return partners.map((partner) => ({ ...partner }));
-}
-
-function readStoredPartners() {
-  if (typeof window === 'undefined') {
-    return clonePartners(SEED_PARTNERS);
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_PARTNERS));
-      return clonePartners(SEED_PARTNERS);
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_PARTNERS));
-      return clonePartners(SEED_PARTNERS);
-    }
-
-    return parsed.map((partner, index) => normalizePartnerRecord(partner, index)).filter(Boolean);
-  } catch {
-    return clonePartners(SEED_PARTNERS);
-  }
-}
-
-function writeStoredPartners(partners) {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(partners));
-  }
+function parseErrorMessage(errorData, fallback) {
+  if (!errorData || typeof errorData !== 'object') return fallback;
+  const err = errorData.error ?? errorData.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && typeof err.message === 'string') return err.message;
+  return fallback;
 }
 
 function normalizePartnerRecord(raw, index) {
   if (!raw || typeof raw !== 'object') return null;
 
+  const id = raw.id ?? raw.partner_id ?? raw.user_id ?? `pt_${index}`;
+  const email = raw.email ?? raw.login_email ?? '';
+  const displayName =
+    raw.trading_name ?? raw.display_name ?? raw.displayName ?? raw.name ?? '';
+  const legalName = raw.legal_name ?? raw.legalName ?? raw.legal_entity_name ?? '';
+  const partnerCode = raw.partner_code ?? raw.partnerCode ?? '';
+  const category = raw.category ?? raw.partner_category ?? '';
+  const status = raw.status ?? 'active';
+  const statusReason = raw.status_reason ?? raw.statusReason ?? null;
+  const municipality = raw.municipality ?? '';
+  const commercialRegistrationNumber =
+    raw.commercial_registration_number ?? raw.commercialRegistrationNumber ?? '';
+  const portalUserId = raw.portal_user_id ?? raw.portalUserId ?? null;
+  const hasPortalLogin = raw.has_portal_login ?? raw.hasPortalLogin ?? false;
+  const createdRaw = raw.created_at ?? raw.createdAt ?? raw.created ?? null;
+  const updatedRaw = raw.updated_at ?? raw.updatedAt ?? null;
+  const approvedRaw = raw.approved_at ?? raw.approvedAt ?? null;
+
+  const parseDate = (value) => {
+    if (value == null) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  };
+
   return {
-    id: String(raw.id ?? `pt_${index}`),
-    email: String(raw.email || '').toLowerCase(),
-    displayName: String(raw.displayName || raw.trading_name || '').trim() || '—',
-    legalName: String(raw.legalName || raw.legal_entity_name || '').trim(),
-    category: String(raw.category || '').toLowerCase(),
-    partnerCode: String(raw.partnerCode || raw.partner_code || '').trim(),
-    status: String(raw.status || 'active').toLowerCase(),
-    createdAt: raw.createdAt || new Date().toISOString(),
+    id: String(id),
+    email: email ? String(email).toLowerCase() : '',
+    displayName: String(displayName || '').trim() || '—',
+    legalName: String(legalName || '').trim(),
+    category: String(category || '').toLowerCase(),
+    partnerCode: String(partnerCode || '').trim(),
+    status: String(status || 'active').toLowerCase(),
+    statusReason: statusReason ? String(statusReason) : null,
+    municipality: String(municipality || '').trim(),
+    commercialRegistrationNumber: String(commercialRegistrationNumber || '').trim(),
+    portalUserId: portalUserId ? String(portalUserId) : null,
+    hasPortalLogin: Boolean(hasPortalLogin),
+    createdAt: parseDate(createdRaw) ?? new Date().toISOString(),
+    updatedAt: parseDate(updatedRaw),
+    approvedAt: parseDate(approvedRaw),
   };
 }
 
-function generatePartnerCode(category) {
-  const prefix = CATEGORY_CODE_PREFIX[category] || 'PTR';
-  const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
-  let suffix = '';
-  for (let i = 0; i < 4; i += 1) {
-    suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+function extractListPayload(data) {
+  if (!data || typeof data !== 'object') {
+    return { partners: [], totalCount: null, page: 1, limit: 50, totalPages: null };
   }
-  return `QG-${prefix}-${suffix}`;
-}
 
-function simulateDelay(ms = 180) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
+  const payload = data.data && typeof data.data === 'object' && !Array.isArray(data.data)
+    ? data.data
+    : data;
 
-export async function fetchPartnersList() {
-  await simulateDelay();
-  const partners = readStoredPartners();
+  const partners = extractPartnersArray(payload.partners != null ? payload : data);
 
   return {
-    success: true,
-    data: {
-      partners,
-      page: 1,
-      limit: partners.length,
-      totalCount: partners.length,
-      totalPages: 1,
-    },
+    partners,
+    totalCount: payload.total_count ?? payload.totalCount ?? null,
+    page: payload.page ?? null,
+    limit: payload.limit ?? null,
+    totalPages: payload.total_pages ?? payload.totalPages ?? null,
   };
 }
 
+function extractPartnersArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.partners)) return data.partners;
+  if (data.data && Array.isArray(data.data.partners)) return data.data.partners;
+  if (data.data && Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.results)) return data.results;
+  return [];
+}
+
+function extractPartnerFromResponse(data) {
+  if (!data || typeof data !== 'object') return null;
+  const candidate = data.partner ?? data.data?.partner ?? data.data ?? data;
+  if (Array.isArray(candidate)) {
+    return normalizePartnerRecord(candidate[0], 0);
+  }
+  return normalizePartnerRecord(candidate, 0);
+}
+
+/**
+ * List partners (GET `admin-partners-list`).
+ * Supports search, category, status, page, and limit query params.
+ */
+export async function fetchPartnersList(opts = {}) {
+  try {
+    const page = Math.max(1, parseInt(String(opts.page), 10) || 1);
+    const limit = Math.max(1, parseInt(String(opts.limit), 10) || 50);
+
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    const search = String(opts.search ?? '').trim();
+    if (search) params.set('search', search);
+
+    const category = String(opts.category ?? '').trim().toLowerCase();
+    if (category) params.set('category', category);
+
+    const status = String(opts.status ?? '').trim().toLowerCase();
+    if (status) params.set('status', status);
+
+    const url = `${API_BASE_URL}/admin-partners-list?${params.toString()}`;
+
+    const response = await authenticatedFetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+      },
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: parseErrorMessage(data, `HTTP ${response.status}: ${response.statusText}`),
+      };
+    }
+
+    if (data.success === false) {
+      return {
+        success: false,
+        error: parseErrorMessage(data, 'Failed to load partners'),
+      };
+    }
+
+    const listPayload = extractListPayload(data);
+    const seen = new Set();
+    const partners = [];
+
+    listPayload.partners.forEach((row, i) => {
+      const partner = normalizePartnerRecord(row, i);
+      if (!partner?.id) return;
+      if (seen.has(partner.id)) return;
+      seen.add(partner.id);
+      partners.push(partner);
+    });
+
+    const totalCount = listPayload.totalCount ?? partners.length;
+    const totalPages =
+      listPayload.totalPages ??
+      (totalCount != null ? Math.ceil(totalCount / limit) : null);
+
+    return {
+      success: true,
+      data: {
+        partners,
+        page: listPayload.page ?? page,
+        limit: listPayload.limit ?? limit,
+        totalCount,
+        totalPages,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to load partners',
+    };
+  }
+}
+
+/**
+ * Create partner portal login (POST `admin-partners-create`).
+ */
 export async function createPartner({
   category,
   displayName,
   legalName,
   email,
+  password,
+  confirmPassword,
 }) {
-  await simulateDelay();
+  try {
+    const url = `${API_BASE_URL}/admin-partners-create`;
 
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (!normalizedEmail) {
-    return { success: false, error: 'Email is required.' };
+    const body = {
+      category: String(category || 'restaurant').toLowerCase(),
+      trading_name: String(displayName || '').trim(),
+      email: String(email || '').trim().toLowerCase(),
+      password,
+      confirm_password: confirmPassword,
+    };
+
+    const legal = String(legalName || '').trim();
+    if (legal) {
+      body.legal_name = legal;
+    }
+
+    const response = await authenticatedFetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const partner = extractPartnerFromResponse(data);
+
+    return {
+      success: true,
+      data: partner ?? {
+        id: data.partner_id ?? data.id ?? `pt_${Date.now()}`,
+        email: body.email,
+        displayName: body.trading_name || '—',
+        legalName: legal,
+        category: body.category,
+        partnerCode: data.partner_code ?? data.partnerCode ?? '',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to create partner',
+    };
   }
-
-  const partners = readStoredPartners();
-  if (partners.some((partner) => partner.email === normalizedEmail)) {
-    return { success: false, error: 'A partner with this email already exists.' };
-  }
-
-  const partner = {
-    id: `pt_${Date.now()}`,
-    email: normalizedEmail,
-    displayName: String(displayName || '').trim() || '—',
-    legalName: String(legalName || '').trim(),
-    category: String(category || 'restaurant').toLowerCase(),
-    partnerCode: generatePartnerCode(category),
-    status: 'active',
-    createdAt: new Date().toISOString(),
-  };
-
-  writeStoredPartners([partner, ...partners]);
-  return { success: true, data: partner };
 }
 
+/**
+ * Update partner (POST `admin-partners-update`).
+ */
 export async function updatePartner(partnerId, {
   category,
   displayName,
   legalName,
   email,
+  password,
+  confirmPassword,
 }) {
-  await simulateDelay();
+  try {
+    const url = `${API_BASE_URL}/admin-partners-update`;
+    const hasNewPassword =
+      typeof password === 'string' &&
+      password.length > 0 &&
+      typeof confirmPassword === 'string' &&
+      password === confirmPassword;
 
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  const partners = readStoredPartners();
-  const index = partners.findIndex((partner) => partner.id === partnerId);
+    const body = {
+      partner_id: partnerId,
+      category: String(category || 'restaurant').toLowerCase(),
+      trading_name: String(displayName || '').trim(),
+      legal_name: String(legalName || '').trim(),
+      email: String(email || '').trim().toLowerCase(),
+      password: hasNewPassword ? password : '',
+    };
 
-  if (index === -1) {
-    return { success: false, error: 'Partner not found.' };
+    if (hasNewPassword) {
+      body.confirm_password = confirmPassword;
+    }
+
+    const response = await authenticatedFetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const partner = extractPartnerFromResponse(data);
+
+    return {
+      success: true,
+      data: partner ?? {
+        id: partnerId,
+        email: body.email,
+        displayName: body.trading_name || '—',
+        legalName: body.legal_name,
+        category: body.category,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to update partner',
+    };
   }
-
-  if (partners.some((partner, i) => i !== index && partner.email === normalizedEmail)) {
-    return { success: false, error: 'A partner with this email already exists.' };
-  }
-
-  const current = partners[index];
-  const nextCategory = String(category || current.category).toLowerCase();
-  const categoryChanged = nextCategory !== current.category;
-
-  partners[index] = {
-    ...current,
-    email: normalizedEmail,
-    displayName: String(displayName || '').trim() || '—',
-    legalName: String(legalName || '').trim(),
-    category: nextCategory,
-    partnerCode: categoryChanged ? generatePartnerCode(nextCategory) : current.partnerCode,
-  };
-
-  writeStoredPartners(partners);
-  return { success: true, data: partners[index] };
 }
 
-export async function deletePartner(partnerId) {
-  await simulateDelay();
+/**
+ * Delete partner (POST `admin-partners-delete`).
+ */
+export async function deletePartner(partnerId, reason) {
+  try {
+    const url = `${API_BASE_URL}/admin-partners-delete`;
 
-  const partners = readStoredPartners();
-  const nextPartners = partners.filter((partner) => partner.id !== partnerId);
+    const response = await authenticatedFetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        partner_id: partnerId,
+        reason: String(reason || '').trim(),
+      }),
+    });
 
-  if (nextPartners.length === partners.length) {
-    return { success: false, error: 'Partner not found.' };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`));
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to delete partner',
+    };
   }
-
-  writeStoredPartners(nextPartners);
-  return { success: true, data: { partner_id: partnerId } };
-}
-
-export function resetPartnersToSeed() {
-  writeStoredPartners(clonePartners(SEED_PARTNERS));
 }

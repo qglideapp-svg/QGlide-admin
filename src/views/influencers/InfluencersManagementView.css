@@ -125,7 +125,7 @@
   opacity: 1;
 }
 
-.btn-add-marketer {
+.btn-add-influencer {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -144,16 +144,16 @@
   transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
 }
 
-.btn-add-marketer:hover {
+.btn-add-influencer:hover {
   filter: brightness(1.03);
   box-shadow: 0 4px 16px rgba(107, 33, 168, 0.25), 0 2px 4px rgba(15, 23, 42, 0.06);
 }
 
-.btn-add-marketer:active {
+.btn-add-influencer:active {
   transform: scale(0.98);
 }
 
-.btn-add-marketer:disabled {
+.btn-add-influencer:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
@@ -539,7 +539,7 @@
     min-width: 0;
   }
 
-  .btn-add-marketer {
+  .btn-add-influencer {
     width: 100%;
     justify-content: center;
   }

@@ -1,0 +1,234 @@
+.driver-chat-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: #fff;
+}
+
+.driver-chat-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.driver-chat-panel-header h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.driver-chat-panel-status {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.driver-chat-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.driver-chat-live-indicator::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: driver-chat-live-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes driver-chat-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.driver-chat-close-btn {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.driver-chat-close-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.driver-chat-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+  background: #f3f4f6;
+}
+
+.driver-chat-bubble {
+  max-width: 78%;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.driver-chat-bubble.is-driver {
+  margin-right: auto;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+
+.driver-chat-bubble.is-admin {
+  margin-left: auto;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+}
+
+.driver-chat-bubble-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.driver-chat-sender {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.driver-chat-bubble-head time {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.driver-chat-bubble-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.driver-chat-compose {
+  flex-shrink: 0;
+  padding: 14px 18px 18px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.driver-chat-compose textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.driver-chat-compose textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.driver-chat-compose-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.driver-chat-compose-error {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+.driver-chat-closed-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.driver-chat-closed-banner p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.driver-chat-state,
+.driver-chat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 220px;
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.driver-chat-state .material-symbols-outlined,
+.driver-chat-empty-state .material-symbols-outlined {
+  font-size: 34px;
+  color: #9ca3af;
+}
+
+.driver-chat-state-error .material-symbols-outlined {
+  color: #ef4444;
+}
+
+.dark-mode .driver-chat-panel,
+.dark-mode .driver-chat-compose {
+  background: #1f2937;
+}
+
+.dark-mode .driver-chat-thread {
+  background: #111827;
+}
+
+.dark-mode .driver-chat-bubble.is-driver {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark-mode .driver-chat-bubble.is-admin {
+  background: #1e3a8a;
+  border-color: #2563eb;
+}
+
+.dark-mode .driver-chat-bubble-body,
+.dark-mode .driver-chat-sender,
+.dark-mode .driver-chat-panel-header h3 {
+  color: #f9fafb;
+}
+
+.dark-mode .driver-chat-compose textarea {
+  background: #111827;
+  border-color: #4b5563;
+  color: #f9fafb;
+}

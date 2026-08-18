@@ -22,7 +22,8 @@
 }
 
 .admin-live-toast-icon-booking,
-.admin-live-toast-icon-pickup {
+.admin-live-toast-icon-pickup,
+.admin-live-toast-icon-driver_message {
   background: rgba(59, 130, 246, 0.12);
   color: #2563eb;
 }

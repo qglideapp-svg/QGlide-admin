@@ -105,6 +105,7 @@ function VerticalBarChart({ data, color = '#8b5cf6' }) {
 }
 
 function HorizontalBarChart({ data, maxItems = 6 }) {
+  const { formatNumber } = useLanguage();
   const items = data.slice(0, maxItems);
   if (!items.length) return <div className="inf-chart-empty">No data</div>;
   const max = Math.max(...items.map((d) => d.referrals ?? d.count ?? 0), 1);
@@ -130,6 +131,7 @@ function HorizontalBarChart({ data, maxItems = 6 }) {
 }
 
 function DonutChart({ segments }) {
+  const { formatNumber } = useLanguage();
   if (!segments?.length) return <div className="inf-chart-empty">No data</div>;
 
   return (
